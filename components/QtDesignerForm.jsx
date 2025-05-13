@@ -391,8 +391,15 @@ class QtDesignerForm extends React.Component {
                 // kvrel__reltablename__attrname__datatable__keyfield__valuefield
                 const count = parts.length;
                 const attrname = parts.slice(1, count - 3).join("__");
-                const currentEditConfig = this.props.editConfig[parts[1]];
-                const comboFieldConstraints = currentEditConfig.fields.find(field => field.id === attrname.split("__")[1])?.constraints || {};
+                let currentEditConfig;
+                let comboFieldConstraints = {};
+                if (parts.length === 5) {
+                    currentEditConfig = this.props.editConfig[this.props.editLayerId.split(".")[1]];
+                    comboFieldConstraints = currentEditConfig.fields.find(field => field.id === attrname)?.constraints || {};
+                } else {
+                    currentEditConfig = this.props.editConfig[parts[1]];
+                    comboFieldConstraints = currentEditConfig.fields.find(field => field.id === attrname.split("__")[1])?.constraints || {};
+                }
                 value = (feature.properties || [])[attrname] ?? "";
                 const fieldId = parts.slice(1, count - 3).join("__");
                 const keyvalrel = this.props.mapPrefix + parts[count - 3] + ":" + parts[count - 2] + ":" + parts[count - 1];
