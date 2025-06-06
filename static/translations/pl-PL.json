@@ -53,6 +53,7 @@
         "Redlining": "Redlining",
         "Routing": "",
         "Tools": "Narzędzia Mapy",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Odrzuć",
       "draw": "Rysuj",
       "feature": "",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Maksymalizuj",
@@ -242,7 +244,7 @@
       "noresults": "Brak dostępnych danych dla wybranego punktu",
       "querying": "Przetwarzam zapytanie...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Feature Info"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Porównaj najwyższą warstwę",
       "deletealllayers": "Usuń wszystkie warstwy",
+      "hidealllayers": "",
       "importlayer": "Importuj warstwę",
       "maptip": "Pokaż wskazówki dla warstwy",
       "printlegend": "Drukuj legendę",
@@ -678,6 +681,11 @@
       "home": "Pokaż całą mapę",
       "zoomin": "Przybliż",
       "zoomout": "Oddal"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

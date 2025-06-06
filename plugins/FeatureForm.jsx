@@ -102,13 +102,14 @@ class FeatureForm extends React.Component {
             const feature = this.state.pickedFeatures ? this.state.pickedFeatures[this.state.selectedFeature] : null;
             const curLayerId = this.state.selectedFeature.split("::")[0];
             const curConfig = this.props.theme.editConfig[curLayerId] || {};
+            const canEditGeometry = ['Point', 'LineString', 'Polygon'].includes((curConfig.geomType || "").replace(/^Multi/, '').replace(/Z$/, ''));
             const editPermissions = curConfig.permissions || {};
             this.props.setEditContext('FeatureForm', {
                 action: 'Pick',
                 feature: feature,
                 changed: false,
                 geomType: curConfig.geomType || null,
-                geomReadOnly: editPermissions.updatable === false
+                geomReadOnly: editPermissions.updatable === false || !canEditGeometry
             });
         }
         if (!this.props.enabled && prevProps.enabled) {
@@ -203,8 +204,8 @@ class FeatureForm extends React.Component {
                                     {Object.entries(this.state.pickedFeatures).map(([id, feature]) => {
                                         const [layerId, featureId] = id.split("::");
                                         const editConfig = this.props.theme.editConfig[layerId];
-                                        const match = LayerUtils.searchLayer(this.props.layers, 'name', editConfig.layerName, [LayerRole.THEME]);
-                                        const layerName = match ? match.sublayer.title : editConfig.layerName;
+                                        const match = LayerUtils.searchLayer(this.props.layers, this.props.theme.url, editConfig.layerName);
+                                        const layerName = match?.sublayer?.title ?? editConfig.layerName;
                                         const featureName = editConfig.displayField ? feature.properties[editConfig.displayField] : featureText + " " + featureId;
                                         return (
                                             <option key={id} value={id}>{layerName + ": " + featureName}</option>
@@ -214,7 +215,7 @@ class FeatureForm extends React.Component {
                             </div>
                         ) : null}
                         {this.props.editContext.feature ? (
-                            <AttributeForm editConfig={curConfig} editContext={this.props.editContext} iface={this.props.iface} />
+                            <AttributeForm editConfig={curConfig} editContext={this.props.editContext} iface={this.props.iface} onCommit={this.updatePickedFeatures} />
                         ) : null}
                     </div>
                 );
@@ -251,6 +252,14 @@ class FeatureForm extends React.Component {
         if (!this.props.editContext.changed) {
             this.setState(FeatureForm.defaultState);
         }
+    };
+    updatePickedFeatures = (newfeature) => {
+        this.setState(state => ({
+            pickedFeatures: Object.entries(state.pickedFeatures).reduce((res, [key, feature]) => {
+                res[key] = feature.id === newfeature.id ? newfeature : feature;
+                return res;
+            }, {})
+        }));
     };
 }
 

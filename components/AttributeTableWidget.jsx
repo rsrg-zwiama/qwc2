@@ -290,9 +290,9 @@ class AttributeTableWidget extends React.Component {
                             <option disabled value="">{LocaleUtils.tr("attribtable.selectlayer")}</option>
                             {Object.keys(editConfig).map(layerId => {
                                 const layerName = editConfig[layerId].layerName;
-                                const match = LayerUtils.searchLayer(this.props.layers, 'name', layerName, [LayerRole.THEME]);
+                                const match = LayerUtils.searchLayer(this.props.layers, this.props.theme.url, layerName);
                                 return (
-                                    <option key={layerId} value={layerId}>{match ? match.sublayer.title : layerName}</option>
+                                    <option key={layerId} value={layerId}>{match?.sublayer?.title ?? layerName}</option>
                                 );
                             })}
                         </select>
@@ -434,7 +434,7 @@ class AttributeTableWidget extends React.Component {
             const precision = constraints.prec ?? 0;
             const step = constraints.step ?? 1;
             input = (
-                <NumberInput decimals={precision} disabled={disabled} max={constraints.max} min={constraints.min}
+                <NumberInput decimals={precision} disabled={disabled} fitParent max={constraints.max} min={constraints.min}
                     name={field.id} onChange={v => updateField(field.id, v, true)}
                     readOnly={constraints.readOnly} required={constraints.required} step={step} value={value} />
             );
@@ -567,6 +567,13 @@ class AttributeTableWidget extends React.Component {
                 properties: {name: CoordinatesUtils.toOgcUrnCrs(this.props.mapCrs)}
             }
         };
+        // Omit geometry if it is read-only
+        const editConfig = this.props.theme.editConfig || {};
+        const currentEditConfig = editConfig[this.state.loadedLayer];
+        const canEditGeometry = ['Point', 'LineString', 'Polygon'].includes((currentEditConfig.geomType || "").replace(/^Multi/, '').replace(/Z$/, ''));
+        if (!canEditGeometry) {
+            delete feature.geometry;
+        }
         const featureData = new FormData();
         featureData.set('feature', JSON.stringify(feature));
         Object.entries(this.changedFiles).forEach(([key, value]) => featureData.set('file:' + key, value));

@@ -196,10 +196,11 @@ class IdentifyViewer extends React.Component {
         expanded: {},
         expandedResults: {},
         resultTree: {},
+        reports: {},
         currentResult: null,
         currentLayer: null,
         exportFormat: 'geojson',
-        selectedAggregatedReport: null,
+        selectedAggregatedReport: "",
         generatingReport: false,
         selectedLayer: ''
     };
@@ -236,13 +237,15 @@ class IdentifyViewer extends React.Component {
         let currentResult = null;
         let currentLayer = null;
         if (layers.length === 1 && this.props.identifyResults[layers[0]].length === 1) {
-            currentResult = this.props.identifyResults[layers[0]][0];
             currentLayer = layers[0];
+            currentResult = this.props.identifyResults[layers[0]][0];
         }
+
         this.setState({
             resultTree: clone(this.props.identifyResults),
             currentResult: currentResult,
-            currentLayer: currentLayer
+            currentLayer: currentLayer,
+            reports: LayerUtils.collectFeatureReports(this.props.layers)
         });
     };
     setHighlightedResults = (results, resultTree) => {
@@ -385,23 +388,20 @@ class IdentifyViewer extends React.Component {
             </div>
         );
     };
-    renderResultAttributes = (layer, result, resultClass, reportFeatures) => {
+    renderResultAttributes = (layer, result, resultClass) => {
         if (!result) {
             return null;
         }
         let resultbox = null;
         let extraattribs = null;
-        let featureReportTemplate = null;
-        if (ConfigUtils.getConfigProp("documentServiceUrl")) {
-            featureReportTemplate = result.featurereport || this.findFeatureReportTemplate(layer);
-        }
-        if (featureReportTemplate) {
-            reportFeatures[layer] = [
-                ...(reportFeatures[layer] || []),
-                result
-            ];
-        }
         let inlineExtaAttribs = false;
+        const featureReports = this.state.reports[layer] || [];
+        if (result.featureReport) {
+            featureReports.push({
+                title: result.layertitle,
+                template: result.featureReport
+            });
+        }
         if (result.type === "text") {
             resultbox = (
                 <pre className="identify-result-box">
@@ -449,14 +449,14 @@ class IdentifyViewer extends React.Component {
                 });
             }
             rows.push(...this.computeExtraAttributes(layer, result));
-            if (featureReportTemplate) {
-                rows = rows.concat(
-                    <tr key="__featurereport">
-                        <td className={"identify-attr-title " + this.props.longAttributesDisplay}><i>{LocaleUtils.tr("identify.featureReport")}</i></td>
-                        <td className={"identify-attr-value " + this.props.longAttributesDisplay}><a href={this.getFeatureReportUrl(featureReportTemplate, result)}>{LocaleUtils.tr("identify.link")}</a></td>
+            featureReports.forEach((report, idx) => {
+                rows.push(
+                    <tr key={"__featurereport" + idx}>
+                        <td className={"identify-attr-title " + this.props.longAttributesDisplay}><i>{LocaleUtils.tr("identify.featureReport") + ": " + report.title}</i></td>
+                        <td className={"identify-attr-value " + this.props.longAttributesDisplay}><a href={this.getFeatureReportUrl(report, result)}>{LocaleUtils.tr("identify.link")}</a></td>
                     </tr>
                 );
-            }
+            });
             if (isEmpty(rows)) {
                 rows = (
                     <tr><td className="identify-attr-value"><i>{LocaleUtils.tr("identify.noattributes")}</i></td></tr>
@@ -470,23 +470,23 @@ class IdentifyViewer extends React.Component {
                 </div>
             );
         }
-        if (!inlineExtaAttribs && (this.props.attributeCalculator || featureReportTemplate)) {
+        if (!inlineExtaAttribs && (this.props.attributeCalculator || !isEmpty(this.state.reports[layer]))) {
             extraattribs = (
                 <div className="identify-result-box">
                     <table className="attribute-list"><tbody>
                         {this.computeExtraAttributes(layer, result)}
-                        {featureReportTemplate ? (
-                            <tr>
+                        {featureReports.map((report, idx) => (
+                            <tr key={"report" + idx}>
                                 <td className={"identify-attr-title " + this.props.longAttributesDisplay}>
-                                    <i>{LocaleUtils.tr("identify.featureReport")}</i>
+                                    <i>{LocaleUtils.tr("identify.featureReport") + ": " + report.title}</i>
                                 </td>
                                 <td className={"identify-attr-value " + this.props.longAttributesDisplay}>
-                                    <a href={this.getFeatureReportUrl(featureReportTemplate, result)} rel="noreferrer" target="_blank">
+                                    <a href={this.getFeatureReportUrl(report, result)} rel="noreferrer" target="_blank">
                                         {LocaleUtils.tr("identify.link")}
                                     </a>
                                 </td>
                             </tr>
-                        ) : null}
+                        ))}
                     </tbody></table>
                 </div>
             );
@@ -507,7 +507,7 @@ class IdentifyViewer extends React.Component {
                     )}
                     <span>{(this.props.showLayerTitles ? (result.layertitle + ": ") : "") + result.displayname}</span>
                     {zoomToFeatureButton}
-                    <Icon icon="info-sign" onClick={() => this.showLayerInfo(result)} />
+                    <Icon icon="info-sign" onClick={() => this.showLayerInfo(layer)} />
                 </div>
                 {this.props.collapsible && !expanded ? null : (
                     <div className="identify-result-container">
@@ -521,10 +521,9 @@ class IdentifyViewer extends React.Component {
     render() {
         const tree = this.props.displayResultTree;
         let body = null;
-        const reportFeatures = {};
         if (tree) {
             const contents = Object.keys(this.state.resultTree).map(layer => this.renderLayer(layer));
-            const attributes = this.renderResultAttributes(this.state.currentLayer, this.state.currentResult, 'identify-result-tree-frame', reportFeatures);
+            const attributes = this.renderResultAttributes(this.state.currentLayer, this.state.currentResult, 'identify-result-tree-frame');
             const resultsContainerStyle = {
                 maxHeight: attributes ? '10em' : 'initial'
             };
@@ -539,10 +538,10 @@ class IdentifyViewer extends React.Component {
                         <div className="identify-selectbox">
                             <select className="identify-layer-select" onChange={(e) => {const selectedLayer = e.target.value; this.setState({ selectedLayer });}}>
                                 <option value=''>{LocaleUtils.tr("identify.layerall")}</option>
-                                {Object.keys(this.state.resultTree).sort().map(
+                                {Object.keys(this.state.resultTree).filter(key => this.state.resultTree[key].length).map(
                                     layer => (
                                         <option key={layer} value={layer}>
-                                            {this.state.resultTree[layer]?.[0]?.layertitle || layer}
+                                            {this.state.resultTree[layer][0].layertitle}
                                         </option>
                                     ))}
                             </select>
@@ -559,7 +558,7 @@ class IdentifyViewer extends React.Component {
                                     onMouseEnter={() => this.setState({ currentResult: result, currentLayer: layer })}
                                     onMouseLeave={() => this.setState({ currentResult: null, currentLayer: null })}
                                 >
-                                    {this.renderResultAttributes(layer, result, resultClass, reportFeatures)}
+                                    {this.renderResultAttributes(layer, result, resultClass)}
                                 </div>
                             );
                         });
@@ -595,26 +594,23 @@ class IdentifyViewer extends React.Component {
                         </div>
                     </div>
                 ) : null}
-                {this.props.enableAggregatedReports && Object.values(reportFeatures).find(entry => entry.length > 1) !== undefined ? (
+                {this.props.enableAggregatedReports && Object.keys(this.state.reports).length > 0 ? (
                     <div className="identify-buttonbox">
                         <span className="identify-buttonbox-spacer" />
                         <span>{LocaleUtils.tr("identify.aggregatedreport")}:&nbsp;</span>
                         <div className="controlgroup">
-                            <select className="combo identify-export-format" onChange={ev => this.setState({selectedAggregatedReport: ev.target.value})} value={this.state.selectedAggregatedReport || ""}>
-                                <option disabled value=''>{LocaleUtils.tr("identify.selectlayer")}</option>
-                                {Object.entries(reportFeatures).map(([layername, results]) => {
-                                    if (results.length > 1) {
-                                        return (
-                                            <option key={layername} value={layername}>{results[0].layertitle}</option>
-                                        );
-                                    }
-                                    return null;
+                            <select className="combo identify-export-format" onChange={ev => this.setState({selectedAggregatedReport: ev.target.value})} value={this.state.selectedAggregatedReport}>
+                                <option disabled value=''>{LocaleUtils.tr("identify.selectreport")}</option>
+                                {Object.entries(this.state.reports).map(([layername, reports]) => {
+                                    return reports.map((report, idx) => (
+                                        <option key={layername + "::" + idx} value={layername + "::" + idx}>{report.title}</option>
+                                    ));
                                 })}
                             </select>
                             <button
                                 className="button"
                                 disabled={!this.state.selectedAggregatedReport || this.state.generatingReport}
-                                onClick={() => this.downloadAggregatedReport(this.state.selectedAggregatedReport, reportFeatures[this.state.selectedAggregatedReport])}
+                                onClick={this.downloadAggregatedReport}
                             >
                                 {this.state.generatingReport ? (<Spinner />) : (<Icon icon="report" />)}
                             </button>
@@ -699,29 +695,36 @@ class IdentifyViewer extends React.Component {
         });
         return reports[layer] || null;
     };
-    getFeatureReportUrl = (template, result) => {
+    getFeatureReportUrl = (report, result) => {
         const serviceUrl = ConfigUtils.getConfigProp("documentServiceUrl").replace(/\/$/, "");
         const params = {
             feature: result.id,
             x: result.clickPos[0],
             y: result.clickPos[1],
-            crs: this.props.mapcrs
+            crs: this.props.mapcrs,
+            single_report: report.single_report || false
         };
-        return serviceUrl + "/" + template + "?" + Object.keys(params).map(key => encodeURIComponent(key) + "=" + encodeURIComponent(params[key])).join("&");
+        const path = "/" + report.template + "." + (report.format || "pdf");
+        const query = Object.keys(params).map(key => encodeURIComponent(key) + "=" + encodeURIComponent(params[key])).join("&");
+        return serviceUrl + path + "?" + query;
     };
-    downloadAggregatedReport = (layername, results) => {
+    downloadAggregatedReport = () => {
+        const [layername, idx] = this.state.selectedAggregatedReport.split("::");
+        const report = this.state.reports[layername][idx];
+        const results = this.state.resultTree[layername];
         const serviceUrl = ConfigUtils.getConfigProp("documentServiceUrl").replace(/\/$/, "");
         const params = {
             feature: results.map(result => result.id).join(","),
             x: results[0].clickPos[0],
             y: results[0].clickPos[1],
-            crs: this.props.mapcrs
+            crs: this.props.mapcrs,
+            single_report: report.single_report || false
         };
         this.setState({generatingReport: true});
-        const template = results[0].featurereport || this.findFeatureReportTemplate(layername);
-        const url = serviceUrl + "/" + template + "?" + Object.keys(params).map(key => encodeURIComponent(key) + "=" + encodeURIComponent(params[key])).join("&");
-        axios.get(url, {responseType: "arraybuffer"}).then(response => {
-            FileSaver.saveAs(new Blob([response.data], {type: "application/pdf"}), layername + ".pdf");
+        const url = serviceUrl + "/" + report.template;
+        axios.get(url, {params, responseType: "arraybuffer"}).then(response => {
+            const filename = (report.filename || report.title.replace(" ", "_")) + "." + (report.format || "pdf");
+            FileSaver.saveAs(new Blob([response.data], {type: "application/pdf"}), filename);
             this.setState({generatingReport: false});
         }).catch(() => {
             /* eslint-disable-next-line */
@@ -729,19 +732,9 @@ class IdentifyViewer extends React.Component {
             this.setState({generatingReport: false});
         });
     };
-    showLayerInfo = (result) => {
-        let match = null;
-        // Search matching layer by technical name
-        for (const name of [result.layername, result.layerinfo]) {
-            match = LayerUtils.searchLayer(this.props.layers, 'name', name);
-            if (match) {
-                break;
-            }
-        }
-        if (!match) {
-            // Search matching layer by title
-            match = LayerUtils.searchLayer(this.props.layers, 'title', result.layertitle);
-        }
+    showLayerInfo = (layer) => {
+        const [layerUrl, layerName] = layer.split('#');
+        const match = LayerUtils.searchLayer(this.props.layers, layerUrl, layerName);
         if (match) {
             this.props.setActiveLayerInfo(match.layer, match.sublayer);
         }
@@ -789,7 +782,7 @@ class IdentifyViewer extends React.Component {
             return l.role === LayerRole.THEME && (sublayer = LayerUtils.searchSubLayer(l, 'name', result.layername, path));
         });
         if (layer && sublayer) {
-            this.props.changeLayerProperty(layer.uuid, "visibility", true, path);
+            this.props.changeLayerProperty(layer.id, "visibility", true, path);
         }
     };
 }

@@ -53,6 +53,7 @@
         "Redlining": "Línia de demarcació",
         "Routing": "Routing",
         "Tools": "Eines de Mapa",
+        "TourGuide": "",
         "TimeManager": "Gestor de Temps",
         "View3D": ""
       },
@@ -167,7 +168,8 @@
       "discard": "Descartar",
       "draw": "Traçar",
       "feature": "Element",
-      "geomreadonly": "La geometria conté valors Z diferents de zero, per tant és de només lectura",
+      "geomnonzeroz": "La geometria conté valors Z diferents de zero, per tant és de només lectura",
+      "geomreadonly": "",
       "invalidform": "Formulari invàlid",
       "maximize": "Maximitzar",
       "minimize": "Minimitzar",
@@ -242,7 +244,7 @@
       "noresults": "Sense informació disponible sobre el punt seleccionat",
       "querying": "Consultant...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Informació del element"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Comparar amb la capa superior",
       "deletealllayers": "Eliminar todas las capas",
+      "hidealllayers": "",
       "importlayer": "Importar capa",
       "maptip": "Mostrar suggerències de capes en el mapa",
       "printlegend": "Imprimir llegenda",
@@ -678,6 +681,11 @@
       "home": "Mostrar tot el mapa",
       "zoomin": "Apropar",
       "zoomout": "Allunyar"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

@@ -25,7 +25,7 @@ export const SearchResultType = {
 
 function coordinatesSearch(text, searchParams, callback) {
     const displaycrs = searchParams.displaycrs || "EPSG:4326";
-    const matches = text.match(/^\s*([+-]?\d+\.?\d*)[,\s]\s*([+-]?\d+\.?\d*)\s*$/);
+    const matches = text.replace(/[’']/g, "").match(/^\s*([+-]?\d+\.?\d*)[,\s]\s*([+-]?\d+\.?\d*)\s*$/);
     const items = [];
     if (matches && matches.length >= 3) {
         const x = parseFloat(matches[1]);
@@ -254,6 +254,11 @@ class QgisSearch {
         const results = [];
         Object.entries(features).forEach(([layername, layerfeatures]) => {
             const items = layerfeatures.map(feature => {
+                if (!feature.bbox || !feature.geometry) {
+                    /* eslint-disable-next-line */
+                    console.warn("Skipping result without geometry");
+                    return null;
+                }
                 const values = {
                     ...feature.properties,
                     id: feature.id,
@@ -269,7 +274,7 @@ class QgisSearch {
                     geometry: feature.geometry,
                     layername: layername
                 };
-            });
+            }).filter(Boolean);
             results.push(
                 {
                     id: "qgis." + layername,
@@ -389,7 +394,9 @@ export class FulltextSearch {
         const quot = typeof(resultItem.id) === 'string' ? '"' : '';
         const filter = `[["${resultItem.id_field_name}","=", ${quot}${resultItem.id}${quot}]]`;
         axios.get(dataServiceUrl.replace(/\/?$/, "/") + resultItem.dataproduct_id + "/?filter=" + filter).then(response => {
-            callback({feature: response.data, crs: response.data.crs.properties.name});
+            const bbox = response.data.bbox;
+            const center = bbox ? [0.5 * (bbox[0] + bbox[2]), 0.5 * (bbox[1] + bbox[3])] : null;
+            callback({bbox, center, feature: response.data, crs: response.data.crs.properties.name});
         }).catch(() => {
             callback(null);
         });

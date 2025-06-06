@@ -53,6 +53,7 @@
         "Redlining": "Serbest Çizim",
         "Routing": "Navigasyon",
         "Tools": "Harita Araçları",
+        "TourGuide": "",
         "TimeManager": "Zaman Yöneticisi",
         "View3D": "3 Boyutlu Görünüm"
       },
@@ -167,7 +168,8 @@
       "discard": "İptal",
       "draw": "Çiz",
       "feature": "Obje",
-      "geomreadonly": "Geometri, sıfır olmayan yükseklik değeri içerdiğinden salt okunur",
+      "geomnonzeroz": "Geometri, sıfır olmayan yükseklik değeri içerdiğinden salt okunur",
+      "geomreadonly": "",
       "invalidform": "Geçersiz form",
       "maximize": "Büyüt",
       "minimize": "Küçült",
@@ -242,7 +244,7 @@
       "noresults": "Seçilen nokta için geçerli bilgi yok",
       "querying": "Sorgulanıyor...",
       "reportfail": "Rapor üretilemedi",
-      "selectlayer": "Katman seçiniz...",
+      "selectreport": "",
       "title": "Obje Bilgisi"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "En üst katmanı karşılaştır",
       "deletealllayers": "Tüm katmanları kaldır",
+      "hidealllayers": "",
       "importlayer": "Katmanı içeri al",
       "maptip": "Katman harita ipuçlarını göster",
       "printlegend": "Yazdırma Lejandı",
@@ -678,6 +681,11 @@
       "home": "Haritanın tamamını göster",
       "zoomin": "Yaklaş",
       "zoomout": "Uzaklaş"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

@@ -53,6 +53,7 @@
         "Redlining": "Redlining",
         "Routing": "",
         "Tools": "Kartverktøy",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Forkast",
       "draw": "Tegn",
       "feature": "Objekt",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Maksimer",
@@ -242,7 +244,7 @@
       "noresults": "Ingen informasjon for valgt punkt",
       "querying": "Søker...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Objektinformasjon"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Sammenlign øverste lag",
       "deletealllayers": "Slett alle lag",
+      "hidealllayers": "",
       "importlayer": "Importer lag",
       "maptip": "Vis karttips for lag",
       "printlegend": "Skriv ut tegnforklaring",
@@ -678,6 +681,11 @@
       "home": "Vis hele kartet",
       "zoomin": "Zoom inn",
       "zoomout": "Zoom ut"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

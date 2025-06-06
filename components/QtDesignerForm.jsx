@@ -57,6 +57,7 @@ const vFitWidgets = ["QLabel", "QCheckBox", "QRadioButton", "Line", "QDateTimeEd
 class QtDesignerForm extends React.Component {
     static propTypes = {
         addRelationRecord: PropTypes.func,
+        editConfig: PropTypes.object,
         editLayerId: PropTypes.string,
         editRelationRecord: PropTypes.func,
         feature: PropTypes.object,
@@ -347,7 +348,7 @@ class QtDesignerForm extends React.Component {
                 return (<div className="qt-designer-form-textarea">{value}</div>);
             } else {
                 const addLinkAnchors = ConfigUtils.getConfigProp("editingAddLinkAnchors") !== false;
-                return (<TextInput addLinkAnchors={addLinkAnchors} multiline name={elname} onChange={(val) => updateField(widget.name, val)} {...inputConstraints} style={fontStyle} value={value} />);
+                return (<TextInput addLinkAnchors={addLinkAnchors} multiline name={elname} onChange={(val) => updateField(widget.name, val)} {...inputConstraints} style={fontStyle} value={String(value)} />);
             }
         } else if (widget.class === "QLineEdit") {
             if (widget.name.endsWith("__upload")) {
@@ -370,7 +371,7 @@ class QtDesignerForm extends React.Component {
                 } else {
                     const addLinkAnchors = ConfigUtils.getConfigProp("editingAddLinkAnchors") !== false;
                     const editTextNullValue = ConfigUtils.getConfigProp("editTextNullValue");
-                    return (<TextInput addLinkAnchors={addLinkAnchors} clearValue={editTextNullValue} name={elname} onChange={(val) => updateField(widget.name, val)} {...inputConstraints} style={fontStyle} value={value} />);
+                    return (<TextInput addLinkAnchors={addLinkAnchors} clearValue={editTextNullValue} name={elname} onChange={(val) => updateField(widget.name, val)} {...inputConstraints} style={fontStyle} value={String(value)} />);
                 }
             }
         } else if (widget.class === "QCheckBox" || widget.class === "QRadioButton") {
@@ -389,20 +390,23 @@ class QtDesignerForm extends React.Component {
                 // kvrel__attrname__datatable__keyfield__valuefield
                 // kvrel__reltablename__attrname__datatable__keyfield__valuefield
                 const count = parts.length;
-                const attrname = parts.slice(1, count - 3).join("__");
-                const comboFieldConstraints = this.props.fields[attrname]?.constraints || {};
-                value = (feature.properties || [])[attrname] ?? "";
+                const isRelAttr = count === 6;
+                const attrname = parts[isRelAttr ? 2 : 1];
                 const fieldId = parts.slice(1, count - 3).join("__");
+                value = (feature.properties || [])[fieldId] ?? "";
                 const keyvalrel = this.props.mapPrefix + parts[count - 3] + ":" + parts[count - 2] + ":" + parts[count - 1];
                 let filterExpr = null;
-                if (this.props.fields[attrname]?.filterExpression) {
-                    filterExpr = parseExpression(this.props.fields[attrname].filterExpression, feature, dataset, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}), true);
+                const currentLayerId = isRelAttr ? parts[1] : this.props.editLayerId.split(".")[1];
+                const currentEditConfig = this.props.editConfig[currentLayerId];
+                const comboFieldConstraints = currentEditConfig.fields.find(field => field.id === attrname)?.constraints || {};
+                if (currentEditConfig.fields.find(field => field.id === attrname)?.filterExpression) {
+                    filterExpr = parseExpression(currentEditConfig.fields.find(field => field.id === attrname).filterExpression, feature, dataset, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}), true);
                 }
                 return (
                     <EditComboField
                         editIface={this.props.iface} fieldId={fieldId} filterExpr={filterExpr} key={fieldId}
                         keyvalrel={keyvalrel} multiSelect={widget.allowMulti === "true"}
-                        name={nametransform(attrname)} placeholder={inputConstraints.placeholder}
+                        name={nametransform(fieldId)} placeholder={inputConstraints.placeholder}
                         readOnly={inputConstraints.readOnly || comboFieldConstraints.readOnly}
                         required={inputConstraints.required || comboFieldConstraints.required}
                         style={fontStyle} updateField={updateField} value={value} />

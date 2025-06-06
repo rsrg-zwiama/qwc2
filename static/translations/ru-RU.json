@@ -53,6 +53,7 @@
         "Redlining": "Обводка",
         "Routing": "",
         "Tools": "Средства картографии",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Отменить изменения",
       "draw": "Нарисовать",
       "feature": "",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Развернуть",
@@ -242,7 +244,7 @@
       "noresults": "Для выбранной точки нет доступной информации",
       "querying": "Выполняется запрос...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Информация об объекте"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Сравнить верхний слой",
       "deletealllayers": "",
+      "hidealllayers": "",
       "importlayer": "Импортировать слой",
       "maptip": "Показывать подписи",
       "printlegend": "Распечатать легенду",
@@ -678,6 +681,11 @@
       "home": "Показать всю карту",
       "zoomin": "Увеличить",
       "zoomout": "Уменьшить"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

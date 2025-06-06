@@ -53,6 +53,7 @@
         "Redlining": "Vázlat",
         "Routing": "",
         "Tools": "Térkép eszközök",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Elvetés",
       "draw": "Rajzolás",
       "feature": "",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "",
@@ -242,7 +244,7 @@
       "noresults": "Nincs információ a kiválasztott pontról",
       "querying": "Lekérdezés...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Lekérdezés információ"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Összehasonlítás a felső fóliával",
       "deletealllayers": "",
+      "hidealllayers": "",
       "importlayer": "Fólia importálása",
       "maptip": "Show layer map tips",
       "printlegend": "Print legend",
@@ -678,6 +681,11 @@
       "home": "",
       "zoomin": "",
       "zoomout": ""
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

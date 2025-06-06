@@ -53,6 +53,7 @@
         "Redlining": "Omat merkinnät",
         "Routing": "",
         "Tools": "Karttatyökalut",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Discard",
       "draw": "Draw",
       "feature": "Feature",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Maximize",
@@ -242,7 +244,7 @@
       "noresults": "Valitulla pisteellä ei ole informaatiota",
       "querying": "Kysely käynnissä...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Ominaisuustiedot"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Vertaa ylintä tasoa",
       "deletealllayers": "Poista kaikki tasot",
+      "hidealllayers": "",
       "importlayer": "Tuo taso",
       "maptip": "Näytä tason vinkkejä",
       "printlegend": "Tulosta selite",
@@ -678,6 +681,11 @@
       "home": "Näytä koko kartta",
       "zoomin": "Zoomaa sisään",
       "zoomout": "Zoomaa ulos"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

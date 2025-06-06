@@ -53,6 +53,7 @@
         "Redlining": "Připomínkování",
         "Routing": "Trasy",
         "Tools": "Nástroje mapy",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Vyřadit",
       "draw": "Kreslit",
       "feature": "Prvek",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Maximální",
@@ -242,7 +244,7 @@
       "noresults": "V tomto bodu nejsou k dispozici informace o žádném prvku",
       "querying": "Dotazování...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Informace o prvku"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Porovnat vrchní vrstvy",
       "deletealllayers": "Odstranit všechny vrstvy",
+      "hidealllayers": "",
       "importlayer": "Importovat vrstvu",
       "maptip": "Zobrazovat bubliny nad mapou",
       "printlegend": "Tisk legendy",
@@ -678,6 +681,11 @@
       "home": "Výchozí zobrazení mapy",
       "zoomin": "Přiblížit",
       "zoomout": "Oddálit"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

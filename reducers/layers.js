@@ -27,8 +27,8 @@ import {
     REMOVE_ALL_LAYERS,
     REPLACE_PLACEHOLDER_LAYER,
     SET_SWIPE,
-    SET_LAYERS,
-    SET_FILTER
+    SET_FILTER,
+    SET_THEME_LAYERS_VISIBILITY_PRESET
 } from '../actions/layers';
 import LayerUtils from '../utils/LayerUtils';
 import {UrlParams} from '../utils/PermaLinkUtils';
@@ -57,7 +57,7 @@ export default function layers(state = defaultState, action) {
         };
     }
     case CHANGE_LAYER_PROPERTY: {
-        const targetLayer = state.flat.find((layer) => {return layer.uuid === action.layerUuid; });
+        const targetLayer = state.flat.find((layer) => {return layer.id === action.layerId; });
         if (!targetLayer) {
             return state;
         }
@@ -73,7 +73,7 @@ export default function layers(state = defaultState, action) {
         }
 
         const newLayers = (state.flat || []).map((layer) => {
-            if (layer.uuid === action.layerUuid) {
+            if (layer.id === action.layerId) {
 
                 const {newlayer, newsublayer} = LayerUtils.cloneLayer(layer, action.sublayerpath || []);
                 newsublayer[action.property] = action.newvalue;
@@ -110,8 +110,13 @@ export default function layers(state = defaultState, action) {
         return {...state, flat: newLayers};
     }
     case SET_LAYER_DIMENSIONS: {
+        // Set dimensions for all layers with the same URL (i.e. if a WMS is split)
+        const layerUrl = state.flat.find(layer => layer.id === action.layerId)?.url;
+        if (!layerUrl) {
+            return "";
+        }
         const newLayers = (state.flat || []).map((layer) => {
-            if (layer.id === action.layerId) {
+            if (layer.url === layerUrl) {
                 const newLayer = {...layer, dimensionValues: action.dimensions};
                 Object.assign(newLayer, LayerUtils.buildWMSLayerParams(newLayer, state.filter));
                 return newLayer;
@@ -133,9 +138,12 @@ export default function layers(state = defaultState, action) {
             opacity: action.layer.opacity ?? 255,
             layertreehidden: action.layer.layertreehidden || action.layer.role > LayerRole.USERLAYER
         };
-        LayerUtils.addUUIDs(newLayer);
-        if (action.beforename) {
-            newLayers = LayerUtils.insertLayer(newLayers, newLayer, "name", action.beforename);
+        if (action.options?.beforeLayerName || action.options?.afterLayerName) {
+            newLayers = LayerUtils.insertLayer(
+                newLayers, newLayer, "name",
+                action.options.beforeLayerName || action.options.afterLayerName,
+                action.options.afterLayerName ? true : false
+            );
         } else {
             let inspos = 0;
             if (action.pos === null) {
@@ -210,7 +218,6 @@ export default function layers(state = defaultState, action) {
                 id: layerId,
                 type: 'vector',
                 name: action.layer.name || layerId,
-                uuid: uuidv4(),
                 features: newFeatures,
                 role: action.layer.role || LayerRole.USERLAYER,
                 queryable: action.layer.queryable || false,
@@ -270,11 +277,7 @@ export default function layers(state = defaultState, action) {
             const newLayers = state.flat.slice(0);
             newLayers[themeLayerIdx] = LayerUtils.mergeSubLayers(state.flat[themeLayerIdx], action.layer);
             newLayers[themeLayerIdx].visibility = true;
-            for (const lyr of newLayers) {
-                if (lyr.type === "wms") {
-                    Object.assign(lyr, LayerUtils.buildWMSLayerParams(lyr, state.filter));
-                }
-            }
+            Object.assign(newLayers[themeLayerIdx], LayerUtils.buildWMSLayerParams(newLayers[themeLayerIdx], state.filter));
             UrlParams.updateParams({l: LayerUtils.buildWMSLayerUrlParam(newLayers)});
             return {...state, flat: newLayers};
         }
@@ -290,7 +293,7 @@ export default function layers(state = defaultState, action) {
         return {...state, flat: newLayers};
     }
     case REMOVE_ALL_LAYERS: {
-        return {...state, flat: [], swipe: null};
+        return defaultState;
     }
     case REORDER_LAYER: {
         const newLayers = LayerUtils.reorderLayer(
@@ -314,14 +317,15 @@ export default function layers(state = defaultState, action) {
                         ...layer,
                         ...action.layer,
                         role: layer.role,
-                        id: layer.id,
-                        uuid: layer.uuid,
-                        // keep original title and attribution
-                        title: layer.title || action.layer.title,
-                        attribution: layer.attribution || action.layer.attribution
+                        id: layer.id
                     };
+                    // For background layers, preserve any custom title/attribution/opacity
+                    if (layer.role === LayerRole.BACKGROUND) {
+                        newLayer.title = layer.title || action.layer.title;
+                        newLayer.attribution = layer.attribution || action.layer.attribution;
+                        newLayer.opacity = layer.opacity || action.layer.opacity
+                    }
                     delete newLayer.loading;
-                    LayerUtils.addUUIDs(newLayer);
                     if (newLayer.type === "wms") {
                         Object.assign(newLayer, LayerUtils.buildWMSLayerParams(newLayer, state.filter));
                     }
@@ -339,9 +343,6 @@ export default function layers(state = defaultState, action) {
     case SET_SWIPE: {
         return {...state, swipe: action.swipe};
     }
-    case SET_LAYERS: {
-        return {...state, flat: action.layers};
-    }
     case SET_FILTER: {
         const filter = {
             filterParams: action.filter,
@@ -355,6 +356,18 @@ export default function layers(state = defaultState, action) {
             return layer;
         });
         return {...state, flat: newLayers, filter: filter};
+    }
+    case SET_THEME_LAYERS_VISIBILITY_PRESET: {
+        const newLayers = state.flat.map(layer => {
+            if (layer.role === LayerRole.THEME) {
+                const newLayer = LayerUtils.applyVisibilityPreset(layer, action.preset);
+                return {...newLayer, ...LayerUtils.buildWMSLayerParams(newLayer, state.filter)};
+            } else {
+                return layer;
+            }
+        });
+        UrlParams.updateParams({l: LayerUtils.buildWMSLayerUrlParam(newLayers)});
+        return {...state, flat: newLayers};
     }
     default:
         return state;

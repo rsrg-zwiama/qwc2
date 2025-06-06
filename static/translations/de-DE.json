@@ -53,6 +53,7 @@
         "Redlining": "Zeichnen",
         "Routing": "Routing",
         "Tools": "Werkzeuge",
+        "TourGuide": "",
         "TimeManager": "Zeitleiste",
         "View3D": "3D Ansicht"
       },
@@ -167,7 +168,8 @@
       "discard": "Abbrechen",
       "draw": "Zeichnen",
       "feature": "Objekt",
-      "geomreadonly": "Die Geometrie enthält Z-Werte ungleich Null und kann daher nicht veränderbar.",
+      "geomnonzeroz": "Die Geometrie enthält Z-Werte ungleich Null und ist daher nicht veränderbar.",
+      "geomreadonly": "Die Geometrie ist nicht veränderbar",
       "invalidform": "Ungültiges Formular",
       "maximize": "Maximieren",
       "minimize": "Minimieren",
@@ -242,7 +244,7 @@
       "noresults": "Keine Resultate an der ausgewählten Position",
       "querying": "Objekte werden abgefragt...",
       "reportfail": "Bericht konnt nicht erstellt werden",
-      "selectlayer": "Ebene auswählen",
+      "selectreport": "Bericht auswählen...",
       "title": "Objektinformationen"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Oberste Ebene vergleichen",
       "deletealllayers": "Alle Ebenen entfernen",
+      "hidealllayers": "Alle Ebenen ausblenden",
       "importlayer": "Ebene importieren",
       "maptip": "Kartentipps anzeigen",
       "printlegend": "Legende drucken",
@@ -678,6 +681,11 @@
       "home": "Ganze Karte anzeigen",
       "zoomin": "Hineinzoomen",
       "zoomout": "Hinauszoomen"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "Alle",

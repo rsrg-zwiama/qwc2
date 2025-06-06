@@ -53,6 +53,7 @@
         "Redlining": "Evidențiere",
         "Routing": "Traseu",
         "Tools": "Unelte hartă",
+        "TourGuide": "",
         "TimeManager": "Informații temporale",
         "View3D": ""
       },
@@ -167,7 +168,8 @@
       "discard": "Renunță",
       "draw": "Desenare",
       "feature": "Obiect spațial",
-      "geomreadonly": "Geometria include valori Z și, prin urmare, nu poate fi editată",
+      "geomnonzeroz": "Geometria include valori Z și, prin urmare, nu poate fi editată",
+      "geomreadonly": "",
       "invalidform": "Date invalide în formular",
       "maximize": "Maximizează",
       "minimize": "Minimizează",
@@ -242,7 +244,7 @@
       "noresults": "Nu există informații în punctul selectat",
       "querying": "Interogare...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Informații obiect spațial"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Compară stratul de sus",
       "deletealllayers": "Elimină toate straturile",
+      "hidealllayers": "",
       "importlayer": "Import strat",
       "maptip": "Arată indicii hartă",
       "printlegend": "Tipărește legenda",
@@ -678,6 +681,11 @@
       "home": "Arată toată harta",
       "zoomin": "Mărire",
       "zoomout": "Micșorare"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

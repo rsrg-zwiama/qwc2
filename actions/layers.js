@@ -27,8 +27,8 @@ export const REFRESH_LAYER = 'REFRESH_LAYER';
 export const REMOVE_ALL_LAYERS = 'REMOVE_ALL_LAYERS';
 export const REPLACE_PLACEHOLDER_LAYER = 'REPLACE_PLACEHOLDER_LAYER';
 export const SET_SWIPE = 'SET_SWIPE';
-export const SET_LAYERS = 'SET_LAYERS';
 export const SET_FILTER = 'SET_FILTER';
+export const SET_THEME_LAYERS_VISIBILITY_PRESET = 'SET_THEME_LAYERS_VISIBILITY_PRESET';
 
 
 export const LayerRole = {
@@ -40,12 +40,12 @@ export const LayerRole = {
 };
 
 
-export function addLayer(layer, pos = null, beforename = null) {
+export function addLayer(layer, pos = null, options = null) {
     return {
         type: ADD_LAYER,
         layer,
         pos,
-        beforename
+        options
     };
 }
 
@@ -111,10 +111,10 @@ export function addThemeSublayer(layer) {
 }
 
 // recurseDirection: null (don't recurse), 'parents', 'children', 'both'
-export function changeLayerProperty(layerUuid, property, newvalue, sublayerpath = [], recurseDirection = null) {
+export function changeLayerProperty(layerId, property, newvalue, sublayerpath = [], recurseDirection = null) {
     return {
         type: CHANGE_LAYER_PROPERTY,
-        layerUuid,
+        layerId,
         property,
         newvalue,
         sublayerpath,
@@ -189,13 +189,6 @@ export function setSwipe(swipe) {
     };
 }
 
-export function setLayers(layers) {
-    return {
-        type: SET_LAYERS,
-        layers
-    };
-}
-
 export function setFilter(filter, filterGeom, timeRange) {
     return {
         type: SET_FILTER,
@@ -204,3 +197,10 @@ export function setFilter(filter, filterGeom, timeRange) {
         timeRange
     };
 }
+
+export function setThemeLayersVisibilityPreset(preset) {
+    return {
+        type: SET_THEME_LAYERS_VISIBILITY_PRESET,
+        preset: preset
+    };
+};

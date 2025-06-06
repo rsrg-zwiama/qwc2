@@ -53,6 +53,7 @@
         "Redlining": "Línea de demarcación",
         "Routing": "Routing",
         "Tools": "Herramientas de Mapa",
+        "TourGuide": "",
         "TimeManager": "Gestor de Tiempo",
         "View3D": ""
       },
@@ -167,7 +168,8 @@
       "discard": "Descartar",
       "draw": "Trazar",
       "feature": "Elemento",
-      "geomreadonly": "La geometría contiene valores Z diferentes de cero por lo que es sólo lectura",
+      "geomnonzeroz": "La geometría contiene valores Z diferentes de cero por lo que es sólo lectura",
+      "geomreadonly": "",
       "invalidform": "Formulario inválido",
       "maximize": "Maximizar",
       "minimize": "Minimizar",
@@ -242,7 +244,7 @@
       "noresults": "Sin información disponible sobre el punto seleccionado",
       "querying": "Consultando...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Información del elemento"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Comparar con la capa superior",
       "deletealllayers": "Remover todas las capas",
+      "hidealllayers": "",
       "importlayer": "Importar capa",
       "maptip": "Mostrar sugerencias de capas en el mapa",
       "printlegend": "Imprimir leyenda",
@@ -678,6 +681,11 @@
       "home": "Mostrar todo el mapa",
       "zoomin": "Acercarse",
       "zoomout": "Alejarse"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

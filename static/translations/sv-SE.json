@@ -53,6 +53,7 @@
         "Redlining": "Rita",
         "Routing": "",
         "Tools": "Kartverktyg",
+        "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
@@ -167,6 +168,7 @@
       "discard": "Förkasta",
       "draw": "Rita",
       "feature": "Objekt",
+      "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
       "maximize": "Maximera",
@@ -242,7 +244,7 @@
       "noresults": "Ingen information för vald punkt",
       "querying": "Frågar...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Objektinformation"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Jämför översta lagret",
       "deletealllayers": "Ta bort alla lager",
+      "hidealllayers": "",
       "importlayer": "Importera lager",
       "maptip": "Visa karttips för lager",
       "printlegend": "Skriv ut teckenförklaring",
@@ -678,6 +681,11 @@
       "home": "Visa hela kartan",
       "zoomin": "Zooma in",
       "zoomout": "Zooma ut"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",

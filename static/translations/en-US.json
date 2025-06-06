@@ -53,6 +53,7 @@
         "Redlining": "Redlining",
         "Routing": "Routing",
         "Tools": "Map Tools",
+        "TourGuide": "Tour Guide",
         "TimeManager": "Time Manager",
         "View3D": "3D View"
       },
@@ -167,7 +168,8 @@
       "discard": "Discard",
       "draw": "Draw",
       "feature": "Feature",
-      "geomreadonly": "The geometry contains non-zero Z values and is therefore read only.",
+      "geomnonzeroz": "The geometry contains non-zero Z values and is therefore read only.",
+      "geomreadonly": "The geometry is read only.",
       "invalidform": "Invalid form",
       "maximize": "Maximize",
       "minimize": "Minimize",
@@ -242,7 +244,7 @@
       "noresults": "No information available for the selected point",
       "querying": "Querying...",
       "reportfail": "Failed to generate report",
-      "selectlayer": "Select layer...",
+      "selectreport": "Select report..",
       "title": "Feature Info"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Compare top layer",
       "deletealllayers": "Remove all layers",
+      "hidealllayers": "Hide all layers",
       "importlayer": "Import layer",
       "maptip": "Show layer map tips",
       "printlegend": "Print legend",
@@ -678,6 +681,11 @@
       "home": "Show entire map",
       "zoomin": "Zoom in",
       "zoomout": "Zoom out"
+    },
+    "tourguide": {
+      "done": "Done",
+      "next": "Next",
+      "previous": "Previous"
     },
     "valuetool": {
       "all": "All",

@@ -53,6 +53,7 @@
         "Redlining": "Dessiner",
         "Routing": "Routage",
         "Tools": "Outils",
+        "TourGuide": "Visite Guidée",
         "TimeManager": "Ligne du temps",
         "View3D": "Vue 3D"
       },
@@ -167,7 +168,8 @@
       "discard": "Rejeter",
       "draw": "Dessiner",
       "feature": "Objet",
-      "geomreadonly": "La géométrie contient des valeurs Z non nulles et ne peut donc pas être modifiée.",
+      "geomnonzeroz": "La géométrie contient des valeurs Z non nulles et ne peut donc pas être modifiée.",
+      "geomreadonly": "La géométrie e peut pas être modifiée.",
       "invalidform": "Formulaire non valide",
       "maximize": "Maximiser",
       "minimize": "Minimiser",
@@ -242,7 +244,7 @@
       "noresults": "Pas de résultats pour la position sélectionnée",
       "querying": "Identification en cours...",
       "reportfail": "Le rapport n'a pas été généré",
-      "selectlayer": "Sélectionner la couche...",
+      "selectreport": "Selectionner rapport...",
       "title": "Informations sur l'objet"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Comparer",
       "deletealllayers": "Supprimer toutes les couches",
+      "hidealllayers": "Cacher toutes les couches",
       "importlayer": "Importer une couche",
       "maptip": "Afficher les infobulles",
       "printlegend": "Imprimer la légende",
@@ -678,6 +681,11 @@
       "home": "Afficher toute la carte",
       "zoomin": "Zoomer",
       "zoomout": "Dézoomer"
+    },
+    "tourguide": {
+      "done": "Terminé",
+      "next": "Suivant",
+      "previous": "Précédent"
     },
     "valuetool": {
       "all": "Tous",

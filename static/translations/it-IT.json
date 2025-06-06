@@ -53,6 +53,7 @@
         "Redlining": "Strumenti di disegno",
         "Routing": "Routing",
         "Tools": "Strumenti",
+        "TourGuide": "",
         "TimeManager": "Linea temporale",
         "View3D": "Vista 3D"
       },
@@ -167,7 +168,8 @@
       "discard": "Annulla",
       "draw": "Disegna",
       "feature": "Oggetto",
-      "geomreadonly": "La geometria contiene valori Z non nulli ed è quindi di sola lettura.",
+      "geomnonzeroz": "La geometria contiene valori Z non nulli ed è quindi di sola lettura.",
+      "geomreadonly": "La geometria è di solo lettura.",
       "invalidform": "Formulario invalido",
       "maximize": "Massimizza",
       "minimize": "Minimizza",
@@ -242,7 +244,7 @@
       "noresults": "Nessun risultato",
       "querying": "Caricando...",
       "reportfail": "Errore nella generazione del rapporto",
-      "selectlayer": "Seleziona livello...",
+      "selectreport": "Seleziona rapporto...",
       "title": "Titolo"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Compara il primo livello",
       "deletealllayers": "Rimuovi tutti i livelli",
+      "hidealllayers": "Nascondi tutti i livelli",
       "importlayer": "Importa livello",
       "maptip": "Attiva maptip",
       "printlegend": "Stampa legenda",
@@ -678,6 +681,11 @@
       "home": "Mostra tutta la mappa intera",
       "zoomin": "Ingrandisci",
       "zoomout": "Rimpicciolisci"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "Tutte",

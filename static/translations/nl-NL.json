@@ -53,6 +53,7 @@
         "Redlining": "Redlining",
         "Routing": "Routing",
         "Tools": "Tools",
+        "TourGuide": "",
         "TimeManager": "Tijd Manager",
         "View3D": ""
       },
@@ -167,7 +168,8 @@
       "discard": "Negeren",
       "draw": "Tekenen",
       "feature": "Object",
-      "geomreadonly": "De geometrie bevat geen Z-waarden en is daarom read only.",
+      "geomnonzeroz": "De geometrie bevat geen Z-waarden en is daarom read only.",
+      "geomreadonly": "",
       "invalidform": "Ongeldig formulier",
       "maximize": "Maximaliseren",
       "minimize": "Minimaliseren",
@@ -242,7 +244,7 @@
       "noresults": "Geen informatie beschikbaar voor het aangewezen punt",
       "querying": "Zoeken...",
       "reportfail": "",
-      "selectlayer": "",
+      "selectreport": "",
       "title": "Objectgegevens"
     },
     "imageeditor": {
@@ -289,6 +291,7 @@
     "layertree": {
       "compare": "Vergelijk bovenste laag",
       "deletealllayers": "Verwijder alle lagen",
+      "hidealllayers": "",
       "importlayer": "Importeer laag",
       "maptip": "Toon kaarttips voor de laag",
       "printlegend": "Print legenda",
@@ -678,6 +681,11 @@
       "home": "Toon volledige kaart",
       "zoomin": "Inzoomen",
       "zoomout": "Uitzoomen"
+    },
+    "tourguide": {
+      "done": "",
+      "next": "",
+      "previous": ""
     },
     "valuetool": {
       "all": "",
