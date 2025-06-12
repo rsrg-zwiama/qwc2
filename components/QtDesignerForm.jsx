@@ -399,7 +399,7 @@ class QtDesignerForm extends React.Component {
                 const field = isRelAttr ? this.props.editConfig[parts[1]]?.fields?.find?.(f => f.id === attrname) : this.props.fields[fieldId];
                 const comboFieldConstraints = field?.constraints || {};
                 if (field?.filterExpression) {
-                    filterExpr = parseExpression(field.filterExpression, feature, dataset, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}), true);
+                    filterExpr = parseExpression(field.filterExpression, feature, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}), true);
                 }
                 return (
                     <EditComboField
