@@ -26,11 +26,12 @@
         "Print": "Print",
         "Reports": "Reports",
         "Settings": "Settings",
+        "Settings3D": "Settings",
         "Share": "Share Link",
         "ThemeSwitcher": "Theme",
         "AttributeTable": "Attribute Table",
         "AuthenticationLogin": "Login",
-        "AuthenticationLogout": "Logout",
+        "AuthenticationLogout": "Logout - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "Draw",
         "FeatureForm": "Feature Form",
@@ -150,6 +151,7 @@
       "sphere": "Sphere",
       "subtract": "Subtract",
       "thescale": "Scale",
+      "thesize": "Size",
       "translate": "Translate",
       "undoBool": "Undo operation",
       "union": "Union",
@@ -251,6 +253,10 @@
       "confirmclose": "Close without saving?",
       "title": "Image editor"
     },
+    "import3d": {
+      "importing": "Importing {0}...",
+      "noprocessesserver": "No import service configured"
+    },
     "importlayer": {
       "addfailed": "Failed to add layer.",
       "addlayer": "Add layer",
@@ -333,7 +339,7 @@
       "resetrotation": "Reset rotation"
     },
     "map3d": {
-      "lockview": "Move with 2D view",
+      "lockview": "Auto-sync 2D/3D views",
       "syncview": "Synchronize with 2D view",
       "terrain": "Terrain",
       "title": "3D View"
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Configuration",
       "format": "Format",
+      "projection": "Projection",
       "resolution": "Resolution",
       "scale": "Scale",
       "size": "Size",
@@ -373,13 +380,12 @@
       "windowtitle": "Legend"
     },
     "maplight3d": {
-      "ambientLightIntensity": "Ambient light intensity",
       "animationstep": "Animation step",
       "date": "Date",
       "dayspersec": "days / second",
-      "directionalLightIntensity": "Directional light intensity",
       "helpersVisible": "Show helpers",
       "minspersec": "mins / second",
+      "moonLightIntensity": "Moonlight intensity",
       "normalBias": "Normal bias",
       "shadowBias": "Shadow bias",
       "shadowMapSize": "Shadowmap size",
@@ -389,6 +395,7 @@
       "shadowintensity": "Shadow intensity",
       "shadows": "Enable shadows",
       "showadvanced": "Show advanced",
+      "sunLightIntensity": "Sunlight intensity",
       "time": "Time",
       "zFactor": "Z-factor"
     },
@@ -588,6 +595,9 @@
       "systemlang": "System language",
       "themes": "Themes"
     },
+    "settings3d": {
+      "quality": "Quality"
+    },
     "share": {
       "QRCodeLinkTitle": "QR Code",
       "directLinkTitle": "Via a direct link",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "None",
       "prompt": "Enter layer name"
+    },
+    "view3d": {
+      "storingstate": "Storing 3D state..."
     },
     "window": {
       "close": "Close",

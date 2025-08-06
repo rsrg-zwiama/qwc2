@@ -26,11 +26,12 @@
         "Print": "Skriv ut",
         "Reports": "",
         "Settings": "",
+        "Settings3D": "",
         "Share": "Dela länk",
         "ThemeSwitcher": "Tema",
         "AttributeTable": "",
         "AuthenticationLogin": "Logga in",
-        "AuthenticationLogout": "Logga ut",
+        "AuthenticationLogout": "Logga ut - {0}",
         "Cyclomedia": "",
         "Draw3D": "",
         "FeatureForm": "",
@@ -150,6 +151,7 @@
       "sphere": "",
       "subtract": "",
       "thescale": "",
+      "thesize": "",
       "translate": "",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "",
       "title": ""
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "",
       "addlayer": "Lägg till lager",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "",
       "format": "Format:",
+      "projection": "",
       "resolution": "Upplösning:",
       "scale": "",
       "size": "",
@@ -373,13 +380,12 @@
       "windowtitle": ""
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "",
       "themes": ""
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "QR kod",
       "directLinkTitle": "Via en direktlänk",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "",
       "prompt": ""
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "",

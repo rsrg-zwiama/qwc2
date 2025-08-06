@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
 import axios from 'axios';
@@ -14,6 +15,7 @@ import PropTypes from 'prop-types';
 
 import {setCurrentTask} from '../actions/task';
 import Icon from '../components/Icon';
+import {MapContainerPortalContext} from '../components/PluginsContainer';
 import CopyButton from '../components/widgets/CopyButton';
 import ConfigUtils from '../utils/ConfigUtils';
 import CoordinatesUtils from '../utils/CoordinatesUtils';
@@ -53,13 +55,13 @@ import './style/MapInfoTooltip.css';
  * ```
  */
 class MapInfoTooltip extends React.Component {
+    static contextType = MapContainerPortalContext;
     static propTypes = {
         /** The number of decimal places to display for elevation values. */
         elevationPrecision: PropTypes.number,
         enabled: PropTypes.bool,
         includeWGS84: PropTypes.bool,
         map: PropTypes.object,
-        mapMargins: PropTypes.object,
         /** Additional plugin components for the map info tooltip. */
         plugins: PropTypes.array,
         setCurrentTask: PropTypes.func
@@ -85,12 +87,11 @@ class MapInfoTooltip extends React.Component {
         } else {
             const oldPoint = prevProps.map.click;
             if (!oldPoint || oldPoint.pixel[0] !== newPoint.pixel[0] || oldPoint.pixel[1] !== newPoint.pixel[1]) {
-                this.setState({point: newPoint, elevation: null});
+                this.setState({point: newPoint, elevation: null, extraInfo: null});
                 const pos = newPoint.coordinate;
                 const crs = this.props.map.projection;
                 getElevationInterface().getElevation(pos, crs).then(elevation => {
-                    const elevationPrecision = this.props.elevationPrecision;
-                    this.setState({elevation: Math.round(elevation * Math.pow(10, elevationPrecision)) / Math.pow(10, elevationPrecision)});
+                    this.setState({elevation: elevation});
                 }).catch(() => {});
                 const mapInfoService = ConfigUtils.getConfigProp("mapInfoService");
                 if (mapInfoService) {
@@ -102,7 +103,7 @@ class MapInfoTooltip extends React.Component {
         }
     }
     clear = () => {
-        this.setState({point: null, height: null, extraInfo: null});
+        this.setState({point: null, elevation: null, extraInfo: null});
     };
     render() {
         if (!this.state.point) {
@@ -127,11 +128,17 @@ class MapInfoTooltip extends React.Component {
             ]);
         });
 
-        if (this.state.elevation) {
-            info.push([
-                LocaleUtils.tr("mapinfotooltip.elevation"),
-                this.state.elevation + " m"
-            ]);
+        if (this.state.elevation !== undefined && this.state.elevation !== null) {
+            let elevs = this.state.elevation.list;
+            if (!elevs) {
+                elevs = [{elevation: this.state.elevation, dataset: null}];
+            }
+            for (const data of elevs) {
+                info.push([
+                    LocaleUtils.tr("mapinfotooltip.elevation") + (data.dataset ? " (" + data.dataset + ")" : ""),
+                    data.elevation.toFixed(this.props.elevationPrecision) + " m"
+                ]);
+            }
         }
 
         if (this.state.extraInfo) {
@@ -140,8 +147,8 @@ class MapInfoTooltip extends React.Component {
         const title = LocaleUtils.tr("mapinfotooltip.title");
         const pixel = MapUtils.getHook(MapUtils.GET_PIXEL_FROM_COORDINATES_HOOK)(this.state.point.coordinate);
         const style = {
-            left: (this.props.mapMargins.left + pixel[0]) + "px",
-            top: (this.props.mapMargins.top + pixel[1]) + "px"
+            left: (pixel[0]) + "px",
+            top: (pixel[1]) + "px"
         };
         const text = info.map(entry => entry.join(": ")).join("\n");
         let routingButtons = null;
@@ -179,7 +186,7 @@ class MapInfoTooltip extends React.Component {
                 </table>
             );
         }
-        return (
+        return ReactDOM.createPortal((
             <div className="mapinfotooltip" style={style}>
                 <div className="mapinfotooltip-window">
                     <div className="mapinfotooltip-titlebar">
@@ -203,13 +210,12 @@ class MapInfoTooltip extends React.Component {
                     </div>
                 </div>
             </div>
-        );
+        ), this.context);
     }
 }
 
 export default (plugins) => {
     return connect((state) => ({
-        mapMargins: state.windows.mapMargins,
         enabled: state.task.identifyEnabled,
         map: state.map,
         plugins: plugins

@@ -26,11 +26,12 @@
         "Print": "Yazdır",
         "Reports": "Raporlar",
         "Settings": "Ayarlar",
+        "Settings3D": "",
         "Share": "Bağlantı Paylaş",
         "ThemeSwitcher": "Tema",
         "AttributeTable": "Öznitelik Tablosu",
         "AuthenticationLogin": "Giriş",
-        "AuthenticationLogout": "Çıkış",
+        "AuthenticationLogout": "Çıkış - {0}",
         "Cyclomedia": "Siklomedya",
         "Draw3D": "Çizim",
         "FeatureForm": "Obje Formu",
@@ -150,6 +151,7 @@
       "sphere": "Küre",
       "subtract": "",
       "thescale": "Ölçek",
+      "thesize": "",
       "translate": "Çevir",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "Kaydetmeden kapat",
       "title": "Resim editörü"
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Katman ekleme başarısız",
       "addlayer": "Katman ekle",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Yapılandırma",
       "format": "Format:",
+      "projection": "",
       "resolution": "Çözünürlük:",
       "scale": "Ölçek",
       "size": "Boyut",
@@ -373,13 +380,12 @@
       "windowtitle": "Lejant"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Sistem dili",
       "themes": "Temalar"
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "Karekod",
       "directLinkTitle": "Doğrudan bağlantı yolu ile",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Yok",
       "prompt": "Katman adı giriniz"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Kapat",

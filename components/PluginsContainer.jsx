@@ -12,17 +12,20 @@ import {connect} from 'react-redux';
 import PropTypes from 'prop-types';
 
 import ConfigUtils from '../utils/ConfigUtils';
+import ProcessNotifications from './ProcessNotifications';
 import WindowManager from './WindowManager';
 
 import './style/PluginsContainer.css';
 
 
 export const MapButtonPortalContext = React.createContext(null);
+export const MapContainerPortalContext = React.createContext(null);
 
 
 class PluginsContainer extends React.Component {
     static propTypes = {
         children: PropTypes.oneOfType([PropTypes.node, PropTypes.func]),
+        className: PropTypes.string,
         mapMargins: PropTypes.object,
         plugins: PropTypes.object,
         pluginsAppConfig: PropTypes.object,
@@ -30,7 +33,8 @@ class PluginsContainer extends React.Component {
         theme: PropTypes.object
     };
     state = {
-        mapButtonsContainerRef: null
+        mapButtonsContainerRef: null,
+        mapContainerRef: null
     };
     renderPlugins = () => {
         const mode = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
@@ -52,20 +56,26 @@ class PluginsContainer extends React.Component {
         const top = this.props.mapMargins.top;
         const right = this.props.mapMargins.right;
         const bottom = this.props.mapMargins.bottom;
-        const buttonContainerStyle = {
-            left: 'calc(1em + ' + left + 'px)',
+        const mapContainerStyle = {
+            left: 'calc(' + left + 'px)',
             top: 'calc(var(--topbar-height) + ' + top + 'px)',
-            right: 'calc(1em + ' + right + 'px)',
+            right: 'calc(' + right + 'px)',
             bottom: 'calc(var(--bottombar-height) + ' + bottom + 'px)'
         };
+        const haveRefs = this.state.mapButtonsContainerRef && this.state.mapContainerRef;
         return (
-            <div className="PluginsContainer" ref={this.setupTouchEvents}>
+            <div className={"plugins-container " + this.props.className} ref={this.setupTouchEvents}>
                 <MapButtonPortalContext.Provider value={this.state.mapButtonsContainerRef}>
-                    {this.renderPlugins()}
-                    {this.props.children}
+                    <MapContainerPortalContext.Provider value={this.state.mapContainerRef}>
+                        {haveRefs ? this.renderPlugins() : null}
+                        {haveRefs ? this.props.children : null}
+                    </MapContainerPortalContext.Provider>
                 </MapButtonPortalContext.Provider>
                 <WindowManager />
-                <div className="map-buttons-container" ref={this.setContainerRef} style={buttonContainerStyle} />
+                <div className="map-container" ref={this.setOverlayContainerRef} style={mapContainerStyle}>
+                    <ProcessNotifications />
+                </div>
+                <div className="map-buttons-container" ref={this.setButtonContainerRef} style={mapContainerStyle} />
             </div>
         );
     }
@@ -109,7 +119,10 @@ class PluginsContainer extends React.Component {
             ev.preventDefault();
         }
     };
-    setContainerRef = (el) => {
+    setOverlayContainerRef = (el) => {
+        this.setState({mapContainerRef: el});
+    };
+    setButtonContainerRef = (el) => {
         this.setState({mapButtonsContainerRef: el});
         if (el) {
             const resizeObserver = new ResizeObserver(entries => {

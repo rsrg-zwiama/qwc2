@@ -18,6 +18,7 @@ import Icon from '../../Icon';
 import ButtonBar from '../../widgets/ButtonBar';
 import ColorButton from '../../widgets/ColorButton';
 import TextInput from '../../widgets/TextInput';
+import {updateObjectLabel} from '../utils/MiscUtils3D';
 import NumericInput3D from './NumericInput3D';
 
 
@@ -75,11 +76,10 @@ class GroupSelection extends Group {
             });
             center.divideScalar(this.children.length);
             this.position.copy(center);
-            this.updateMatrixWorld();
             this.children.forEach(child => {
                 child.position.sub(this.position);
-                child.updateMatrixWorld();
             });
+            this.updateMatrixWorld(true);
         }
     };
 }
@@ -106,9 +106,15 @@ export default class EditTool3D extends React.Component {
         this.transformControls = new TransformControls( camera, renderer.domElement );
         this.props.sceneContext.scene.add(this.transformControls.getHelper());
         this.transformControls.setMode(this.state.mode);
-        this.transformControls.addEventListener('change', this.toolChanged);
-        this.transformControls.addEventListener('mouseUp', this.toolChanged);
-        this.transformControls.addEventListener('mouseUp', this.clearCsgBackup);
+        this.transformControls.setSpace('local');
+        this.transformControls.setTranslationSnap(1);
+        this.transformControls.scaleFromEdge = true;
+        this.transformControls.allowNegativeScales = false;
+        this.transformControls.setRotationSnap(5 / 180 * Math.PI);
+        this.transformControls.addEventListener('mouseDown', this.onControlMouseDown);
+        this.transformControls.addEventListener('objectChange', this.onControlObjectChange);
+        this.transformControls.addEventListener('change', this.onControlChange);
+        this.transformControls.addEventListener('mouseUp', this.onControlMouseUp);
         this.transformControls.addEventListener('dragging-changed', (event) => {
             this.props.sceneContext.scene.view.controls.enabled = !event.value;
         });
@@ -154,6 +160,7 @@ export default class EditTool3D extends React.Component {
         }
         if (this.state.mode !== prevState.mode) {
             this.transformControls.setMode(this.state.mode);
+            this.transformControls.setSpace('local');
             this.transformControls.getHelper().updateMatrixWorld();
             this.props.sceneContext.scene.notifyChange();
         }
@@ -224,7 +231,7 @@ export default class EditTool3D extends React.Component {
             this.state.selectCount === 1 ? (
                 <div className="redlining-controlsbar" key="Label">
                     <div className="redlining-control redlining-control-fill controlgroup">
-                        <span>{LocaleUtils.tr("draw3d.label")}: </span>
+                        <span>{LocaleUtils.tr("draw3d.label")}:&nbsp;</span>
                         <TextInput className="controlgroup-fillitem" onChange={this.setLabel} value={this.state.label} />
                     </div>
                 </div>
@@ -322,11 +329,6 @@ export default class EditTool3D extends React.Component {
         this.transformControls.getHelper().updateMatrixWorld();
         this.props.sceneContext.scene.notifyChange();
     };
-    toolChanged = () => {
-        this.props.selectedObject?.updateMatrixWorld?.();
-        this.transformControls.getHelper().updateMatrixWorld();
-        this.props.sceneContext.scene.notifyChange();
-    };
     onKeyDown = (ev) => {
         if (ev.key === "Escape") {
             this.transformControls.reset();
@@ -344,7 +346,7 @@ export default class EditTool3D extends React.Component {
     };
     applyCsgOperation = (operation) => {
         let result = null;
-        const children = [...this.props.selectedObject.children];
+        const children = [...this.props.selectedObject.children].reverse();
         if (operation === "union") {
             result = CSG.union(...children);
         } else if (operation === "subtract") {
@@ -387,7 +389,8 @@ export default class EditTool3D extends React.Component {
     setLabel = (text) => {
         this.setState({label: text});
         this.props.selectedObject.userData.label = text;
-        this.props.sceneContext.updateObjectLabel(this.props.selectedObject);
+        updateObjectLabel(this.props.selectedObject, this.props.sceneContext);
+        this.props.sceneContext.scene.notifyChange(this.props.selectedObject);
     };
     cloneSelectedObject = () => {
         if (this.props.selectedObject) {
@@ -416,5 +419,62 @@ export default class EditTool3D extends React.Component {
             clone.add(this.deepClone(child));
         });
         return clone;
+    };
+    onControlMouseDown = (e) => {
+        const {object} = e.target;
+        if (object.geometry) {
+            if ( ! object.geometry.boundingBox ) object.geometry.computeBoundingBox();
+            this._bbox = object.geometry.boundingBox.clone();
+            this._scaleStart = object.scale.clone();
+            this._positionStart = object.position.clone();
+        }
+    };
+    onControlObjectChange = (e) => {
+        const control = e.target;
+        const {mode, object} = control;
+        if (mode === 'scale') {
+            // Block zero or negative scales
+            object.scale.max(new Vector3(0.1, 0.1, 0.1));
+            const offset = new Vector3();
+            if (this._bbox) {
+                if (control.pointStart.x > 0) {
+                    offset.x = this._bbox.min.x * (this._scaleStart.x - object.scale.x);
+                } else {
+                    offset.x = this._bbox.max.x * (this._scaleStart.x - object.scale.x);
+                }
+
+                if (control.pointStart.y > 0) {
+                    offset.y = this._bbox.min.y * (this._scaleStart.y - object.scale.y);
+                } else {
+                    offset.y = this._bbox.max.y * (this._scaleStart.y - object.scale.y);
+                }
+
+                if (control.pointStart.z > 0) {
+                    offset.z = this._bbox.min.z * (this._scaleStart.z - object.scale.z);
+                } else {
+                    offset.z = this._bbox.max.z * (this._scaleStart.z - object.scale.z);
+                }
+                offset.applyQuaternion(object.quaternion);
+                object.position.copy(offset).add(this._positionStart);
+            }
+        }
+        object.updateMatrixWorld();
+        this.transformControls.getHelper().updateMatrixWorld();
+        this.props.sceneContext.scene.notifyChange(object);
+    };
+    onControlChange = (e) => {
+        this.transformControls.getHelper().updateMatrixWorld();
+        this.props.sceneContext.scene.notifyChange(this.transformControls.getHelper());
+    };
+    onControlMouseUp = (e) => {
+        this._bbox = null;
+        this._scaleStart = null;
+        this._positionStart = null;
+
+        const {object} = e.target;
+        this.clearCsgBackup();
+        object.updateMatrixWorld();
+        this.transformControls.getHelper().updateMatrixWorld();
+        this.props.sceneContext.scene.notifyChange(object);
     };
 }

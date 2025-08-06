@@ -14,17 +14,19 @@ import FileSaver from 'file-saver';
 import formDataEntries from 'formdata-json';
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
+import {SRGBColorSpace, Vector2, WebGLRenderTarget} from 'three';
 import utif from 'utif';
 
 import {setCurrentTask} from '../../actions/task';
 import LocaleUtils from '../../utils/LocaleUtils';
 import MiscUtils from '../../utils/MiscUtils';
+import ExportSelection from '../ExportSelection';
 import Icon from '../Icon';
 import SideBar from '../SideBar';
+import NumberInput from '../widgets/NumberInput';
 import Spinner from '../widgets/Spinner';
 
 import './../../plugins/style/MapExport.css';
-import './style/MapExport3D.css';
 
 
 class MapExport3D extends React.Component {
@@ -34,34 +36,56 @@ class MapExport3D extends React.Component {
         setCurrentTask: PropTypes.func,
         theme: PropTypes.object
     };
-    state = {
+    static defaultState = {
         minimized: false,
         layouts: [],
         selectedFormat: 'image/jpeg',
         layout: "",
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        exporting: false
+        frame: null,
+        frameRatio: null,
+        exporting: false,
+        exportScaleFactor: 100,
+        exportDpi: 300
     };
+    state = MapExport3D.defaultState;
     onShow = () => {
+        const rect = this.props.sceneContext.scene.domElement.getBoundingClientRect();
+        const frame = {
+            x: 0.125 * rect.width,
+            y: 0.125 * rect.height,
+            width: 0.75 * rect.width,
+            height: 0.75 * rect.height
+        };
         if (!isEmpty(this.props.theme?.print)) {
             const layouts = this.props.theme.print.filter(l => l.map).sort((a, b) => {
                 return a.name.split('/').pop().localeCompare(b.name.split('/').pop(), undefined, {numeric: true});
             });
-            const layout = layouts.find(l => l.default) || layouts[0];
-            this.setState({layouts: layouts, layout: layout});
+            const exportDpi = this.props.theme.printResolutions?.find(x => x === 300) ?? this.props.theme.printResolutions?.[0] ?? 300;
+            this.setState({layouts: layouts, exportDpi: exportDpi, frame: frame});
         } else {
-            this.setState({layouts: [], layout: ""});
+            this.setState({layouts: [], frame: frame});
         }
     };
+    onHide = () => {
+        this.setState(MapExport3D.defaultState);
+    };
     formatChanged = (ev) => {
-        this.setState({selectedFormat: ev.target.value});
+        let layout = '';
+        let frameRatio = null;
+        if (ev.target.value === "application/pdf") {
+            layout = this.state.layouts.find(l => l.default) || this.state.layouts[0];
+            frameRatio = layout.map.height / layout.map.width;
+        }
+        this.setState(state => ({
+            selectedFormat: ev.target.value, layout, frameRatio
+        }));
     };
     layoutChanged = (ev) => {
         const layout = this.props.theme.print.find(item => item.name === ev.target.value);
-        this.setState({layout: layout});
+        const frameRatio = layout.map.height / layout.map.width;
+        this.setState(state => ({
+            layout: layout, frameRatio, height: Math.round(state.width * frameRatio)
+        }));
     };
     renderBody = () => {
         const formatMap = {
@@ -74,6 +98,34 @@ class MapExport3D extends React.Component {
             this.state.selectedFormat === "application/pdf" && !this.state.layout
         );
         const mapName = this.state.layout?.map?.name || "";
+
+        let resolutionChooser = null;
+        if (this.state.selectedFormat === 'application/pdf') {
+            if (!isEmpty(this.props.theme.printResolutions)) {
+                resolutionChooser = (
+                    <select onChange={(ev) => this.setState({exportDpi: ev.target.value})} value={this.state.exportDpi}>
+                        {this.props.theme.printResolutions.map(res => (
+                            <option disabled={isEmpty(this.state.layouts)} key={res} value={res}>{res} dpi</option>
+                        ))}
+                    </select>
+                );
+            } else {
+                resolutionChooser = (
+                    <NumberInput decimals={0} max={500} min={50}
+                        onChange={val => this.setState({exportDpi: val})}
+                        suffix=" dpi" value={this.state.exportDpi} />
+                );
+            }
+        } else {
+            resolutionChooser = (
+                <select onChange={(ev) => this.setState({exportScaleFactor: ev.target.value})} value={this.state.exportScaleFactor}>
+                    {[100, 150, 200, 250, 300, 350, 400, 450, 500].map(res => (
+                        <option key={res} value={res}>{res}%</option>
+                    ))}
+                </select>
+            );
+        }
+
         return (
             <div className="mapexport-body">
                 <form onSubmit={this.export}>
@@ -101,6 +153,12 @@ class MapExport3D extends React.Component {
                                     </td>
                                 </tr>
                             ) : null}
+                            <tr>
+                                <td>{LocaleUtils.tr("mapexport.resolution")}</td>
+                                <td>
+                                    {resolutionChooser}
+                                </td>
+                            </tr>
                             {this.state.selectedFormat === 'application/pdf' ? (this.state.layout?.labels || []).map(label => {
                                 // Omit labels which start with __
                                 if (label.startsWith("__")) {
@@ -140,23 +198,6 @@ class MapExport3D extends React.Component {
             </div>
         );
     };
-    renderExportFrame = () => {
-        const boxStyle = {
-            left: this.state.x + 'px',
-            top: this.state.y + 'px',
-            width: this.state.width + 'px',
-            height: this.state.height + 'px'
-        };
-        return (
-            <div className="mapexport3d-event-container" onPointerDown={this.startSelection}>
-                <div className="mapexport3d-frame" style={boxStyle}>
-                    <span className="mapexport3d-frame-label">
-                        {this.state.width + " x " + this.state.height}
-                    </span>
-                </div>
-            </div>
-        );
-    };
     render() {
         const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("print.maximize") : LocaleUtils.tr("print.minimize");
         const minMaxIcon = this.state.minimized ? 'chevron-down' : 'chevron-up';
@@ -169,81 +210,102 @@ class MapExport3D extends React.Component {
             >
                 {() => ({
                     body: this.renderBody(),
-                    extra: this.renderExportFrame()
+                    extra: (
+                        <ExportSelection
+                            frame={this.state.frame} frameRatio={this.state.frameRatio}
+                            mapElement={this.props.sceneContext.scene.domElement}
+                            onFrameChanged={this.onFrameChanged}
+                        />
+                    )
                 })}
             </SideBar>
         );
     }
-    startSelection = (ev) => {
-        if (ev.shiftKey) {
-            const target = ev.currentTarget;
-            const view = ev.view;
-            view.addEventListener('pointerup', () => {
-                target.style.pointerEvents = '';
-                view.document.body.style.userSelect = '';
-            }, {once: true});
-            // Move behind
-            target.style.pointerEvents = 'none';
-            view.document.body.style.userSelect = 'none';
-            this.props.sceneContext.scene.domElement.dispatchEvent(new PointerEvent('pointerdown', ev));
-            return;
-        } else if (ev.button === 0) {
-            const rect = ev.currentTarget.getBoundingClientRect();
-            this.setState({
-                x: Math.round(ev.clientX - rect.left),
-                y: Math.round(ev.clientY - rect.top),
-                width: 0,
-                height: 0
-            });
-            const constrainRatio = this.state.selectedFormat === "application/pdf" && this.state.layout;
-            const ratio = constrainRatio ? this.state.layout.map.height / this.state.layout.map.width : null;
-            const onMouseMove = (event) => {
-                this.setState((state) => {
-                    const width = Math.round(Math.max(0, Math.round(event.clientX - rect.left) - state.x));
-                    const height = constrainRatio ? Math.round(width * ratio) : Math.round(Math.max(0, Math.round(event.clientY - rect.top) - state.y));
-                    return {
-                        width: width,
-                        height: height
-                    };
-                });
-            };
-            ev.view.addEventListener('pointermove', onMouseMove);
-            ev.view.addEventListener('pointerup', () => {
-                ev.view.removeEventListener('pointermove', onMouseMove);
-            }, {once: true});
+    onFrameChanged = (frame) => {
+        const {x, y, width, height} = frame;
+        this.setState({frame: {x, y, width, height}});
+    };
+    takeScreenshot = (scale, window) => {
+        const renderer = this.props.sceneContext.scene.renderer;
+        const scene = this.props.sceneContext.scene.scene;
+        const camera = this.props.sceneContext.scene.view.camera;
+
+        const originalSize = renderer.getSize(new Vector2());
+        const originalRenderTarget = renderer.getRenderTarget();
+
+        const renderWidth = Math.round(originalSize.x * scale);
+        const renderHeight = Math.round(originalSize.y * scale);
+
+        const winX = Math.round(window.x * scale);
+        const winY = Math.round(window.y * scale);
+        const winWidth = Math.round(window.width * scale);
+        const winHeight = Math.round(window.height * scale);
+
+        // Render to high-resolution offscreen target
+        const renderTarget = new WebGLRenderTarget(renderWidth, renderHeight, {
+            colorSpace: SRGBColorSpace
+        });
+        renderer.setSize(renderWidth, renderHeight);
+        renderer.setPixelRatio(1); // important! avoid devicePixelRatio scaling
+        renderer.setRenderTarget(renderTarget);
+        renderer.render(scene, camera);
+        renderer.setRenderTarget(null);
+
+        // Read the pixels from the render target and write to offscreen canvas
+        const readBuffer = new Uint8Array(renderWidth * renderHeight * 4);
+        renderer.readRenderTargetPixels(renderTarget, 0, 0, renderWidth, renderHeight, readBuffer);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = winWidth;
+        canvas.height = winHeight;
+        const context = canvas.getContext('2d');
+        const imageData = context.createImageData(winWidth, winHeight);
+        for (let y = 0; y < winHeight; y++) {
+            const srcRow = (winX + (renderHeight - 1 - winY - y) * renderWidth) * 4;
+            const destRow = (y * winWidth) * 4;
+            imageData.data.set(readBuffer.subarray(srcRow, srcRow + winWidth * 4), destRow);
         }
+        context.putImageData(imageData, 0, 0);
+
+        // Restore original renderer target
+        renderer.setSize(originalSize.x, originalSize.y);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setRenderTarget(originalRenderTarget);
+        renderer.render(scene, camera);
+
+        return {canvas, imageData};
     };
     export = (ev) => {
         ev.preventDefault();
+        if (!this.state.frame || this.state.frame.width <= 0 || this.state.frame.height <= 0) {
+            return;
+        }
         const form = ev.target;
+
+        let exportScale = this.state.exportScaleFactor / 100;
+        if (this.state.selectedFormat === "application/pdf") {
+            const mapWidthMM = this.state.layout.map.width;
+            const exportWidthPx = this.state.width;
+            exportScale = Math.min(5, this.state.exportDpi / (exportWidthPx * 25.4 / mapWidthMM));
+        }
+
         this.setState({exporting: true});
-        const {x, y, width, height} = this.state;
-        if (width > 0 && height > 0) {
-            const data = this.props.sceneContext.scene.renderer.domElement.toDataURL('image/png');
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            const img = new Image();
-            img.src = data;
-            img.onload = () => {
-                canvas.width = width;
-                canvas.height = height;
-                ctx.drawImage(img, -x, -y);
-                if (this.state.selectedFormat === "application/pdf") {
-                    canvas.toBlob((blob) => {
-                        blob.arrayBuffer().then(imgBuffer => this.exportToPdf(form, imgBuffer));
-                    }, "image/png");
-                } else if (this.state.selectedFormat === "image/tiff") {
-                    const imageData = ctx.getImageData(0, 0, width, height);
-                    const blob = new Blob([utif.encodeImage(imageData.data, width, height)], { type: "image/tiff" });
-                    FileSaver.saveAs(blob, "export." + this.state.selectedFormat.replace(/.*\//, ''));
-                    this.setState({exporting: false});
-                } else {
-                    canvas.toBlob((blob) => {
-                        FileSaver.saveAs(blob, "export." + this.state.selectedFormat.replace(/.*\//, ''));
-                        this.setState({exporting: false});
-                    }, this.state.selectedFormat);
-                }
-            };
+        const {canvas, context} = this.takeScreenshot(exportScale, this.state.frame);
+
+        if (this.state.selectedFormat === "application/pdf") {
+            canvas.toBlob((blob) => {
+                blob.arrayBuffer().then(imgBuffer => this.exportToPdf(form, imgBuffer));
+            }, "image/png");
+        } else if (this.state.selectedFormat === "image/tiff") {
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const blob = new Blob([utif.encodeImage(imageData.data, canvas.width, canvas.height)], { type: "image/tiff" });
+            FileSaver.saveAs(blob, "export." + this.state.selectedFormat.replace(/.*\//, ''));
+            this.setState({exporting: false});
+        } else {
+            canvas.toBlob((blob) => {
+                FileSaver.saveAs(blob, "export." + this.state.selectedFormat.replace(/.*\//, ''));
+                this.setState({exporting: false});
+            }, this.state.selectedFormat);
         }
     };
     async exportToPdf(form, imgBuffer) {

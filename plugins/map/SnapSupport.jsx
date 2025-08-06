@@ -52,10 +52,10 @@ class SnapSupport extends React.Component {
         this.curPos = null;
     }
     componentDidMount() {
-        MapUtils.getHook(MapUtils.GET_MAP).on('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.ADD_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     componentWillUnmount() {
-        MapUtils.getHook(MapUtils.GET_MAP).un('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.REMOVE_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     componentDidUpdate(prevProps) {
         if (this.props.drawing && this.state.mousePos &&
@@ -106,7 +106,7 @@ class SnapSupport extends React.Component {
 
         const request = IdentifyUtils.buildRequest(layers, queryLayers, this.state.mousePos.coordinate, this.props.mapObj, options);
         axios.get(request.url, {params: request.params}).then(response => {
-            const results = IdentifyUtils.parseXmlResponse(response.data, this.props.mapObj.projection);
+            const results = IdentifyUtils.parseXmlResponse(response.data, this.props.mapObj.projection, layers);
             const features = [];
             results.forEach(result => {
                 for (const feature of result) {

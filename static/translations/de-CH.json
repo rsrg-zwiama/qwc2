@@ -26,11 +26,12 @@
         "Print": "Drucken",
         "Reports": "Berichte",
         "Settings": "Einstellungen",
+        "Settings3D": "Einstellungen",
         "Share": "Teilen",
         "ThemeSwitcher": "Themen",
         "AttributeTable": "Attributtabelle",
         "AuthenticationLogin": "Anmelden",
-        "AuthenticationLogout": "Abmelden",
+        "AuthenticationLogout": "Abmelden - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "Zeichnen",
         "FeatureForm": "Objektformular",
@@ -53,7 +54,7 @@
         "Redlining": "Zeichnen",
         "Routing": "Routing",
         "Tools": "Werkzeuge",
-        "TourGuide": "",
+        "TourGuide": "Einführung",
         "TimeManager": "Zeitleiste",
         "View3D": "3D Ansicht"
       },
@@ -150,6 +151,7 @@
       "sphere": "Kugel",
       "subtract": "Differenz",
       "thescale": "Skalierung",
+      "thesize": "Dimensionen",
       "translate": "Verschieben",
       "undoBool": "Operation rückgängig machen",
       "union": "Vereinigung",
@@ -251,6 +253,10 @@
       "confirmclose": "Schließen, ohne zu speichern?",
       "title": "Bildbearbeitung"
     },
+    "import3d": {
+      "importing": "Wird importiert: {0}...",
+      "noprocessesserver": "Kein Importservice konfiguriert"
+    },
     "importlayer": {
       "addfailed": "Die Ebene konnte nicht hinzugefügt werden",
       "addlayer": "Ebene hinzufügen",
@@ -333,7 +339,7 @@
       "resetrotation": "Drehung zurücksetzen"
     },
     "map3d": {
-      "lockview": "Mit 2D Ansicht verschieben",
+      "lockview": "2D/3D Ansichten automatisch synchronisieren",
       "syncview": "Mit 2D Ansicht synchronisieren",
       "terrain": "Gelände",
       "title": "3D Ansicht"
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Konfiguration",
       "format": "Format",
+      "projection": "Projektion",
       "resolution": "Auflösung",
       "scale": "Massstab",
       "size": "Dimensionen",
@@ -373,13 +380,12 @@
       "windowtitle": "Legende"
     },
     "maplight3d": {
-      "ambientLightIntensity": "Intensität Umgebungslichts",
       "animationstep": "Animationsschritt",
       "date": "Datum",
       "dayspersec": "Tage / Sek",
-      "directionalLightIntensity": "Intensität gerichtetes Licht",
       "helpersVisible": "Hilfen anzeigen",
       "minspersec": "Min / Sek",
+      "moonLightIntensity": "Mondlichtintensität",
       "normalBias": "Normal-Verzerrung",
       "shadowBias": "Schatten-Verzerrung",
       "shadowMapSize": "Grösse der Schattentextur",
@@ -389,6 +395,7 @@
       "shadowintensity": "Schattenintensität",
       "shadows": "Schatten aktivieren",
       "showadvanced": "Erweitert anzeigen",
+      "sunLightIntensity": "Sonnenlichtintensität",
       "time": "Zeit",
       "zFactor": "Z-Faktor"
     },
@@ -432,7 +439,7 @@
     },
     "portal": {
       "filter": "Themen filtern...",
-      "menulabel": "Menu"
+      "menulabel": "Menü"
     },
     "print": {
       "atlasfeature": "Atlasobjekt",
@@ -588,6 +595,9 @@
       "systemlang": "Systemsprache",
       "themes": "Themen"
     },
+    "settings3d": {
+      "quality": "Qualität"
+    },
     "share": {
       "QRCodeLinkTitle": "QR Code (Smartphone)",
       "directLinkTitle": "Über einen direkten Link",
@@ -683,9 +693,9 @@
       "zoomout": "Hinauszoomen"
     },
     "tourguide": {
-      "done": "",
-      "next": "",
-      "previous": ""
+      "done": "Fertig",
+      "next": "Weiter",
+      "previous": "Zurück"
     },
     "valuetool": {
       "all": "Alle",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Keine",
       "prompt": "Ebenenname eingeben"
+    },
+    "view3d": {
+      "storingstate": "3D Ansicht wird gespeichert..."
     },
     "window": {
       "close": "Schliessen",

@@ -43,12 +43,13 @@ export function changeMapView(center, zoom, bbox, size, mapStateSource, projecti
  *             or
  *               {bounds: [xmin, ymin, xmax, ymax], crs: ...}
  */
-export function configureMap(crs, scales, view) {
+export function configureMap(crs, scales, view, defaultdisplaycrs) {
     return {
         type: CONFIGURE_MAP,
         crs,
         scales,
-        view
+        view,
+        defaultdisplaycrs
     };
 }
 
@@ -67,11 +68,12 @@ export function changeZoomLevel(zoomLvl, mapStateSource) {
     };
 }
 
-export function panTo(pos, crs) {
+export function panTo(pos, crs, rotation = undefined) {
     return {
         type: PAN_TO,
         pos,
-        crs
+        crs,
+        rotation
     };
 }
 
@@ -84,12 +86,13 @@ export function zoomToExtent(extent, crs, zoomOffset = 0) {
     };
 }
 
-export function zoomToPoint(pos, zoom, crs) {
+export function zoomToPoint(pos, zoom, crs, rotation = undefined) {
     return {
         type: ZOOM_TO_POINT,
         pos,
         zoom,
-        crs
+        crs,
+        rotation
     };
 }
 

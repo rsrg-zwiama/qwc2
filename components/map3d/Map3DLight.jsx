@@ -18,6 +18,7 @@ import CoordinatesUtils from '../../utils/CoordinatesUtils';
 import LocaleUtils from '../../utils/LocaleUtils';
 import Icon from '../Icon';
 import SideBar from '../SideBar';
+import Input from '../widgets/Input';
 import NumberInput from '../widgets/NumberInput';
 import ToggleSwitch from '../widgets/ToggleSwitch';
 
@@ -34,8 +35,8 @@ export default class Map3DLight extends React.Component {
             day: 182,
             time: 720,
             helpersVisible: false,
-            ambientLightIntensity: 2.1,
-            directionalLightIntensity: 1.8,
+            moonLightIntensity: 0.02,
+            sunLightIntensity: 3.5,
             zFactor: 1,
             lightElevationLayersOnly: false,
             shadowsEnabled: true,
@@ -44,7 +45,7 @@ export default class Map3DLight extends React.Component {
             shadowBias: -0.0001,
             sunDistance: 80000,
             normalBias: 0,
-            shadowIntensity: 0.9,
+            shadowIntensity: 1.0,
             shadowVolumeNear: 60000,
             shadowVolumeFar: 100000
         },
@@ -55,24 +56,32 @@ export default class Map3DLight extends React.Component {
         timeAnimationSettings: false,
         timeStep: 30
     };
+    constructor(props) {
+        super(props);
+        this.state.lightParams.day = props.sceneContext.options.defaultDay;
+        const parts = props.sceneContext.options.defaultTime.split(":").slice(0, 2).map(Number);
+        this.state.lightParams.time = parts[0] * 60 + parts[1];
+    }
     componentDidMount() {
         this.animationInterval = null;
         this.componentDidUpdate({});
     }
     componentDidUpdate(prevProps, prevState) {
         if (this.props.sceneContext.scene !== prevProps.sceneContext?.scene) {
-            const ambientLight = new AmbientLight(0xffffff, this.state.ambientLightIntensity);
+            const ambientLight = new AmbientLight(0xffffff, 1);
             this.props.sceneContext.addSceneObject("__ambientLight", ambientLight);
 
-            const directionalLight = new DirectionalLight(0xffffff, this.state.directionalLightIntensity);
-            directionalLight.castShadow = true;
-            this.props.sceneContext.addSceneObject("__directionalLight", directionalLight);
+            const sunLight = new DirectionalLight(0xffffff, this.state.sunLightIntensity);
+            this.props.sceneContext.addSceneObject("__sunLight", sunLight);
+
+            const moonLight = new DirectionalLight(0xffffff, this.state.moonLightIntensity);
+            this.props.sceneContext.addSceneObject("__moonLight", moonLight);
 
             if (this.state.lightParams.helpersVisible) {
-                const directionalLightHelper = new DirectionalLightHelper(directionalLight, 200, 'white');
-                this.props.sceneContext.addSceneObject("__directionalLightHelper", directionalLightHelper);
+                const sunLightHelper = new DirectionalLightHelper(sunLight, 200, 'white');
+                this.props.sceneContext.addSceneObject("__sunLightHelper", sunLightHelper);
 
-                const shadowCameraHelper = new CameraHelper(directionalLight.shadow.camera);
+                const shadowCameraHelper = new CameraHelper(sunLight.shadow.camera);
                 this.props.sceneContext.addSceneObject("__shadowCameraHelper", shadowCameraHelper);
             }
 
@@ -80,15 +89,15 @@ export default class Map3DLight extends React.Component {
             this.setLighting();
         } else if (this.state.lightParams !== prevState.lightParams) {
             if (this.state.lightParams.helpersVisible && !prevState.lightParams.helpersVisible) {
-                const directionalLight = this.props.sceneContext.getSceneObject("__directionalLight");
+                const sunLight = this.props.sceneContext.getSceneObject("__sunLight");
 
-                const directionalLightHelper = new DirectionalLightHelper(directionalLight, 200, 'white');
-                this.props.sceneContext.addSceneObject("__directionalLightHelper", directionalLightHelper);
+                const sunLightHelper = new DirectionalLightHelper(sunLight, 200, 'white');
+                this.props.sceneContext.addSceneObject("__sunLightHelper", sunLightHelper);
 
-                const shadowCameraHelper = new CameraHelper(directionalLight.shadow.camera);
+                const shadowCameraHelper = new CameraHelper(sunLight.shadow.camera);
                 this.props.sceneContext.addSceneObject("__shadowCameraHelper", shadowCameraHelper);
             } else if (prevState.lightParams.helpersVisible && !this.state.lightParams.helpersVisible) {
-                this.props.sceneContext.removeSceneObject("__directionalLightHelper");
+                this.props.sceneContext.removeSceneObject("__sunLightHelper");
                 this.props.sceneContext.removeSceneObject("__shadowCameraHelper");
             }
             this.setLighting();
@@ -96,6 +105,10 @@ export default class Map3DLight extends React.Component {
     }
     componentWillUnmount() {
         clearInterval(this.lightPositionInterval);
+        this.props.sceneContext.removeSceneObject("__sunLight");
+        this.props.sceneContext.removeSceneObject("__moonLight");
+        this.props.sceneContext.removeSceneObject("__sunLightHelper");
+        this.props.sceneContext.removeSceneObject("__shadowCameraHelper");
     }
     onHide = () => {
         clearInterval(this.animationInterval);
@@ -103,16 +116,14 @@ export default class Map3DLight extends React.Component {
     };
     render() {
         return (
-            <div>
-                <SideBar icon="light" id="MapLight3D" onHide={this.onHide}
-                    title={LocaleUtils.tr("appmenu.items.MapLight3D")}
-                    width="25em"
-                >
-                    {() => ({
-                        body: this.renderBody()
-                    })}
-                </SideBar>
-            </div>
+            <SideBar icon="light" id="MapLight3D" onHide={this.onHide}
+                title={LocaleUtils.tr("appmenu.items.MapLight3D")}
+                width="25em"
+            >
+                {() => ({
+                    body: this.renderBody()
+                })}
+            </SideBar>
         );
     }
     renderBody = () => {
@@ -120,12 +131,12 @@ export default class Map3DLight extends React.Component {
 
         const dateValue = new Date(new Date().getFullYear(), 0, 1 + lightParams.day).toISOString().split("T")[0];
         const dateToDay = (date) => {
-            const d = new Date(date + "T00:00:00");
-            return (d - new Date(d.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24);
+            const d = new Date(date);
+            return 1 + (d - new Date(Date.UTC(d.getUTCFullYear(), 0, 1))) / (1000 * 60 * 60 * 24);
         };
         const isLeapYear = (year) => (new Date(year, 1, 29).getDate() === 29);
 
-        const timeValue = `${String(Math.trunc(lightParams.time / 60)).padStart(2, '0')}:${String(lightParams.time % 60).padStart(2, '0')}`;
+        const timeValue = `${String(Math.trunc(lightParams.time / 60)).padStart(2, '0')}:${String(Math.floor(lightParams.time % 60)).padStart(2, '0')}`;
         const timeToMin = (time) => {
             const parts = time.split(":");
             return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
@@ -141,7 +152,7 @@ export default class Map3DLight extends React.Component {
                                     <Icon icon={this.state.dayAnimation ? "square" : "triangle-right"} onClick={this.toggleDayAnimation} />
                                     <div className="maplight3d-slider">
                                         <input max={365 + isLeapYear()} min={1} onChange={ev => this.updateLightParams("day", parseInt(ev.target.value, 10))} step={1} type="range" value={lightParams.day} />
-                                        <input onChange={ev => dateToDay(ev.target.value)} type="date" value={dateValue} />
+                                        <Input allowEmpty={false} onChange={value => this.updateLightParams("day", dateToDay(value))} type="date" value={dateValue} />
                                     </div>
                                     <Icon
                                         className={this.state.dayAnimationSettings ? "map3d-animation-settings-active" : ""}
@@ -167,7 +178,7 @@ export default class Map3DLight extends React.Component {
                                     <Icon icon={this.state.timeAnimation ? "square" : "triangle-right"} onClick={this.toggleTimeAnimation} />
                                     <div className="maplight3d-slider">
                                         <input max={1439} min={0} onChange={ev => this.updateLightParams("time", parseInt(ev.target.value, 10))} step={1} type="range" value={lightParams.time} />
-                                        <input onChange={ev => timeToMin(ev.target.value)} type="time" value={timeValue} />
+                                        <Input allowEmpty={false} onChange={value => this.updateLightParams("time", timeToMin(value))} type="time" value={timeValue} />
                                     </div>
                                     <Icon
                                         className={this.state.timeAnimationSettings ? "map3d-animation-settings-active" : ""}
@@ -187,12 +198,12 @@ export default class Map3DLight extends React.Component {
                             </tr>
                         ) : null}
                         <tr>
-                            <td>{LocaleUtils.tr("maplight3d.ambientLightIntensity")}</td>
-                            <td>{this.renderSlider('ambientLightIntensity', 0, 5, 0.1)}</td>
+                            <td>{LocaleUtils.tr("maplight3d.sunLightIntensity")}</td>
+                            <td>{this.renderSlider('sunLightIntensity', 0, 10, 0.1)}</td>
                         </tr>
                         <tr>
-                            <td>{LocaleUtils.tr("maplight3d.directionalLightIntensity")}</td>
-                            <td>{this.renderSlider('directionalLightIntensity', 0, 10, 0.1)}</td>
+                            <td>{LocaleUtils.tr("maplight3d.moonLightIntensity")}</td>
+                            <td>{this.renderSlider('moonLightIntensity', 0, 0.5, 0.01)}</td>
                         </tr>
                         <tr>
                             <td>{LocaleUtils.tr("maplight3d.shadows")}</td>
@@ -200,7 +211,7 @@ export default class Map3DLight extends React.Component {
                         </tr>
                         <tr>
                             <td>{LocaleUtils.tr("maplight3d.shadowintensity")}</td>
-                            <td><NumberInput decimals={1} disabled={!lightParams.shadowsEnabled} max={2} min={0} onChange={value => this.updateLightParams('shadowIntensity', value)} value={lightParams.shadowIntensity} /></td>
+                            <td>{this.renderSlider('shadowIntensity', 0, 2, 0.1)}</td>
                         </tr>
                         <tr>
                             <td className="maplight3d-advanced" colSpan="2">
@@ -299,30 +310,39 @@ export default class Map3DLight extends React.Component {
     updateLightParams = (key, value) => {
         this.setState(state => ({lightParams: {...state.lightParams, [key]: value}}));
     };
-    computeShadowVolume = (directionalLight, lightParams) => {
+    configureShadows = (sunLight, lightParams, shadowIntensityK) => {
         if (!lightParams.shadowsEnabled) {
             this.props.sceneContext.scene.renderer.shadowMap.enabled = false;
+            sunLight.castShadow = false;
             return;
         }
         const cameraHeight = this.props.sceneContext.scene.view.camera.position.z;
         const targetHeight = this.props.sceneContext.scene.view.controls.target.z;
         const volumeSize = Math.min(20000, Math.max(1000, cameraHeight - targetHeight));
 
-        directionalLight.shadow.camera.top = volumeSize;
-        directionalLight.shadow.camera.bottom = -volumeSize;
-        directionalLight.shadow.camera.left = -volumeSize;
-        directionalLight.shadow.camera.right = volumeSize;
-        directionalLight.shadow.camera.near = lightParams.shadowVolumeNear;
-        directionalLight.shadow.camera.far = lightParams.shadowVolumeFar;
+        sunLight.shadow.camera.top = volumeSize;
+        sunLight.shadow.camera.bottom = -volumeSize;
+        sunLight.shadow.camera.left = -volumeSize;
+        sunLight.shadow.camera.right = volumeSize;
+        sunLight.shadow.camera.near = lightParams.shadowVolumeNear;
+        sunLight.shadow.camera.far = lightParams.shadowVolumeFar;
+        sunLight.shadow.camera.updateProjectionMatrix();
+
+        sunLight.shadow.mapSize.set(lightParams.shadowMapSize, lightParams.shadowMapSize);
+        sunLight.shadow.bias = lightParams.shadowBias;
+        sunLight.shadow.normalBias = lightParams.normalBias;
+        sunLight.shadow.intensity = lightParams.shadowIntensity * shadowIntensityK;
 
         this.props.sceneContext.scene.renderer.shadowMap.enabled = true;
+        sunLight.castShadow = true;
     };
     setLighting = () => {
         const sceneContext = this.props.sceneContext;
         const lightParams = this.state.lightParams;
 
         const ambientLight = sceneContext.getSceneObject("__ambientLight");
-        const directionalLight = sceneContext.getSceneObject("__directionalLight");
+        const sunLight = sceneContext.getSceneObject("__sunLight");
+        const moonLight = sceneContext.getSceneObject("__moonLight");
 
         const lightTarget = sceneContext.scene.view.controls.target.clone();
         lightTarget.z = 0;
@@ -335,45 +355,70 @@ export default class Map3DLight extends React.Component {
         const azimuth = 180 + sunPos.azimuth / Math.PI * 180;
         const sunLocalPos = Sun.getLocalPosition({
             point: lightTarget,
-            zenith: zenith,
+            zenith: Math.min(90, zenith),
             azimuth: azimuth,
             distance: lightParams.sunDistance
         });
-        directionalLight.position.copy(sunLocalPos);
+
+        // Compute dynamic params
+        const noonColor = { r: 1.0, g: 0.98, b: 0.98 };
+        const horizonColor = { r: 1.0, g: 0.5, b: 0.3 };
+        const duskColor = { r: 0.15, g: 0.22, b: 0.35 };
+
+        const lerpColor = (a, b, t) => ({
+            r: (1 - t) * a.r + t * b.r,
+            g: (1 - t) * a.g + t * b.g,
+            b: (1 - t) * a.b + t * b.b
+        });
+        let sunColor = noonColor;
+        let ambientIntensity = 0;
+        let shadowIntensityK = 0;
+        const sunLightIntensityK = Math.min(1, (98 - Math.min(98, zenith)) / 16);
+        const moonLightIntensityK = 1 - Math.min(1, (90 - Math.min(90, zenith)) / 16);
+        if (zenith < 90) {
+            const k = Math.pow(zenith / 90, 3);
+            sunColor = lerpColor(noonColor, horizonColor, k);
+            ambientIntensity = (1 - zenith / 90) * 1.5;
+            shadowIntensityK = (1 - k) * 0.9 + 0.2 * k;
+        } else if (zenith < 102) {
+            const k = (zenith - 90) / 12;
+            sunColor = lerpColor(horizonColor, duskColor, k);
+            shadowIntensityK = 0.2 * (1 - k);
+        }
 
         // Set lighting params
         sceneContext.map.lighting.enabled = true;
         sceneContext.map.lighting.mode = lightParams.shadowsEnabled ? MapLightingMode.LightBased : MapLightingMode.Hillshade;
         sceneContext.map.lighting.elevationLayersOnly = lightParams.lightElevationLayersOnly;
         sceneContext.map.lighting.hillshadeAzimuth = azimuth;
-        sceneContext.map.lighting.hillshadeZenith = zenith;
+        sceneContext.map.lighting.hillshadeZenith = Math.min(90, zenith);
         sceneContext.map.lighting.zFactor = lightParams.zFactor;
         sceneContext.scene.notifyChange(sceneContext.map);
 
         sceneContext.scene.renderer.shadowMap.type = lightParams.shadowType;
 
-        const zenithAttenuation = Math.pow(zenith / 90, 4);
-        ambientLight.intensity = lightParams.ambientLightIntensity - 3 * zenithAttenuation;
-        directionalLight.intensity = lightParams.directionalLightIntensity - 0.5 * zenithAttenuation;
-        directionalLight.shadow.mapSize.set(lightParams.shadowMapSize, lightParams.shadowMapSize);
-        directionalLight.shadow.bias = lightParams.shadowBias;
-        directionalLight.shadow.normalBias = lightParams.normalBias;
-        directionalLight.shadow.intensity = lightParams.shadowIntensity;
-        directionalLight.target.position.copy(lightTarget);
+        ambientLight.intensity = ambientIntensity;
 
-        this.computeShadowVolume(directionalLight, lightParams);
+        sunLight.position.copy(sunLocalPos);
+        sunLight.intensity = lightParams.sunLightIntensity * sunLightIntensityK;
+        sunLight.color = sunColor;
+        sunLight.target.position.copy(lightTarget);
+        sunLight.updateMatrixWorld(true);
+        sunLight.target.updateMatrixWorld(true);
 
-        // Update scene
-        directionalLight.updateMatrixWorld(true);
-        directionalLight.target.updateMatrixWorld(true);
-        directionalLight.shadow.updateMatrices(directionalLight);
-        directionalLight.shadow.camera.updateProjectionMatrix();
-        directionalLight.shadow.camera.updateMatrix();
+        this.configureShadows(sunLight, lightParams, shadowIntensityK);
+
+        // NOTE: just a top-down light
+        moonLight.position.set(lightTarget.x, lightTarget.y, 8000);
+        moonLight.intensity = lightParams.moonLightIntensity * moonLightIntensityK;
+        moonLight.target.position.copy(lightTarget);
+        moonLight.updateMatrixWorld(true);
+        moonLight.target.updateMatrixWorld(true);
 
         if (lightParams.helpersVisible) {
-            const directionalLightHelper = sceneContext.getSceneObject("__directionalLightHelper");
-            directionalLightHelper.update();
-            directionalLightHelper.updateMatrixWorld(true);
+            const sunLightHelper = sceneContext.getSceneObject("__sunLightHelper");
+            sunLightHelper.update();
+            sunLightHelper.updateMatrixWorld(true);
 
             const shadowCameraHelper = sceneContext.getSceneObject("__shadowCameraHelper");
             shadowCameraHelper.update();

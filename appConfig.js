@@ -39,10 +39,10 @@ import MapLegendPlugin from './plugins/MapLegend';
 import MapTipPlugin from './plugins/MapTip';
 import MeasurePlugin from './plugins/Measure';
 import NewsPopupPlugin from './plugins/NewsPopup';
+import OverviewMapPlugin from './plugins/OverviewMap';
 import PanoramaxPlugin from './plugins/Panoramax';
 import PortalPlugin from './plugins/Portal';
 import PrintPlugin from './plugins/Print';
-import ProcessNotificationsPlugin from './plugins/ProcessNotifications';
 import RedliningPlugin from './plugins/Redlining';
 import ReportsPlugin from './plugins/Reports';
 import RoutingPlugin from './plugins/Routing';
@@ -61,9 +61,7 @@ import {ZoomInPlugin, ZoomOutPlugin} from './plugins/ZoomButtons';
 import EditingSupport from './plugins/map/EditingSupport';
 import LocateSupport from './plugins/map/LocateSupport';
 import MeasurementSupport from './plugins/map/MeasurementSupport';
-import OverviewSupport from './plugins/map/OverviewSupport';
 import RedliningSupport from './plugins/map/RedliningSupport';
-import ScaleBarSupport from './plugins/map/ScaleBarSupport';
 import SnappingSupport from './plugins/map/SnappingSupport';
 import BufferSupport from './plugins/redlining/RedliningBufferSupport';
 import defaultLocaleData from './static/translations/en-US.json';
@@ -80,9 +78,7 @@ export default {
                 EditingSupport: EditingSupport,
                 MeasurementSupport: MeasurementSupport,
                 LocateSupport: LocateSupport,
-                OverviewSupport: OverviewSupport,
                 RedliningSupport: RedliningSupport,
-                ScaleBarSupport: ScaleBarSupport,
                 SnappingSupport: SnappingSupport
             }),
             APIPlugin: APIPlugin,
@@ -112,10 +108,10 @@ export default {
             MapTipPlugin: MapTipPlugin,
             MeasurePlugin: MeasurePlugin,
             NewsPopupPlugin: NewsPopupPlugin,
+            OverviewMapPlugin: OverviewMapPlugin,
             PanoramaxPlugin: PanoramaxPlugin,
             PortalPlugin: PortalPlugin,
             PrintPlugin: PrintPlugin,
-            ProcessNotificationsPlugin: ProcessNotificationsPlugin,
             RedliningPlugin: RedliningPlugin({
                 BufferSupport: BufferSupport
             }),

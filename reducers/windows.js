@@ -121,7 +121,7 @@ export default function windows(state = defaultState, action) {
             bottom: splitWindows.filter(entry => entry.side === 'bottom').reduce((res, e) => Math.max(e.size, res), 0),
             left: splitWindows.filter(entry => entry.side === 'left').reduce((res, e) => Math.max(e.size, res), 0),
             top: splitWindows.filter(entry => entry.side === 'top').reduce((res, e) => Math.max(e.size, res), 0),
-            splitTopAndBottomBar: splitWindows.find(x => x.splitTopAndBottomBar === true)
+            splitTopAndBottomBar: splitWindows.find(x => x.splitTopAndBottomBar === true) !== undefined
         };
         return {
             ...state,
@@ -138,17 +138,17 @@ export default function windows(state = defaultState, action) {
         return {...state, menuMargins: menuMargins, mapMargins: computeMapMargins(state.windowMargins, menuMargins)};
     }
     case SET_TOPBAR_HEIGHT: {
+        document.querySelector(':root').style.setProperty('--topbar-height', action.height + 'px');
         if (action.height <= 0) {
             return state;
         }
-        document.querySelector(':root').style.setProperty('--topbar-height', action.height + 'px');
         return {...state, topbarHeight: action.height};
     }
     case SET_BOTTOMBAR_HEIGHT: {
+        document.querySelector(':root').style.setProperty('--bottombar-height', action.height + 'px');
         if (action.height <= 0) {
             return state;
         }
-        document.querySelector(':root').style.setProperty('--bottombar-height', action.height + 'px');
         return {...state, bottombarHeight: action.height};
     }
     default:

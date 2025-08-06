@@ -7,17 +7,13 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import isEmpty from 'lodash.isempty';
-
 import {
     CHANGE_MAP_VIEW, CONFIGURE_MAP, CHANGE_ZOOM_LVL, ZOOM_TO_EXTENT, ZOOM_TO_POINT,
     PAN_TO, CHANGE_ROTATION, CLICK_ON_MAP, TOGGLE_MAPTIPS, SET_DISPLAY_CRS,
     SET_SNAPPING_CONFIG
 } from '../actions/map';
-import ConfigUtils from '../utils/ConfigUtils';
 import CoordinatesUtils from '../utils/CoordinatesUtils';
 import MapUtils from '../utils/MapUtils';
-import {UrlParams} from '../utils/PermaLinkUtils';
 
 const defaultState = {
     bbox: {bounds: [0, 0, 0, 0], rotation: 0},
@@ -47,26 +43,7 @@ export default function map(state = defaultState, action) {
         // eslint-disable-next-line
         const {type, ...params} = action;
         const newState = {...state, ...params};
-
-        const newParams = {};
-        const positionFormat = ConfigUtils.getConfigProp("urlPositionFormat");
-        const positionCrs = ConfigUtils.getConfigProp("urlPositionCrs") || newState.projection;
-        const prec = CoordinatesUtils.getPrecision(positionCrs);
-        if (positionFormat === "centerAndZoom") {
-            const center = CoordinatesUtils.reproject(newState.center, newState.projection, positionCrs);
-            const scale = Math.round(MapUtils.computeForZoom(newState.scales, newState.zoom));
-            Object.assign(newParams, {c: center.map(x => x.toFixed(prec)).join(","), s: scale});
-        } else {
-            const bounds = CoordinatesUtils.reprojectBbox(newState.bbox.bounds, newState.projection, positionCrs);
-            Object.assign(newParams, {e: bounds.map(x => x.toFixed(prec)).join(",")});
-        }
-        if (positionCrs !== newState.projection) {
-            Object.assign(newParams, {crs: positionCrs});
-        }
-        if (!isEmpty(newParams)) {
-            UrlParams.updateParams(newParams);
-        }
-
+        MapUtils.updateMapUrlParams(newState);
         return newState;
     }
     case CONFIGURE_MAP: {
@@ -89,7 +66,7 @@ export default function map(state = defaultState, action) {
             center: center,
             zoom: zoom,
             projection: action.crs,
-            displayCrs: action.crs,
+            displayCrs: action.defaultdisplaycrs ?? action.crs,
             scales: action.scales,
             resolutions: resolutions
         };
@@ -110,31 +87,47 @@ export default function map(state = defaultState, action) {
         bounds[2] += padding * width;
         bounds[1] -= padding * height;
         bounds[3] += padding * height;
-        return {
+        const newState = {
             ...state,
             center: [0.5 * (bounds[0] + bounds[2]), 0.5 * (bounds[1] + bounds[3])],
             zoom: MapUtils.getZoomForExtent(bounds, state.resolutions, state.size, 0, state.scales.length - 1) + action.zoomOffset,
             bbox: {...state.bbox, bounds: bounds}
         };
+        MapUtils.updateMapUrlParams(newState);
+        return newState;
     }
     case ZOOM_TO_POINT: {
-        return {
+        const newState = {
             ...state,
             center: CoordinatesUtils.reproject(action.pos, action.crs || state.projection, state.projection),
-            zoom: action.zoom
+            zoom: action.zoom,
+            bbox: {
+                ...state.bbox,
+                rotation: action.rotation ?? state.bbox.rotation
+            }
         };
+        MapUtils.updateMapUrlParams(newState);
+        return newState;
     }
     case PAN_TO: {
-        return {
+        const newState = {
             ...state,
-            center: CoordinatesUtils.reproject(action.pos, action.crs || state.projection, state.projection)
+            center: CoordinatesUtils.reproject(action.pos, action.crs || state.projection, state.projection),
+            bbox: {
+                ...state.bbox,
+                rotation: action.rotation ?? state.bbox.rotation
+            }
         };
+        MapUtils.updateMapUrlParams(newState);
+        return newState;
     }
     case CHANGE_ROTATION: {
-        return {
+        const newState = {
             ...state,
             bbox: {...state.bbox, rotation: action.rotation}
         };
+        MapUtils.updateMapUrlParams(newState);
+        return newState;
     }
     case CLICK_ON_MAP: {
         return {...state, click: action.click};

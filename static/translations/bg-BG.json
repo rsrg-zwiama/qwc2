@@ -26,11 +26,12 @@
         "Print": "Отпечатване",
         "Reports": "Доклади",
         "Settings": "Настройки",
+        "Settings3D": "",
         "Share": "Споделяне на връзка",
         "ThemeSwitcher": "Тема",
         "AttributeTable": "Таблица на атрибутите",
         "AuthenticationLogin": "Вход",
-        "AuthenticationLogout": "Излизане от системата",
+        "AuthenticationLogout": "Излизане от системата - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "Начертайте",
         "FeatureForm": "Формуляр за функция",
@@ -150,6 +151,7 @@
       "sphere": "Сфера",
       "subtract": "",
       "thescale": "Стълбища",
+      "thesize": "",
       "translate": "Превод",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "Затворете, без да запазвате?",
       "title": "Редактор на изображения"
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Не успя да добави слой.",
       "addlayer": "Добавяне на слой",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Конфигурация",
       "format": "Формат",
+      "projection": "",
       "resolution": "Резолюция",
       "scale": "Стълбища",
       "size": "Размер",
@@ -373,13 +380,12 @@
       "windowtitle": "Легенда"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Език на системата",
       "themes": "Теми"
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "QR код",
       "directLinkTitle": "Чрез директна връзка",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Няма",
       "prompt": "Въведете името на слоя"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Затвори",

@@ -26,11 +26,12 @@
         "Print": "Imprimer",
         "Reports": "Rapports",
         "Settings": "Paramètres",
+        "Settings3D": "Paramètres",
         "Share": "Partager",
         "ThemeSwitcher": "Thèmes",
         "AttributeTable": "Table d'attributs",
         "AuthenticationLogin": "Connexion",
-        "AuthenticationLogout": "Déconnexion",
+        "AuthenticationLogout": "Déconnexion - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "Dessiner",
         "FeatureForm": "Formulaire d'objet",
@@ -150,6 +151,7 @@
       "sphere": "Sphère",
       "subtract": "Soustraire",
       "thescale": "Echelle",
+      "thesize": "Dimensions",
       "translate": "Déplacer",
       "undoBool": "Annuler l'opération",
       "union": "Unir",
@@ -251,6 +253,10 @@
       "confirmclose": "Fermer sans enregistrer?",
       "title": "Traitement des images"
     },
+    "import3d": {
+      "importing": "Importation de {0}...",
+      "noprocessesserver": "Aucun service d'importation configuré"
+    },
     "importlayer": {
       "addfailed": "La couche n'a pas pu être ajoutée",
       "addlayer": "Ajouter une couche",
@@ -333,7 +339,7 @@
       "resetrotation": "Réinitialiser la rotation"
     },
     "map3d": {
-      "lockview": "Déplacer avec vue 2D",
+      "lockview": "Auto-sync des vues 2D/3D",
       "syncview": "Synchroniser avec vue 2D",
       "terrain": "Terrain",
       "title": "Vue 3D"
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Configuration",
       "format": "Format",
+      "projection": "Projection",
       "resolution": "Résolution",
       "scale": "Echelle",
       "size": "Dimension",
@@ -373,13 +380,12 @@
       "windowtitle": "Légende"
     },
     "maplight3d": {
-      "ambientLightIntensity": "Intensité lumineuse ambiante",
       "animationstep": "Pas d'animation",
       "date": "Date",
       "dayspersec": "jours / sec",
-      "directionalLightIntensity": "Intensité lumineuse directionnelle",
       "helpersVisible": "Montrer les aides",
       "minspersec": "minutes / sec",
+      "moonLightIntensity": "Intensité lune",
       "normalBias": "Bias normal",
       "shadowBias": "Bias de l'ombre",
       "shadowMapSize": "Taille texture d'ombre",
@@ -389,6 +395,7 @@
       "shadowintensity": "Intensité de l'ombre",
       "shadows": "Activer les ombres",
       "showadvanced": "Paramètres avancés",
+      "sunLightIntensity": "Intensité soleil",
       "time": "Heure",
       "zFactor": "Facteur z"
     },
@@ -588,6 +595,9 @@
       "systemlang": "Langue du système",
       "themes": "Thèmes"
     },
+    "settings3d": {
+      "quality": "Qualité"
+    },
     "share": {
       "QRCodeLinkTitle": "QR code",
       "directLinkTitle": "Via un lien direct",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Aucune",
       "prompt": "Entrez le nom de la couche"
+    },
+    "view3d": {
+      "storingstate": "Enregistrement de la vue 3D..."
     },
     "window": {
       "close": "Fermer",

@@ -30,10 +30,10 @@ Plugin reference
 * [MapTip](#maptip)
 * [Measure](#measure)
 * [NewsPopup](#newspopup)
+* [OverviewMap](#overviewmap)
 * [Panoramax](#panoramax)
 * [Portal](#portal)
 * [Print](#print)
-* [ProcessNotifications](#processnotifications)
 * [Redlining](#redlining)
 * [Reports](#reports)
 * [Routing](#routing)
@@ -51,9 +51,7 @@ Plugin reference
 * [EditingSupport](#editingsupport)
 * [LocateSupport](#locatesupport)
 * [MeasurementSupport](#measurementsupport)
-* [OverviewMap](#overviewmap)
 * [RedliningSupport](#redliningsupport)
-* [ScaleBarSupport](#scalebarsupport)
 * [SnappingSupport](#snappingsupport)
 
 ---
@@ -63,25 +61,50 @@ Exposes an API for interacting with QWC2 via `window.qwc2`.
 
 You can interact with the API as soon as the `QWC2ApiReady` event is dispatched.
 
-For example:
+Here is an example of a custom plugin:
 
 ```
 window.addEventListener("QWC2ApiReady", () => {
-     const {React} = window.qwc2.libs;
+    const {React, PropTypes, connect} = window.qwc2.libs;
+    const {TaskBar} = window.qwc2.components;
 
-     class MyPlugin extends React.Component {
-         render() {
-             return React.createElement("div", {}, "Hello World");
-         }
-     }
+    class CurrentTheme extends React.Component {
+        static propTypes = {
+            theme: PropTypes.object
+        };
+        render() {
+            return React.createElement(TaskBar, {task: "CurrentTheme"},
+                React.createElement(
+                    'span', {role: 'body'},
+                    `Current theme: ${this.props.theme?.title}`
+                )
+            );
+        }
+    }
 
-     window.qwc2.addPlugin("MyPlugin", MyPlugin);
+    const CurrentThemePlugin = connect(state => ({
+        theme: state.theme.current
+    }))(CurrentTheme);
+
+    window.qwc2.addPlugin("CurrentThemePlugin", CurrentThemePlugin);
 });
 ```
 
-Note: You can also write the plugin in JSX syntax, and transpile to plain JS using babel.
+*Note*: You can also write the plugin in JSX syntax, and transpile to plain JS using babel.
 
-All following action functions are available:
+To load custom plugins in QWC:
+
+- Include the custom plugin code in `index.html`, i.e.
+
+        <script type="text/javascript" src="assets/js/currenttheme.js" ></script>
+
+- Enable the plugin in the plugins block of `config.json`
+
+        {
+            "name": "CurrentTheme"
+        }
+
+The following action functions are exposed in the API:
 
 - [display](https://github.com/qgis/qwc2/blob/master/actions/display.js)
 - [editing](https://github.com/qgis/qwc2/blob/master/actions/editing.js)
@@ -94,7 +117,18 @@ All following action functions are available:
 
 I.e. `setCurrentTask` is available via `window.qwc2.setCurrentTask`.
 
-Some of the core libraries (React, axios, ol, ...) are accessible via `window.qwc2.libs`.
+The following core libraries are accessible via `window.qwc2.libs`:
+
+- `axios`
+- `React`
+- `ReactDOM`
+- `PropTypes`
+- `connect`
+- `ol`
+- `uuid`
+- `url`
+
+The QWC shared components are acessible via `window.qwc2.components`, i.e. `window.qwc2.components.SideBar`.
 
 In addition, the following methods are available on `window.qwc2`:
 
@@ -246,9 +280,12 @@ Bottom bar, displaying mouse coordinate, scale, etc.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
-| additionalBottomBarLinks | `[{`<br />`  label: string,`<br />`  labelMsgId: string,`<br />`  url: string,`<br />`  urlTarget: string,`<br />`  icon: string,`<br />`}]` | Additional bottombar links | `undefined` |
+| additionalBottomBarLinks | `[{`<br />`  label: string,`<br />`  labelMsgId: string,`<br />`  side: string,`<br />`  url: string,`<br />`  urlTarget: string,`<br />`  icon: string,`<br />`}]` | Additional bottombar links.`side` can be `left` or `right` (default). | `undefined` |
+| coordinateFormatter | `func` | Custom coordinate formatter, as `(coordinate, crs) => string`. | `undefined` |
 | displayCoordinates | `bool` | Whether to display the coordinates in the bottom bar. | `true` |
+| displayScalebar | `bool` | Whether to display the scalebar in the bottom bar. | `true` |
 | displayScales | `bool` | Whether to display the scale in the bottom bar. | `true` |
+| scalebarOptions | `object` | See [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_control_ScaleLine-ScaleLine.html) | `undefined` |
 | termsUrl | `string` | The URL of the terms label anchor. | `undefined` |
 | termsUrlIcon | `string` | Icon of the terms inline window. Relevant only when `termsUrlTarget` is `iframe`. | `undefined` |
 | termsUrlTarget | `string` | The target where to open the terms URL. If `iframe`, it will be displayed in an inline window, otherwise in a new tab. You can also use the `:iframedialog:<dialogname>:<options>` syntax to set up the inline window. | `undefined` |
@@ -311,6 +348,7 @@ Can be used as default identify tool by setting `"identifyTool": "FeatureForm"` 
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
+| clearResultsOnClose | `bool` | Whether to clear the identify results when exiting the identify tool. | `true` |
 | exitTaskOnResultsClose | `bool` | Whether to clear the task when the results window is closed. | `undefined` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 320,`<br />`    initialHeight: 480,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
 
@@ -564,8 +602,9 @@ Allows exporting a selected portion of the map to a variety of formats.
 | defaultScaleFactor | `number` | The factor to apply to the map scale to determine the initial export map scale (if `allowedScales` is not `false`). | `1` |
 | dpis | `[number]` | List of dpis at which to export the map. If empty, the default server dpi is used. | `undefined` |
 | exportExternalLayers | `bool` | Whether to include external layers in the image. Requires QGIS Server 3.x! | `true` |
-| fileNameTemplate | `string` | Template for the name of the generated files when downloading. Can contain the placeholders `{username}`, `{tenant}`, `{theme}`, `{timestamp}`. | `'{theme}_{timestamp}'` |
-| formatConfiguration | `{`<br />`  format: [{`<br />`  name: string,`<br />`  labelMsgId: string,`<br />`  extraQuery: string,`<br />`  formatOptions: string,`<br />`  baseLayer: string,`<br />`}],`<br />`}` | Custom export configuration per format.<br /> If more than one configuration per format is provided, a selection combo will be displayed.<br /> `labelMsgId` is a translation string message id for the combo label. If not defined, `name` will be displayed.<br /> `extraQuery` will be appended to the query string (replacing any existing parameters).<br /> `formatOptions` will be passed as FORMAT_OPTIONS.<br /> `baseLayer` will be appended to the LAYERS instead of the background layer. | `undefined` |
+| fileNameTemplate | `string` | Template for the name of the generated files when downloading. Can contain the placeholders `{username}`, `{tenant}`, `{theme}`, `{themeTitle}`, `{timestamp}`. | `'{theme}_{timestamp}'` |
+| forceAvailableFormats | `array` | Formats to force as available even if the map capabilities report otherwise. Useful if a serviceUrl is defined in a format configuration. | `undefined` |
+| formatConfiguration | `{`<br />`  format: [{`<br />`  name: string,`<br />`  labelMsgId: string,`<br />`  extraQuery: string,`<br />`  formatOptions: string,`<br />`  baseLayer: string,`<br />`  projections: array,`<br />`  serviceUrl: string,`<br />`}],`<br />`}` | Custom export configuration per format.<br /> If more than one configuration per format is provided, a selection combo will be displayed.<br /> `labelMsgId` is a translation string message id for the combo label. If not defined, `name` will be displayed.<br /> `extraQuery` will be appended to the query string (replacing any existing parameters).<br /> `formatOptions` will be passed as FORMAT_OPTIONS.<br /> `baseLayer` will be appended to the LAYERS instead of the background layer.<br /> `projections` is a list of export projections. If empty, the map projection is automatically used.<br /> `serviceUrl` is the address of a custom service to use instead of the layer OWS service url. | `undefined` |
 | pageSizes | `[{`<br />`  name: string,`<br />`  width: number,`<br />`  height: number,`<br />`}]` | List of image sizes to offer, in addition to the free-hand selection. The width and height are in millimeters. | `[]` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
@@ -678,6 +717,14 @@ revision is published (specified via newsRev prop).
 | side | `string` | The side of the application on which to display the sidebar. | `undefined` |
 | sidebarWidth | `string` | The default width of the sidebar, as a CSS width string. | `undefined` |
 
+OverviewMap<a name="overviewmap"></a>
+----------------------------------------------------------------
+Overview map support for the map component.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| options | `object` | See [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_control_OverviewMap-OverviewMap.html) for general options.<br /> Additionally, you can specify:<br /> - `layer`: Custom overview layer, in the same form as background layer definitions (`{type: "<wms|wmts>", "url": ...}`).<br /> - `viewOptions`: Options for the OverviewMap View, see [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_View.html). | `{}` |
+
 Panoramax<a name="panoramax"></a>
 ----------------------------------------------------------------
 Panoramax Integration for QWC2.
@@ -715,21 +762,17 @@ Uses the print layouts defined in the QGIS project.
 | defaultScaleFactor | `number` | The factor to apply to the map scale to determine the initial print map scale. | `0.5` |
 | displayPrintSeries | `bool` | Show an option to print a series of extents. | `false` |
 | displayRotation | `bool` | Whether to display the printing rotation control. | `true` |
-| fileNameTemplate | `string` | Template for the name of the generated files when downloading. Can contain the placeholders `{username}`, `{tenant}`, `{theme}`, `{timestamp}`. | `'{theme}_{timestamp}'` |
+| fileNameTemplate | `string` | Template for the name of the generated files when downloading. Can contain the placeholders `{layout}`, `{username}`, `{tenant}`, `{theme}`, `{themeTitle}`, `{timestamp}`. | `'{theme}_{timestamp}'` |
 | formats | `[string]` | Export layout format mimetypes. If format is not supported by QGIS Server, print will fail. | `['application/pdf', 'image/jpeg', 'image/png', 'image/svg']` |
 | gridInitiallyEnabled | `bool` | Whether the grid is enabled by default. | `false` |
 | hideAutopopulatedFields | `bool` | Whether to hide form fields which contain autopopulated values (i.e. search result label). | `undefined` |
 | inlinePrintOutput | `bool` | Whether to display the print output in an inline dialog instead triggering a download. | `false` |
+| layoutHidePrefix | `string` | Hide layouts which begin with this prefix. | `undefined` |
+| layoutSortOrder | `string` | Layout sort order, asc or desc. | `'asc'` |
 | printExternalLayers | `bool` | Whether to print external layers. Requires QGIS Server 3.x! | `true` |
 | printMapHighlights | `bool` | Whether to print highlights on the map, e.g. selected features or redlining. | `true` |
 | scaleFactor | `number` | Scale factor to apply to line widths, font sizes, ... of redlining drawings passed to GetPrint. | `1.9` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
-
-ProcessNotifications<a name="processnotifications"></a>
-----------------------------------------------------------------
-Adds support for displaying notifications of background processes.
-
-Only useful for third-party plugins which use this functionality.
 
 Redlining<a name="redlining"></a>
 ----------------------------------------------------------------
@@ -776,6 +819,7 @@ Requites `routingServiceUrl` in `config.json` pointing to a Valhalla routing ser
 | enabledProviders | `[string]` | List of search providers to use for routing location search. | `["coordinates", "nominatim"]` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 320,`<br />`    initialHeight: 640,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true,`<br />`    side: 'left'`<br />`}` |
 | showPinLabels | `bool` | Whether to label the routing waypoint pins with the route point number. | `true` |
+| units | `object` | Set of units for isochrone time/distance intervals to use. | `{`<br />`    time: {`<br />`        min: 1,`<br />`        s: 60`<br />`    },`<br />`    distance: {`<br />`        km: 1,`<br />`        m: 1000`<br />`    }`<br />`}` |
 | zoomAuto | `bool` | Automatically zoom to the extent of the route | `true` |
 
 ScratchDrawing<a name="scratchdrawing"></a>
@@ -887,7 +931,7 @@ Top bar, containing the logo, searchbar, task buttons and app menu.
 | logoSrc | `string` | The logo image URL if a different source than the default `assets/img/logo.<ext>` and `assets/img/logo-mobile.<ext>` is desired. | `undefined` |
 | logoUrl | `string` | The hyperlink to open when the logo is clicked. | `undefined` |
 | menuItems | `array` | The menu items. Refer to the corresponding chapter of the viewer documentation and the sample config.json. | `[]` |
-| searchOptions | `{`<br />`  allowSearchFilters: bool,`<br />`  hideResultLabels: bool,`<br />`  highlightStyle: {`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`},`<br />`  minScaleDenom: number,`<br />`  resultLimit: number,`<br />`  sectionsDefaultCollapsed: bool,`<br />`  showHighlightMarker: bool,`<br />`  showLayerAfterChangeTheme: bool,`<br />`  showLayerResultsBeforePlaces: bool,`<br />`  showResultInSearchText: bool,`<br />`  zoomToLayers: bool,`<br />`}` | Options passed down to the search component. | `{`<br />`    showHighlightMarker: true,`<br />`    showResultInSearchText: true`<br />`}` |
+| searchOptions | `{`<br />`  allowSearchFilters: bool,`<br />`  hideResultLabels: bool,`<br />`  highlightStyle: {`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`},`<br />`  minScaleDenom: number,`<br />`  resultLimit: number,`<br />`  sectionsDefaultCollapsed: bool,`<br />`  showHighlightMarker: bool,`<br />`  showLayerAfterChangeTheme: bool,`<br />`  showLayerResultsBeforePlaces: bool,`<br />`  showResultInSearchText: bool,`<br />`  zoomToLayers: bool,`<br />`}` | Options passed down to the search component. | `{`<br />`    showHighlightMarker: true,`<br />`    showResultInSearchText: true,`<br />`    minScaleDenom: 1000`<br />`}` |
 | toolbarItems | `array` | The toolbar. Refer to the corresponding chapter of the viewer documentation and the sample config.json. | `[]` |
 | toolbarItemsShortcutPrefix | `string` | The keyboard shortcut prefix for triggering toolbar tasks. I.e. alt+shift. The task are then triggered by <prefix>+{1,2,3,...} for the 1st, 2nd, 3rd... toolbar icon. | `undefined` |
 
@@ -905,12 +949,14 @@ View3D<a name="view3d"></a>
 ----------------------------------------------------------------
 Displays a 3D map view.
 
+### Configuration
+
 To add a 3D View to a theme, add the following configuration block to a theme item in `themesConfig.json`:
 ```
 "map3d": {
     "dtm": {"url": "<url_to_dtm.tif>", "crs": "<dtm_epsg_code>},
     "basemaps": [
-         {"name": "<name_of_background_layer>", "visibility": true},
+         {"name": "<name_of_background_layer>", "visibility": true, "overview": true},
          {"name": "<name_of_background_layer>"},
          ...
     ],
@@ -919,39 +965,81 @@ To add a 3D View to a theme, add the following configuration block to a theme it
              "name": "<name>",
              "url": "<url_to_tileset.json>",
              "title": "<title>",
+             "baseColor": "<css RGB(A) color string>",
              "idAttr": "<tile_batch_attr>",
-             "tilesetStyleUrl": "<url_to_tilesetStyle.json>",
+             "styles": {"<styleName>", "<url_to_tilesetStyle.json>", ...},
+             "style": "<styleName>",
              "colorAttr": "<tile_batch_attr>",
              "alphaAttr": "<tile_batch_attr>",
              "labelAttr": "<tile_batch_attr>",
          }
+    ],
+    "objects3d": [
+        {
+             "name": "<name>",
+             "url": "<url_to_file.gltf>",
+             "title": "<title>"
+        }
     ]
 }
 ```
 Where:
 
 - The DTM should be a cloud optimized GeoTIFF.
-- The background layer names refer to the names of the entries defined in `backgroundLayers` in the `themesConfig.json`.
-- `idAttr`: Batch table attribute which stores the batch object id, used for styling and passed to `tileInfoServiceUrl`. Default: `id`.
-- `tilesetStyleUrl`: optional, URL to a tileset style JSON dict, see below. Takes precedente over `colorAttr`, `alphaAttr`, `labelAttr`.
-- `colorAttr`: optional, batch table attribute which stores the batch color, as a 0xRRGGBB integer.
-- `alphaAttr`: optional, batch table attribute which stores the batch alpha (transparency), as a [0, 255] integer.
-- `labelAttr`: optional, batch table attribute which stores the batch label, displayed above the geometry.
+- The background layer names refer to the names of the entries defined in `backgroundLayers` in the `themesConfig.json`. Additionally:
+  - `visibility` controls the initially visibile background layer
+  - `overview: true` controls the name of background layer to display in the overview map. If no background layer is marked with `overview: true`, the currently visibile background layer id dipslayed in the overview map.
+- The `tiles3d` entry contains an optional list of 3d tiles to add to the scene, with:
+  - `idAttr`: batch table attribute which stores the batch object id, used for styling and passed to `tileInfoServiceUrl`. Default: `id`.
+  - `styles`: optional, available tileset styles. Takes precedente over `colorAttr`, `alphaAttr`, `labelAttr`.
+  - `style`: optional, tileset style enabled by default.
+  - `baseColor`: the fallback color for the tile objects, defaults to white.
+  - `colorAttr`: optional, batch table attribute which stores the batch color, as a 0xRRGGBB integer.
+  - `alphaAttr`: optional, batch table attribute which stores the batch alpha (transparency), as a [0, 255] integer.
+  - `labelAttr`: optional, batch table attribute which stores the batch label, displayed above the geometry.
+- The `objects3d` entry contains an optional list of GLTF objects to add to the scene.
 
-The tileset style JSON is shaped as follows:
+
+### Styling
+
+The tileset style JSON is a [3D Tiles stylesheet](https://github.com/CesiumGS/3d-tiles/tree/main/specification/Styling),
+of which currently the `color` section is supported, and which may in addition also contain a `batchstyles` section as follows:
 ```
 {
-    "<object_id>": {
-        "label": "<label>",
-        "color": "<css RGB(A) color string>"
-    }
+    "color": {
+       ...
+    },
+    "batchstyles": {
+      "<object_id>": {
+          "label": "<label>",
+          "labelOffset": <offset>,
+          "color": "<css RGB(A) color string>"
+      }
+   }
 }
 ```
+Where:
+
+- `label` is an optional string with which to label the object.
+- `labelOffset` is an optional number which represents the vertical offset between the object top and the label. Defaults to 80.
+- `color` is an optional CSS color string which defines the object color.
+
+*Note*:
+
+- The color declarations in the `batchstyles` section override any color resulting from a color expression in the `color` section.
+- You must ensure that your 3D tiles batch table contains all batch attributes which are referenced as variables in a color expression!
+
+### Import
+
+To import scene objects in formats other than GLTF, a `ogcProcessesUrl` in `config.json` needs to point to a BBOX OGC processes server.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | buttonPosition | `number` | The position slot index of the 3d switch map button, from the bottom (0: bottom slot). | `6` |
+| defaultDay | `number` | Default viewer day (1-365) | `182` |
+| defaultTime | `string` | Default viewer time (00:00-23:59) | `'12:00'` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`}` | Default window geometry. | `{`<br />`    initialWidth: 600,`<br />`    initialHeight: 800,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true`<br />`}` |
+| importedTilesBaseUrl | `string` | Base URL of imported tile sets. | `':/'` |
 | searchMinScaleDenom | `number` | Minimum scale denominator when zooming to search result. | `1000` |
 | tileInfoServiceUrl | `string` | URL to service for querying additional tile information.<br />Can contain the `{tileset}` and `{objectid}` placeholders.<br />Expected to return a JSON dict with attributes. | `undefined` |
 
@@ -980,25 +1068,9 @@ MeasurementSupport<a name="measurementsupport"></a>
 ----------------------------------------------------------------
 Measurement support for the map component.
 
-OverviewMap<a name="overviewmap"></a>
-----------------------------------------------------------------
-Overview map support for the map component.
-
-| Property | Type | Description | Default value |
-|----------|------|-------------|---------------|
-| options | `object` | See [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_control_OverviewMap-OverviewMap.html) for general options.<br /> Additionally, you can specify:<br /> - `layer`: Custom overview layer, in the same form as background layer definitions (`{type: "<wms|wmts>", "url": ...}`).<br /> - `viewOptions`: Options for the OverviewMap View, see [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_View.html). | `{}` |
-
 RedliningSupport<a name="redliningsupport"></a>
 ----------------------------------------------------------------
 Redlining support for the map component.
-
-ScaleBarSupport<a name="scalebarsupport"></a>
-----------------------------------------------------------------
-Scalebar support for the map component.
-
-| Property | Type | Description | Default value |
-|----------|------|-------------|---------------|
-| options | `object` | See [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_control_ScaleLine-ScaleLine.html) | `undefined` |
 
 SnappingSupport<a name="snappingsupport"></a>
 ----------------------------------------------------------------

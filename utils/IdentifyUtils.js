@@ -132,12 +132,8 @@ const IdentifyUtils = {
         return identifyRequestParams(layer, queryLayers, map.projection, params);
     },
     buildFilterRequest(layer, queryLayers, filterGeom, map, options = {}) {
-        const size = [101, 101];
         const params = {
-            height: size[0],
-            width: size[1],
             feature_count: 100,
-            bbox: map.bbox.bounds.join(","),
             FILTER_GEOM: filterGeom,
             ...options
         };
@@ -291,7 +287,7 @@ const IdentifyUtils = {
                 layername = layerEl.attributes.name.value;
                 layertitle = LayerUtils.searchSubLayer(layer, 'name', layername)?.title ?? layername;
             } else {
-                layertitle = layerEl.attributes.layername.value;
+                layertitle = layerEl.attributes.name.value;
                 layername = LayerUtils.searchSubLayer(layer, 'title', layertitle)?.name ?? layertitle;
             }
 

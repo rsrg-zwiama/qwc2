@@ -249,7 +249,7 @@ class SnappingSupport extends React.Component {
             ]]
         });
         const options = {
-            LAYERATTRIBS: JSON.stringify([]),
+            LAYERATTRIBS: JSON.stringify(snapLayers.reduce((res, key) => ({...res, [key]: []}), {}) ),
             with_htmlcontent: false,
             with_bbox: false,
             feature_count: snappingConfig.featureCount || 500
@@ -262,7 +262,7 @@ class SnappingSupport extends React.Component {
                 return;
             }
             if (response) {
-                const result = IdentifyUtils.parseXmlResponse(response, this.props.mapObj.projection);
+                const result = IdentifyUtils.parseXmlResponse(response, this.props.mapObj.projection, themeLayer);
                 const features = Object.values(result).reduce((res, cur) => [...res, ...cur], []);
                 const format = new ol.format.GeoJSON();
                 const olFeatures = format.readFeatures({

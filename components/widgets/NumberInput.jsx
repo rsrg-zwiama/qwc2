@@ -79,14 +79,15 @@ export default class NumberInput extends React.Component {
         return (
             <div className={className + " " + this.props.className}>
                 <input disabled={this.props.disabled}
+                    inputMode="numeric"
                     onBlur={this.commit} onChange={this.onChange}
                     onFocus={this.setupSelectionListener}
                     onKeyDown={this.onKeyDown} placeholder={this.props.placeholder}
                     readOnly={this.props.readOnly} required={this.props.required}
                     style={style} type="text" value={this.props.prefix + this.state.value + this.props.suffix} />
                 <input name={this.props.name} required={this.props.required} type="hidden" value={this.state.value} />
-                <Icon icon={plusIcon} onMouseDown={() => this.startStep(+step)} />
-                <Icon icon={minusIcon} onMouseDown={() => this.startStep(-step)} />
+                <Icon icon={plusIcon} onPointerDown={() => this.startStep(+step)} />
+                <Icon icon={minusIcon} onPointerDown={() => this.startStep(-step)} />
             </div>
         );
     }
@@ -110,7 +111,7 @@ export default class NumberInput extends React.Component {
                 this.props.onChange(this.constrainValue(this.currentFloatValue() + delta));
             }, 50);
         }, 500);
-        document.addEventListener('mouseup', () => {
+        document.addEventListener('pointerup', () => {
             clearTimeout(stepTimeout);
             clearInterval(stepInterval);
         }, {once: true});

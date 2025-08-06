@@ -60,7 +60,7 @@ class Print extends React.Component {
         displayPrintSeries: PropTypes.bool,
         /** Whether to display the printing rotation control. */
         displayRotation: PropTypes.bool,
-        /** Template for the name of the generated files when downloading. Can contain the placeholders `{username}`, `{tenant}`, `{theme}`, `{timestamp}`. */
+        /** Template for the name of the generated files when downloading. Can contain the placeholders `{layout}`, `{username}`, `{tenant}`, `{theme}`, `{themeTitle}`, `{timestamp}`. */
         fileNameTemplate: PropTypes.string,
         /** Export layout format mimetypes. If format is not supported by QGIS Server, print will fail. */
         formats: PropTypes.arrayOf(PropTypes.string),
@@ -71,6 +71,10 @@ class Print extends React.Component {
         /** Whether to display the print output in an inline dialog instead triggering a download. */
         inlinePrintOutput: PropTypes.bool,
         layers: PropTypes.array,
+        /** Hide layouts which begin with this prefix. */
+        layoutHidePrefix: PropTypes.string,
+        /** Layout sort order, asc or desc. */
+        layoutSortOrder: PropTypes.string,
         map: PropTypes.object,
         /** Whether to print external layers. Requires QGIS Server 3.x! */
         printExternalLayers: PropTypes.bool,
@@ -91,6 +95,7 @@ class Print extends React.Component {
         displayRotation: true,
         fileNameTemplate: '{theme}_{timestamp}',
         gridInitiallyEnabled: false,
+        layoutSortOrder: 'asc',
         formats: ['application/pdf', 'image/jpeg', 'image/png', 'image/svg'],
         inlinePrintOutput: false,
         printExternalLayers: true,
@@ -133,8 +138,11 @@ class Print extends React.Component {
     componentDidUpdate(prevProps, prevState) {
         if (prevProps.theme !== this.props.theme) {
             if (this.props.theme && !isEmpty(this.props.theme.print)) {
-                const layouts = this.props.theme.print.filter(l => l.map).sort((a, b) => {
-                    return a.name.split('/').pop().localeCompare(b.name.split('/').pop(), undefined, {numeric: true});
+                const sortDir = this.props.layoutSortOrder === "desc" ? -1 : 1;
+                const layouts = this.props.theme.print.filter(l => {
+                    return l.map && !l.name.split('/').pop().startsWith(this.props.layoutHidePrefix);
+                }).sort((a, b) => {
+                    return sortDir * a.name.split('/').pop().localeCompare(b.name.split('/').pop(), undefined, {numeric: true});
                 });
                 const layout = layouts.find(l => l.default) || layouts[0];
                 this.setState({layouts: layouts, layout: layout, atlasFeatures: []});
@@ -542,6 +550,7 @@ class Print extends React.Component {
     render() {
         const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("print.maximize") : LocaleUtils.tr("print.minimize");
         const extraTitlebarContent = (<Icon className="print-minimize-maximize" icon={this.state.minimized ? 'chevron-down' : 'chevron-up'} onClick={() => this.setState((state) => ({minimized: !state.minimized}))} title={minMaxTooltip}/>);
+        const themeLayer = this.props.layers.find(layer => layer.role === LayerRole.THEME);
         return [
             (
                 <SideBar extraTitlebarContent={extraTitlebarContent} icon={"print"} id="Print" key="Print"
@@ -560,7 +569,7 @@ class Print extends React.Component {
                 <PickFeature
                     featurePicked={this.selectAtlasFeature}
                     key="FeaturePicker"
-                    layerFilter={{url: this.props.theme.url, name: this.state.layout.atlasCoverageLayer}}
+                    layerFilter={{url: themeLayer?.url, name: this.state.layout.atlasCoverageLayer}}
                 />
             ) : null
         ];
@@ -694,9 +703,11 @@ class Print extends React.Component {
 
         const timestamp = dayjs(new Date()).format("YYYYMMDD_HHmmss");
         const fileName = this.props.fileNameTemplate
+            .replace("{layout}", this.state.layout.name)
             .replace("{username}", ConfigUtils.getConfigProp("username", null, ""))
             .replace("{tenant}", ConfigUtils.getConfigProp("tenant", null, ""))
             .replace("{theme}", this.props.theme.id)
+            .replace("{themeTitle}", this.props.theme.title || "")
             .replace("{timestamp}", timestamp);
 
         // batch print all pages

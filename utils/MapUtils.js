@@ -7,8 +7,11 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import isEmpty from 'lodash.isempty';
+
 import ConfigUtils from './ConfigUtils';
 import CoordinatesUtils from './CoordinatesUtils';
+import {UrlParams} from './PermaLinkUtils';
 
 
 const DEFAULT_SCREEN_DPI = 96;
@@ -27,6 +30,8 @@ const MapUtils = {
     GET_COORDINATES_FROM_PIXEL_HOOK: 'GET_COORDINATES_FROM_PIXEL_HOOK',
     GET_SNAPPED_COORDINATES_FROM_PIXEL_HOOK: 'GET_SNAPPED_COORDINATES_FROM_PIXEL_HOOK',
     GET_NATIVE_LAYER: 'GET_NATIVE_LAYER',
+    ADD_POINTER_MOVE_LISTENER: 'ADD_POINTER_MOVE_LISTENER',
+    REMOVE_POINTER_MOVE_LISTENER: 'REMOVE_POINTER_MOVE_LISTENER',
     GET_MAP: 'GET_MAP',
 
     registerHook(name, hook) {
@@ -101,14 +106,11 @@ const MapUtils = {
         const yResolution = Math.abs(hExtent / mapSize.height);
         const extentResolution = Math.max(xResolution, yResolution);
 
+        const zoom = this.computeZoom(resolutions, extentResolution);
         if (ConfigUtils.getConfigProp("allowFractionalZoom") === true) {
-            return Math.max(minZoom, Math.min(this.computeZoom(resolutions, extentResolution), maxZoom));
+            return Math.max(minZoom, Math.min(zoom, maxZoom));
         } else {
-            const calc = resolutions.reduce((previous, resolution, index) => {
-                const diff = Math.abs(resolution - extentResolution);
-                return diff > previous.diff ? previous : {diff: diff, zoom: index};
-            }, {diff: Number.POSITIVE_INFINITY, zoom: 0});
-            return Math.max(minZoom, Math.min(calc.zoom, maxZoom));
+            return Math.max(minZoom, Math.min(Math.round(zoom), maxZoom));
         }
     },
     /**
@@ -212,6 +214,27 @@ const MapUtils = {
     degreesToRadians(degrees) {
         const pi = Math.PI;
         return degrees * (pi / 180);
+    },
+
+    updateMapUrlParams(state) {
+        const newParams = {};
+        const positionFormat = ConfigUtils.getConfigProp("urlPositionFormat");
+        const positionCrs = ConfigUtils.getConfigProp("urlPositionCrs") || state.projection;
+        const prec = CoordinatesUtils.getPrecision(positionCrs);
+        if (positionFormat === "centerAndZoom") {
+            const center = CoordinatesUtils.reproject(state.center, state.projection, positionCrs);
+            const scale = Math.round(MapUtils.computeForZoom(state.scales, state.zoom));
+            Object.assign(newParams, {c: center.map(x => x.toFixed(prec)).join(","), s: scale});
+        } else {
+            const bounds = CoordinatesUtils.reprojectBbox(state.bbox.bounds, state.projection, positionCrs);
+            Object.assign(newParams, {e: bounds.map(x => x.toFixed(prec)).join(",")});
+        }
+        if (positionCrs !== state.projection) {
+            Object.assign(newParams, {crs: positionCrs});
+        }
+        if (!isEmpty(newParams)) {
+            UrlParams.updateParams(newParams);
+        }
     }
 };
 

@@ -33,7 +33,6 @@ class ExportObjects3D extends React.Component {
     };
     state = {
         selectedFormat: "model/gltf+json",
-        minimized: false,
         exporting: false,
         exportPolygon: null
     };
@@ -65,6 +64,7 @@ class ExportObjects3D extends React.Component {
         this.measureTool = null;
         this.props.sceneContext.map.removeLayer(this.drawLayer, {dispose: true});
         this.drawLayer = null;
+        this.setState({exporting: false, exportPolygon: null});
     };
     formatChanged = (ev) => {
         this.setState({selectedFormat: ev.target.value});
@@ -169,12 +169,13 @@ class ExportObjects3D extends React.Component {
     };
     exportArea = (ev) => {
         ev.preventDefault();
+        this.setState({exporting: true});
         if (this.state.selectedFormat === "model/gltf+json") {
-            this.exportToGltf();
+            // Delay one loop to ensure exporting: true is set
+            setTimeout(this.exportToGltf, 0);
         }
     };
     exportToGltf = () => {
-        this.setState({exporting: true});
         const bbox = VectorLayerUtils.computeFeatureBBox({type: "Polygon", coordinates: this.state.exportPolygon});
         // Create a bounding box in world space
         const selectionBox = new Box3().setFromPoints([
@@ -207,11 +208,15 @@ class ExportObjects3D extends React.Component {
     addTileToExportGroup = (tiles, exportGroup, selectionBox) => {
         tiles.group.traverse( c => {
             if (c.geometry) {
-                const bbox = c.geometry.boundingBox.applyMatrix4(c.matrixWorld);
+                const bbox = c.geometry.boundingBox.clone().applyMatrix4(c.matrixWorld);
                 if (!selectionBox.intersectsBox(bbox)) {
                     return;
                 }
                 const batchidAttr = c.geometry.getAttribute( '_batchid' );
+                if (!batchidAttr) {
+                    // Not a tile
+                    return;
+                }
                 const posAttr = c.geometry.getAttribute('position');
                 const norAttr = c.geometry.getAttribute('normal');
                 const colAttr = c.geometry.getAttribute('color');
@@ -275,9 +280,10 @@ class ExportObjects3D extends React.Component {
                         const batchAttrs = batchTableObject.batchTable.getDataFromId(batchId);
                         Object.assign(mesh.userData, batchAttrs);
                         // Add label
-                        const label = batchTableObject.userData.tileLabels?.[batchId];
-                        if (label) {
-                            mesh.userData.label = label;
+                        const labelEntry = batchTableObject.userData.tileLabels?.[batchId];
+                        if (labelEntry) {
+                            mesh.userData.label = labelEntry.label;
+                            mesh.userData.labelOffset = labelEntry.labelOffset;
                         }
 
                         exportGroup.add(mesh);

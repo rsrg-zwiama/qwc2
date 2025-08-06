@@ -26,11 +26,12 @@
         "Print": "Imprimir",
         "Reports": "",
         "Settings": "Configurações",
+        "Settings3D": "",
         "Share": "Partilhar Link",
         "ThemeSwitcher": "Tema",
         "AttributeTable": "Tabela de Atributos",
         "AuthenticationLogin": "Iniciar Sessão",
-        "AuthenticationLogout": "Terminar Sessão",
+        "AuthenticationLogout": "Terminar Sessão - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "",
         "FeatureForm": "Formulário de Recurso",
@@ -150,6 +151,7 @@
       "sphere": "",
       "subtract": "",
       "thescale": "",
+      "thesize": "",
       "translate": "",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "Confirmar Fechar",
       "title": "Editor de Imagens"
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Falha ao Adicionar",
       "addlayer": "Adicionar Camada",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Configuração",
       "format": "Formato:",
+      "projection": "",
       "resolution": "Resolução:",
       "scale": "Escala:",
       "size": "Tamanho:",
@@ -373,13 +380,12 @@
       "windowtitle": "Legenda do Mapa"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Idioma do Sistema",
       "themes": "Temas"
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "Código QR",
       "directLinkTitle": "Via ligação direta",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Nenhum",
       "prompt": "Insira o Nome da Camada"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Fechar",

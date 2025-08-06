@@ -27,10 +27,7 @@ const LayerUtils = {
                 entry.sublayer.opacity = layerConfig.opacity;
                 entry.sublayer.visibility = layerConfig.visibility || layerConfig.tristate;
                 entry.sublayer.tristate = layerConfig.tristate;
-                entry.sublayer.style = layerConfig.style;
-                if (!entry.sublayer.style) {
-                    entry.sublayer.style = !isEmpty(entry.sublayer.styles) ? Object.keys(entry.sublayer.styles)[0] : "";
-                }
+                entry.sublayer.style = layerConfig.style || entry.sublayer.style;
             } else {
                 entry.sublayer.visibility = false;
             }
@@ -61,10 +58,7 @@ const LayerUtils = {
                     entry.sublayer.opacity = layerConfig.opacity;
                     entry.sublayer.visibility = layerConfig.visibility || layerConfig.tristate;
                     entry.sublayer.tristate = layerConfig.tristate;
-                    entry.sublayer.style = layerConfig.style;
-                    if (!entry.sublayer.style) {
-                        entry.sublayer.style = !isEmpty(entry.sublayer.styles) ? Object.keys(entry.sublayer.styles)[0] : "";
-                    }
+                    entry.sublayer.style = layerConfig.style || entry.sublayer.style;
                     reordered.push(entry);
                 }
             } else if (layerConfig.type === 'separator') {
@@ -113,6 +107,9 @@ const LayerUtils = {
             id: id,
             type: "placeholder",
             name: layerConfig.name,
+            opacity: layerConfig.opacity,
+            visibility: layerConfig.visibility,
+            style: layerConfig.style,
             title: layerConfig.name,
             role: LayerRole.USERLAYER,
             loading: true
@@ -159,21 +156,20 @@ const LayerUtils = {
 
         if (!Array.isArray(layer.sublayers)) {
             const layers = (params.LAYERS || layer.name).split(",").filter(Boolean);
+            // Background layers may just contain layer.params.OPACITIES
+            // User layers will be controlled with layer.opacity, and value will be replicated in layer.params.OPACITIES
+            // => Store the initial layer.params.OPACITIES as initialOpacities, compute actual opacities
+            // by multipliying layer.opacity with initialOpacities
+            initialOpacities = layer.initialOpacities ?? params.OPACITIES ?? "";
+            const opacities = initialOpacities.split(",").filter(Boolean);
+            const opacityMult = (layer.opacity ?? 255) / 255;
+
             newParams = {
                 LAYERS: layers.join(","),
                 STYLES: layer.style ?? params.STYLES ?? layers.map(() => "").join(","),
+                OPACITIES: layers.map((x, i) => Math.round((opacities[i] ?? "255") * opacityMult)).map(Math.round).join(","),
                 ...layer.dimensionValues
             };
-            if (params.OPACITIES) {
-                // Background layers may just contain layer.params.OPACITIES
-                // User layers will be controlled with layer.opacity, and value will be replicated in layer.params.OPACITIES
-                // => Store the initial layer.params.OPACITIES as initialOpacities, compute actual opacities
-                // by multipliying layer.opacity with initialOpacities
-                initialOpacities = layer.initialOpacities ?? params.OPACITIES ?? "";
-                const opacities = initialOpacities.split(",").filter(Boolean);
-                const opacityMult = (layer.opacity ?? 255) / 255;
-                newParams.OPACITIES = layers.map((x, i) => Math.round((opacities[i] ?? "255") * opacityMult)).map(Math.round).join(",");
-            }
             queryLayers = layer.queryable && !layer.omitFromQueryLayers ? [layer.name] : [];
         } else {
             let layerNames = [];
@@ -426,6 +422,41 @@ const LayerUtils = {
             ...layers.filter(layer => layer.role === LayerRole.BACKGROUND)
         ];
     },
+    replacePlaceholderLayer(layers, layerid, newlayer, filter = {}) {
+        let newLayers = layers;
+        if (newlayer) {
+            newLayers = layers.map(layer => {
+                if (layer.type === 'placeholder' && layer.id === layerid) {
+                    const newLayer = {
+                        ...layer,
+                        ...newlayer,
+                        attribution: layer.attribution ?? newlayer.attribution,
+                        opacity: layer.opacity ?? newlayer.opacity,
+                        visibility: layer.visibility ?? newlayer.visibility,
+                        tristate: layer.tristate ?? newlayer.tristate,
+                        style: layer.style ?? newlayer.style,
+                        role: layer.role,
+                        id: layer.id
+                    };
+                    // For background layers, preserve any custom name/title/attribution/opacity
+                    if (layer.role === LayerRole.BACKGROUND) {
+                        newLayer.name = layer.name ?? newlayer.name;
+                        newLayer.title = layer.title ?? newlayer.title;
+                    }
+                    delete newLayer.loading;
+                    if (newLayer.type === "wms") {
+                        Object.assign(newLayer, LayerUtils.buildWMSLayerParams(newLayer, filter));
+                    }
+                    return newLayer;
+                } else {
+                    return layer;
+                }
+            });
+        } else {
+            newLayers = newLayers.filter(layer => !(layer.type === 'placeholder' && layer.id === layerid));
+        }
+        return newLayers;
+    },
     explodeLayers(layers) {
         // Return array with one entry for every single sublayer)
         const exploded = [];
@@ -483,6 +514,7 @@ const LayerUtils = {
                 } else {
                     newlayers.push(layer);
                 }
+                usedIds.add(layer.id);
             }
         }
         // Ensure mutually exclusive groups have exactly one visible layer
@@ -1138,6 +1170,9 @@ const LayerUtils = {
                 return newSublayer;
             });
             newLayer.visibility = haveVisibileSublayer;
+            if (newLayer.name in preset) {
+                newLayer.visibility = true;
+            }
         } else if (newLayer.name in preset) {
             newLayer.visibility = true;
             newLayer.style = preset[newLayer.name];

@@ -26,11 +26,12 @@
         "Print": "Imprimir",
         "Reports": "",
         "Settings": "Configurações",
+        "Settings3D": "",
         "Share": "Compartilhar link",
         "ThemeSwitcher": "Tema",
         "AttributeTable": "Tabela de atributos",
         "AuthenticationLogin": "Inicio da sessão",
-        "AuthenticationLogout": "Fim da sessão",
+        "AuthenticationLogout": "Fim da sessão - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "",
         "FeatureForm": "Atributos da feição",
@@ -150,6 +151,7 @@
       "sphere": "",
       "subtract": "",
       "thescale": "",
+      "thesize": "",
       "translate": "",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "Confirmar fechamento",
       "title": "Título"
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Falha ao adicionar",
       "addlayer": "Adicionar camada",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Configuração",
       "format": "Formato:",
+      "projection": "",
       "resolution": "Resolução:",
       "scale": "Escala",
       "size": "Tamanho",
@@ -373,13 +380,12 @@
       "windowtitle": "Titulo da janela"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Idioma do sistema",
       "themes": "Temas"
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "Código QR",
       "directLinkTitle": "Link direto",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "",
       "prompt": "Insira o nome da camada"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Fechar",

@@ -21,6 +21,7 @@ import {v1 as uuidv1} from 'uuid';
 import {LayerRole, addLayerFeatures, addThemeSublayer, changeLayerProperty, removeLayer, addLayer} from '../actions/layers';
 import {logAction} from '../actions/logging';
 import {panTo, zoomToExtent, zoomToPoint} from '../actions/map';
+import {setCurrentSearchResult} from '../actions/search';
 import {setCurrentTask} from '../actions/task';
 import {setCurrentTheme} from '../actions/theme';
 import {openExternalUrl, showNotification} from '../actions/windows';
@@ -70,6 +71,7 @@ class SearchBox extends React.Component {
             zoomToLayers: PropTypes.bool
         }),
         searchProviders: PropTypes.object,
+        setCurrentSearchResult: PropTypes.func,
         setCurrentTask: PropTypes.func,
         setCurrentTheme: PropTypes.func,
         showNotification: PropTypes.func,
@@ -422,7 +424,9 @@ class SearchBox extends React.Component {
             });
         }
         this.updateRecentSearches();
-        if (this.props.searchProviders[provider].getResultGeometry) {
+        if (result.geometry) {
+            this.showResultGeometry(result, {feature: {type: "Feature", geometry: result.geometry}, crs: result.crs});
+        } else if (this.props.searchProviders[provider].getResultGeometry) {
             this.props.searchProviders[provider].getResultGeometry(result, (response) => { this.showResultGeometry(result, response); }, axios);
         } else {
             // Display marker
@@ -446,7 +450,7 @@ class SearchBox extends React.Component {
                 return l.role === LayerRole.THEME && (sublayer = LayerUtils.searchSubLayer(l, 'name', result.layername, path));
             });
             if (layer && sublayer) {
-                this.props.changeLayerProperty(layer.id, "visibility", true, path);
+                this.props.changeLayerProperty(layer.id, "visibility", true, path, 'both');
             }
         }
 
@@ -628,6 +632,7 @@ class SearchBox extends React.Component {
         }
     };
     clear = () => {
+        this.props.setCurrentSearchResult(null);
         this.blur();
         this.setState({searchText: '', searchResults: {}, selectedProvider: '', filterRegionName: "", filterGeometry: null});
         this.props.removeLayer('searchselection');
@@ -819,6 +824,7 @@ class SearchBox extends React.Component {
             item.bbox ?? [item.x, item.y, item.x, item.y], item.crs ?? mapCrs, mapCrs
         );
         this.zoomToResultBBox(bbox, scale);
+        this.props.setCurrentSearchResult(item);
     };
     zoomToResultBBox = (bbox, scale) => {
         let zoom = 0;
@@ -859,6 +865,7 @@ export default connect(
         addLayerFeatures: addLayerFeatures,
         changeLayerProperty: changeLayerProperty,
         removeLayer: removeLayer,
+        setCurrentSearchResult: setCurrentSearchResult,
         setCurrentTask: setCurrentTask,
         zoomToExtent: zoomToExtent,
         zoomToPoint: zoomToPoint,

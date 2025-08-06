@@ -19,6 +19,7 @@ import AttributeForm from '../components/AttributeForm';
 import ResizeableWindow from '../components/ResizeableWindow';
 import TaskBar from '../components/TaskBar';
 import ConfigUtils from '../utils/ConfigUtils';
+import CoordinatesUtils from '../utils/CoordinatesUtils';
 import EditingInterface from '../utils/EditingInterface';
 import LayerUtils from '../utils/LayerUtils';
 import LocaleUtils from '../utils/LocaleUtils';
@@ -44,6 +45,8 @@ import './style/FeatureForm.css';
 class FeatureForm extends React.Component {
     static propTypes = {
         clearEditContext: PropTypes.func,
+        /** Whether to clear the identify results when exiting the identify tool. */
+        clearResultsOnClose: PropTypes.bool,
         click: PropTypes.object,
         currentEditContext: PropTypes.string,
         editContext: PropTypes.object,
@@ -65,9 +68,11 @@ class FeatureForm extends React.Component {
         map: PropTypes.object,
         setCurrentTask: PropTypes.func,
         setEditContext: PropTypes.func,
+        startupParams: PropTypes.object,
         theme: PropTypes.object
     };
     static defaultProps = {
+        clearResultsOnClose: true,
         geometry: {
             initialWidth: 320,
             initialHeight: 480,
@@ -86,8 +91,29 @@ class FeatureForm extends React.Component {
         super(props);
         this.state = FeatureForm.defaultState;
     }
+    componentDidMount() {
+        if (this.props.enabled) {
+            this.props.setEditContext('FeatureForm', {action: 'Pick'});
+        }
+    }
 
     componentDidUpdate(prevProps, prevState) {
+        if (this.props.enabled && this.props.theme && !prevProps.theme) {
+            const startupParams = this.props.startupParams;
+            const haveIc = ["1", "true"].includes((startupParams.ic || "").toLowerCase());
+            const c = (startupParams.c || "").split(/[;,]/g).map(x => parseFloat(x) || 0);
+            if (haveIc && c.length === 2) {
+                const mapCrs = this.props.theme.mapCrs;
+                this.queryFeatures(CoordinatesUtils.reproject(c, startupParams.crs || mapCrs, mapCrs));
+            }
+        } else if (this.props.theme !== prevProps.theme) {
+            this.clearResults();
+        } else if (!this.props.enabled && prevProps.enabled) {
+            if (this.props.clearResultsOnClose) {
+                this.clearResults();
+            }
+        }
+
         if (this.props.enabled && !prevProps.enabled) {
             this.props.setEditContext('FeatureForm', {action: 'Pick'});
         }
@@ -143,9 +169,8 @@ class FeatureForm extends React.Component {
             }
             const layerOrder = layer.params.LAYERS.split(",");
             ++pendingRequests;
-            const editDataset = editConfig.editDataset || layerId;
             const scale = Math.round(MapUtils.computeForZoom(this.props.map.scales, this.props.map.zoom));
-            this.props.iface.getFeature(editDataset, pos, this.props.map.projection, scale, 96, (featureCollection) => {
+            this.props.iface.getFeature(editConfig, pos, this.props.map.projection, scale, 96, (featureCollection) => {
                 if (featureCollection && !isEmpty(featureCollection.features)) {
                     this.setState((state) => {
                         const newPickedFeatures = Object.fromEntries(Object.entries({
@@ -277,7 +302,8 @@ export default (iface = EditingInterface) => connect((state) => {
         layers: state.layers.flat,
         filter: state.layers.filter,
         map: state.map,
-        theme: state.theme.current
+        theme: state.theme.current,
+        startupParams: state.localConfig.startupParams
     };
 },
 {

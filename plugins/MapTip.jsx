@@ -7,6 +7,7 @@
  */
 
 import React from 'react';
+import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
 import htmlReactParser, {domToReact} from 'html-react-parser';
@@ -16,6 +17,7 @@ import {v1 as uuidv1} from 'uuid';
 
 import {LayerRole, addLayerFeatures, removeLayer} from '../actions/layers';
 import {openExternalUrl} from '../actions/windows';
+import {MapContainerPortalContext} from '../components/PluginsContainer';
 import IdentifyUtils from '../utils/IdentifyUtils';
 import MapUtils from '../utils/MapUtils';
 
@@ -29,6 +31,8 @@ import './style/MapTip.css';
  * The map tip needs to be configured in QGIS Layer Properties &rarr; Display.
  */
 class MapTip extends React.Component {
+    static contextType = MapContainerPortalContext;
+
     static propTypes = {
         addLayerFeatures: PropTypes.func,
         iframeDialogsInitiallyDocked: PropTypes.bool,
@@ -41,7 +45,6 @@ class MapTip extends React.Component {
         maxHeight: PropTypes.string,
         /** The maximum height of the maptip popop bubble, as a CSS string. */
         maxWidth: PropTypes.string,
-        mousepos: PropTypes.object,
         openExternalUrl: PropTypes.func,
         removeLayer: PropTypes.func,
         /** Whether to show the maptip feature selection on the map or not */
@@ -60,10 +63,10 @@ class MapTip extends React.Component {
         pos: null
     };
     componentDidMount() {
-        MapUtils.getHook(MapUtils.GET_MAP).on('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.ADD_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     componentWillUnmount() {
-        MapUtils.getHook(MapUtils.GET_MAP).un('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.REMOVE_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     componentDidUpdate(prevProps, prevState) {
         if (this.props.map !== prevProps.map) {
@@ -126,7 +129,7 @@ class MapTip extends React.Component {
             const request = IdentifyUtils.buildRequest(layer, queryLayers.join(","), this.state.mousePos.coordinate, this.props.map, options);
             IdentifyUtils.sendRequest(request, (response) => {
                 if (this.reqId === reqId) {
-                    const result = IdentifyUtils.parseXmlResponse(response || "", this.props.map.projection);
+                    const result = IdentifyUtils.parseXmlResponse(response || "", this.props.map.projection, layer);
                     const mapTips = [];
                     const features = [];
                     for (const sublayer of request.params.layers.split(",")) {
@@ -163,7 +166,7 @@ class MapTip extends React.Component {
                 left: (this.state.pos[0] - 8) + "px",
                 top: (this.state.pos[1] - 8) + "px"
             };
-            return [(
+            return ReactDOM.createPortal([(
                 <div id="MapTipPointerBuffer" key="MapTipPointerBuffer" style={bufferPos} />
             ), (
                 <div
@@ -176,7 +179,7 @@ class MapTip extends React.Component {
                         </div>
                     ))}
                 </div>
-            )];
+            )], this.context);
         }
         return null;
     }
@@ -206,11 +209,12 @@ class MapTip extends React.Component {
         if (el) {
             let x = this.state.pos[0];
             let y = this.state.pos[1];
+            const parentBBox = el.parentElement.getBoundingClientRect();
             const bbox = el.getBoundingClientRect();
-            if (x + bbox.width > window.innerWidth) {
+            if (x + bbox.width > parentBBox.width) {
                 x -= bbox.width;
             }
-            if (y + bbox.height > window.innerHeight) {
+            if (y + bbox.height > parentBBox.height) {
                 y -= bbox.height;
             }
             el.style.left = x + "px";

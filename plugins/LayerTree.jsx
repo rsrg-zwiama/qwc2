@@ -269,7 +269,7 @@ class LayerTree extends React.Component {
                     <span className="layertree-item-title" onClick={() => this.itemVisibilityToggled(layer, path, visibility)} title={group.title}>{group.title}</span>
                     {LayerUtils.hasQueryableSublayers(group) && this.props.allowSelectIdentifyableLayers ? (<Icon className={"layertree-item-identifyable " + identifyableClassName}  icon="info-sign" onClick={() => this.itemOmitQueryableToggled(layer, path, omitqueryable)} />) : null}
                     <span className="layertree-item-spacer" />
-                    {!isEmpty(styles) ? (<Icon className={styleMenuClasses} icon="paint" onClick={() => this.layerStyleMenuToggled(groupId)}/>) : null}
+                    {Object.keys(styles || {}).length > 1 ? (<Icon className={styleMenuClasses} icon="paint" onClick={() => this.layerStyleMenuToggled(groupId)}/>) : null}
                     <Icon className={optMenuClasses} icon="cog" onClick={() => this.layerMenuToggled(groupId)}/>
                     {allowRemove ? (<Icon className="layertree-item-remove" icon="trash" onClick={() => this.props.removeLayer(layer.id, path)}/>) : null}
                 </div>
@@ -402,7 +402,7 @@ class LayerTree extends React.Component {
             attrTableButton = (<Icon icon="editing" onClick={() => this.props.setCurrentTask("AttributeTable", null, null, {layer: sublayer.name})} />);
         }
         return (
-            <div className="layertree-item-optionsmenu" onMouseDown={this.preventLayerTreeItemDrag} style={{marginRight: (marginRight * 1.75) + 'em'}}>
+            <div className="layertree-item-optionsmenu" onPointerDown={this.preventLayerTreeItemDrag} style={{marginRight: (marginRight * 1.75) + 'em'}}>
                 {zoomToLayerButton}
                 {this.props.transparencyIcon ? (<Icon icon="transparency" />) : LocaleUtils.tr("layertree.transparency")}
                 <input className="layertree-item-transparency-slider" max="255" min="0"
@@ -432,7 +432,7 @@ class LayerTree extends React.Component {
         const draggableEl = ev.currentTarget.parentNode;
         if (draggableEl.draggable) {
             draggableEl.draggable = false;
-            document.addEventListener('mouseup', () => {
+            document.addEventListener('pointerup', () => {
                 draggableEl.draggable = true;
             }, {once: true});
         }
@@ -794,7 +794,7 @@ class LayerTree extends React.Component {
         } else {
             if (sublayer.visibility && LayerUtils.layerScaleInRange(sublayer, this.props.mapScale)) {
                 const request = LayerUtils.getLegendUrl(layer, {name: sublayer.name}, this.props.mapScale, this.props.map, this.props.bboxDependentLegend, this.props.scaleDependentLegend, this.props.extraLegendParameters);
-                body = request ? '<div class="legend-entry"><img src="' + request + '" /></div>' : "";
+                body = request ? '<div class="legend-entry"><img src="' + request + '" style="max-width: 100%"/></div>' : "";
             }
         }
         return body;

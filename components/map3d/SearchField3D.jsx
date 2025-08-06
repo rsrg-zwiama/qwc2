@@ -25,7 +25,6 @@ import pinModel from './models/pin.glb';
 
 export default class SearchField3D extends React.Component {
     static propTypes = {
-        options: PropTypes.object,
         sceneContext: PropTypes.object,
         searchProviders: PropTypes.object
     };
@@ -51,7 +50,7 @@ export default class SearchField3D extends React.Component {
         const mapCrs = sceneContext.mapCrs;
         const scenePos = CoordinatesUtils.reproject([result.x, result.y], result.crs ?? mapCrs, mapCrs);
 
-        // Add higlight geometry
+        // Add highlight geometry
         if (result.feature && result.feature?.geometry?.type !== "Point") {
             const format = new ol.format.GeoJSON();
             const olFeatures = format.readFeatures(result.feature, {
@@ -68,18 +67,15 @@ export default class SearchField3D extends React.Component {
         }
 
         // Zoom to bounds
-        let bounds = result.feature ? VectorLayerUtils.computeFeatureBBox(result.feature) : [
-            scenePos[0], scenePos[1],
-            scenePos[0], scenePos[1]
-        ];
+        let bounds = result.feature ? VectorLayerUtils.computeFeatureBBox(result.feature) : CoordinatesUtils.reprojectBbox(result.bbox, result.crs ?? mapCrs, mapCrs);
         // Adjust bounds so that we do not zoom further than 1:searchMinScaleDenom
         const bbWidth = bounds[2] - bounds[0];
         const bbHeight = bounds[3] - bounds[1];
         const sceneRect = this.props.sceneContext.scene.viewport.getBoundingClientRect();
         // Compute maximum allowed dimensions at the given scale
         const px2m = 0.0254 / 96;
-        const minWidth = sceneRect.width * px2m * this.props.options.searchMinScaleDenom;
-        const minHeight = sceneRect.height * px2m * this.props.options.searchMinScaleDenom;
+        const minWidth = sceneRect.width * px2m * this.props.sceneContext.options.searchMinScaleDenom;
+        const minHeight = sceneRect.height * px2m * this.props.sceneContext.options.searchMinScaleDenom;
         const scaleFactor = Math.max(bbWidth / minWidth, bbHeight / minHeight);
         if (scaleFactor < 1) {
             const bbCenterX = 0.5 * (bounds[0] + bounds[2]);
@@ -110,7 +106,7 @@ export default class SearchField3D extends React.Component {
                 // Add label
                 const labelEl = document.createElement("span");
                 labelEl.innerText = result.label ?? result.text;
-                labelEl.className = "map3d-object-label";
+                labelEl.className = "map3d-search-label";
                 const label = new CSS2DObject(labelEl);
                 label.position.set(scenePos[0], scenePos[1], terrainHeight + 2);
                 label.updateMatrixWorld();
@@ -132,7 +128,7 @@ export default class SearchField3D extends React.Component {
                 searchMarker.addEventListener('removed', () => {
                     sceneContext.scene.view.controls.removeEventListener('change', scaleSearchMarker);
                     // The label DOM element is not removed when the searchMarker group is removed from the instance
-                    labelEl.parentNode.removeChild(labelEl);
+                    labelEl.parentNode?.removeChild?.(labelEl);
                 });
             });
         });

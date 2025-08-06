@@ -26,11 +26,12 @@
         "Print": "Print",
         "Reports": "",
         "Settings": "Instellingen",
+        "Settings3D": "",
         "Share": "Link delen",
         "ThemeSwitcher": "Kaartselectie",
         "AttributeTable": "Attributentabel",
         "AuthenticationLogin": "Inloggen",
-        "AuthenticationLogout": "Uitloggen",
+        "AuthenticationLogout": "Uitloggen - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "",
         "FeatureForm": "Objectgegevens",
@@ -150,6 +151,7 @@
       "sphere": "",
       "subtract": "",
       "thescale": "",
+      "thesize": "",
       "translate": "",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "Sluiten zonder op te slaan?",
       "title": "Image editor"
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Toevoegen van laag mislukt",
       "addlayer": "Laag toevoegen",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "Configuratie",
       "format": "Format",
+      "projection": "",
       "resolution": "Resolutie",
       "scale": "Schaal",
       "size": "Afmeting",
@@ -373,13 +380,12 @@
       "windowtitle": "Legenda"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Systeemtaal",
       "themes": "Kaarten"
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "QR-code",
       "directLinkTitle": "Via een directe link",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Geen",
       "prompt": "Voer de naam van de laag in"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Sluiten",

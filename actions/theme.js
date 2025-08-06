@@ -70,7 +70,14 @@ export function finishThemeSetup(dispatch, theme, themes, layerConfigs, insertPo
 
     // Add background layers for theme
     let haveVisibleBg = false;
-    for (const bgLayer of ThemeUtils.createThemeBackgroundLayers(theme, themes, visibleBgLayer, externalLayers, dispatch, initialTheme)) {
+    const bgLayers = ThemeUtils.createThemeBackgroundLayers(theme.backgroundLayers || [], themes, visibleBgLayer, externalLayers);
+    if (initialTheme && visibleBgLayer) {
+        const visibleLayer = bgLayers.find(entry => entry.visibility)?.name;
+        if (visibleLayer !== visibleBgLayer) {
+            dispatch(showNotification("missingbglayer", LocaleUtils.tr("app.missingbg", visibleBgLayer), NotificationType.WARN, true));
+        }
+    }
+    for (const bgLayer of bgLayers) {
         haveVisibleBg |= bgLayer.visibility;
         dispatch(addLayer(bgLayer));
     }
@@ -170,7 +177,8 @@ export function setCurrentTheme(theme, themes, preserve = true, initialView = nu
             printResolutions: theme.printResolutions || themes.defaultPrintResolutions || undefined,
             printGrid: theme.printGrid || themes.defaultPrintGrid || undefined,
             searchProviders: theme.searchProviders || themes.defaultSearchProviders || undefined,
-            backgroundLayers: theme.backgroundLayers || themes.defaultBackgroundLayers || []
+            backgroundLayers: theme.backgroundLayers || themes.defaultBackgroundLayers || [],
+            defaultDisplayCrs: theme.defaultDisplayCrs || themes.defaultDisplayCrs || undefined
         };
 
         // Preserve extent if desired and possible
@@ -193,8 +201,7 @@ export function setCurrentTheme(theme, themes, preserve = true, initialView = nu
         }
 
         // Reconfigure map
-        dispatch(configureMap(theme.mapCrs, theme.scales, initialView || theme.initialBbox));
-
+        dispatch(configureMap(theme.mapCrs, theme.scales, initialView || theme.initialBbox, theme.defaultDisplayCrs));
         let layerConfigs = layerParams ? layerParams.map(param => LayerUtils.splitLayerUrlParam(param)) : null;
         if (layerConfigs) {
             layerConfigs = LayerUtils.replaceLayerGroups(layerConfigs, theme);

@@ -77,6 +77,14 @@ class Compare3D extends React.Component {
         } else if (!this.state.enabled && prevState.enabled) {
             this.clearClippingPlane();
         }
+        if (this.props.sceneContext.sceneObjects !== prevProps.sceneContext.sceneObjects) {
+            const sceneObjects = this.props.sceneContext.sceneObjects;
+            this.setState(state => ({
+                clippedObjects: Object.fromEntries(
+                    Object.entries(state.clippedObjects).filter(([objectId, entry]) => objectId in sceneObjects)
+                )
+            }));
+        }
     }
     updateClippingPlane = () => {
         const point = new Vector3(this.state.planeX, this.state.planeY, 0);
@@ -102,6 +110,7 @@ class Compare3D extends React.Component {
                 object.traverse(child => {
                     if (child.material) {
                         child.material.clippingPlanes = planes;
+                        child.material.clipShadows = true;
                     }
                 });
             }
@@ -119,6 +128,7 @@ class Compare3D extends React.Component {
                 object.traverse(child => {
                     if (child.material) {
                         child.material.clippingPlanes = [];
+                        child.material.clipShadows = false;
                     }
                 });
             }
@@ -134,6 +144,7 @@ class Compare3D extends React.Component {
 
         const renderer = this.props.sceneContext.scene.renderer;
         renderer.domElement.addEventListener("pointerdown", this.dragArrows);
+        this.centerArrowsInView();
     };
     disableArrows = () => {
         this.props.sceneContext.scene.view.controls?.removeEventListener?.('change', this.centerArrowsInView);
@@ -177,11 +188,12 @@ class Compare3D extends React.Component {
         }, {once: true});
     };
     centerArrowsInView = () => {
-        const cameraTarget = this.props.sceneContext.scene.view.controls.target.clone();
+        const inter = this.props.sceneContext.getSceneIntersection(0, 0);
+        const center = inter?.point ?? this.props.sceneContext.scene.view.controls.target.clone();
         const alpha = this.state.planeA / 180 * Math.PI;
         const dir = new Vector3(Math.cos(alpha), -Math.sin(alpha), 0);
         const curPos = new Vector3(this.state.planeX, this.state.planeY, 0);
-        const newPos = curPos.add(dir.multiplyScalar(cameraTarget.sub(curPos).dot(dir)));
+        const newPos = curPos.add(dir.multiplyScalar(center.sub(curPos).dot(dir)));
         this.setState({planeX: newPos.x, planeY: newPos.y});
         this.positionArrows(newPos.x, newPos.y, this.state.planeA);
     };
@@ -200,16 +212,14 @@ class Compare3D extends React.Component {
     };
     render() {
         return (
-            <div>
-                <SideBar icon="layers" id="Compare3D"
-                    title={LocaleUtils.tr("appmenu.items.Compare3D")}
-                    width="20em"
-                >
-                    {() => ({
-                        body: this.renderBody()
-                    })}
-                </SideBar>
-            </div>
+            <SideBar icon="layers" id="Compare3D"
+                title={LocaleUtils.tr("appmenu.items.Compare3D")}
+                width="20em"
+            >
+                {() => ({
+                    body: this.renderBody()
+                })}
+            </SideBar>
         );
     }
     renderBody = () => {

@@ -26,11 +26,12 @@
         "Print": "Tisk",
         "Reports": "",
         "Settings": "Nastavení",
+        "Settings3D": "",
         "Share": "Sdílet odkaz",
         "ThemeSwitcher": "Téma",
         "AttributeTable": "Atributy",
         "AuthenticationLogin": "Přihlášení",
-        "AuthenticationLogout": "Odhlášení",
+        "AuthenticationLogout": "Odhlášení - {0}",
         "Cyclomedia": "Cyclomedia",
         "Draw3D": "",
         "FeatureForm": "Editační formulář",
@@ -150,6 +151,7 @@
       "sphere": "",
       "subtract": "",
       "thescale": "",
+      "thesize": "",
       "translate": "",
       "undoBool": "",
       "union": "",
@@ -251,6 +253,10 @@
       "confirmclose": "",
       "title": ""
     },
+    "import3d": {
+      "importing": "",
+      "noprocessesserver": ""
+    },
     "importlayer": {
       "addfailed": "Přidání vrstvy selhalo",
       "addlayer": "Přidat vrstvu",
@@ -341,6 +347,7 @@
     "mapexport": {
       "configuration": "",
       "format": "Formát:",
+      "projection": "",
       "resolution": "Rozlišení:",
       "scale": "Měřítko",
       "size": "Velikost",
@@ -373,13 +380,12 @@
       "windowtitle": "Legenda"
     },
     "maplight3d": {
-      "ambientLightIntensity": "",
       "animationstep": "",
       "date": "",
       "dayspersec": "",
-      "directionalLightIntensity": "",
       "helpersVisible": "",
       "minspersec": "",
+      "moonLightIntensity": "",
       "normalBias": "",
       "shadowBias": "",
       "shadowMapSize": "",
@@ -389,6 +395,7 @@
       "shadowintensity": "",
       "shadows": "",
       "showadvanced": "",
+      "sunLightIntensity": "",
       "time": "",
       "zFactor": ""
     },
@@ -588,6 +595,9 @@
       "systemlang": "Systémový jazyk",
       "themes": ""
     },
+    "settings3d": {
+      "quality": ""
+    },
     "share": {
       "QRCodeLinkTitle": "QR kód",
       "directLinkTitle": "Přes přímý odkaz",
@@ -710,6 +720,9 @@
     "vectorlayerpicker": {
       "none": "Žádná",
       "prompt": "Zadejte název vrstvy"
+    },
+    "view3d": {
+      "storingstate": ""
     },
     "window": {
       "close": "Zavřít",

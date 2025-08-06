@@ -17,6 +17,7 @@ import MapUtils from '../utils/MapUtils';
 export default class CoordinateDisplayer extends React.Component {
     static propTypes = {
         className: PropTypes.string,
+        coordinateFormatter: PropTypes.func,
         displayCrs: PropTypes.string,
         mapCrs: PropTypes.string
     };
@@ -24,15 +25,17 @@ export default class CoordinateDisplayer extends React.Component {
         mousePos: []
     };
     componentDidMount() {
-        MapUtils.getHook(MapUtils.GET_MAP).on('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.ADD_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     componentWillUnmount() {
-        MapUtils.getHook(MapUtils.GET_MAP).un('pointermove', this.getMapMousePos);
+        MapUtils.getHook(MapUtils.REMOVE_POINTER_MOVE_LISTENER)(this.getMapMousePos);
     }
     render() {
         let value = "";
         const coo = CoordinatesUtils.reproject(this.state.mousePos, this.props.mapCrs, this.props.displayCrs);
-        if (!isNaN(coo[0]) && !isNaN(coo[1])) {
+        if (this.props.coordinateFormatter) {
+            value = this.props.coordinateFormatter(coo, this.props.displayCrs);
+        } else if (!isNaN(coo[0]) && !isNaN(coo[1])) {
             const decimals = CoordinatesUtils.getPrecision(this.props.displayCrs);
             value = LocaleUtils.toLocaleFixed(coo[0], decimals) + " " + LocaleUtils.toLocaleFixed(coo[1], decimals);
         }
