@@ -30,28 +30,30 @@ import {v4 as uuidv4} from 'uuid';
 
 import {LayerRole} from '../../actions/layers';
 import {setCurrentTask} from '../../actions/task';
-import {BackgroundSwitcher} from '../../plugins/BackgroundSwitcher';
+import BackgroundSwitcher3D from '../../plugins/map3d/BackgroundSwitcher3D';
+import BottomBar3D from '../../plugins/map3d/BottomBar3D';
+import Compare3D from '../../plugins/map3d/Compare3D';
+import Draw3D from '../../plugins/map3d/Draw3D';
+import ExportObjects3D from '../../plugins/map3d/ExportObjects3D';
+import HideObjects3D from '../../plugins/map3d/HideObjects3D';
+import Identify3D from '../../plugins/map3d/Identify3D';
+import LayerTree3D from '../../plugins/map3d/LayerTree3D';
+import MapExport3D from '../../plugins/map3d/MapExport3D';
+import Measure3D from '../../plugins/map3d/Measure3D';
+import OverviewMap3D from '../../plugins/map3d/OverviewMap3D';
+import Settings3D from '../../plugins/map3d/Settings3D';
+import TopBar3D from '../../plugins/map3d/TopBar3D';
 import ConfigUtils from '../../utils/ConfigUtils';
 import CoordinatesUtils from '../../utils/CoordinatesUtils';
 import LayerUtils from '../../utils/LayerUtils';
 import MiscUtils from '../../utils/MiscUtils';
 import {registerPermalinkDataStoreHook, unregisterPermalinkDataStoreHook, UrlParams} from '../../utils/PermaLinkUtils';
+import ServiceLayerUtils from '../../utils/ServiceLayerUtils';
+import ThemeUtils from '../../utils/ThemeUtils';
 import {MapContainerPortalContext} from '../PluginsContainer';
-import BottomBar3D from './BottomBar3D';
-import Compare3D from './Compare3D';
-import Draw3D from './Draw3D';
 import EditDataset3D from './EditDataset3D';
-import ExportObjects3D from './ExportObjects3D';
-import HideObjects3D from './HideObjects3D';
-import Identify3D from './Identify3D';
-import LayerTree3D from './LayerTree3D';
 import Map3DLight from './Map3DLight';
 import MapControls3D from './MapControls3D';
-import MapExport3D from './MapExport3D';
-import Measure3D from './Measure3D';
-import OverviewMap3D from './OverviewMap3D';
-import Settings3D from './Settings3D';
-import TopBar3D from './TopBar3D';
 import View3DSwitcher from './View3DSwitcher';
 import LayerRegistry from './layers/index';
 import {importGltf, updateObjectLabel} from './utils/MiscUtils3D';
@@ -91,7 +93,8 @@ class Map3D extends React.Component {
         options: PropTypes.object,
         searchProviders: PropTypes.object,
         setCurrentTask: PropTypes.func,
-        theme: PropTypes.object
+        theme: PropTypes.object,
+        themes: PropTypes.object
     };
     static defaultProps = {
         geometry: {
@@ -124,6 +127,7 @@ class Map3D extends React.Component {
             getLayer: (layerId) => {},
             removeLayer: (layerId) => {},
             updateColorLayer: (layerId, options, path) => {},
+            setBaseLayer: (layer, visibility) => {},
 
             add3dTiles: (url, options) => {},
             addSceneObject: (objectId, object, options = {}) => {},
@@ -159,6 +163,7 @@ class Map3D extends React.Component {
         this.state.sceneContext.getLayer = this.getLayer;
         this.state.sceneContext.removeLayer = this.removeLayer;
         this.state.sceneContext.updateColorLayer = this.updateColorLayer;
+        this.state.sceneContext.setBaseLayer = this.setBaseLayer;
         this.state.sceneContext.add3dTiles = this.add3dTiles;
         this.state.sceneContext.addSceneObject = this.addSceneObject;
         this.state.sceneContext.getSceneObject = this.getSceneObject;
@@ -225,6 +230,7 @@ class Map3D extends React.Component {
     applyBaseLayer = () => {
         const baseLayer = this.state.sceneContext.baseLayers.find(e => e.visibility === true);
         this.removeLayer("__baselayer");
+        UrlParams.updateParams({bl3d: baseLayer?.name ?? ''});
         if (!baseLayer) {
             return;
         }
@@ -249,7 +255,6 @@ class Map3D extends React.Component {
                 ))
             }
         }));
-        UrlParams.updateParams({bl3d: visibility ? layer.name : ''});
     };
     collectColorLayers = (prevColorLayers) => {
         return this.props.layers.reduce((colorLayers, layer) => {
@@ -624,8 +629,6 @@ class Map3D extends React.Component {
         return this.map;
     };
     render() {
-        const baseLayer = this.state.sceneContext.baseLayers.find(l => l.visibility === true);
-        const overviewLayer = this.state.sceneContext.baseLayers.find(l => l.overview === true) ?? baseLayer;
         return [
             ReactDOM.createPortal((
                 <div className="map3d-map" id="map3d" key="Map3D" ref={this.setupContainer} />
@@ -633,7 +636,7 @@ class Map3D extends React.Component {
             this.state.sceneContext.scene ? (
                 <UnloadWrapper key={this.state.sceneId} onUnload={this.onUnload} sceneId={this.state.sceneId}>
                     <MapControls3D onCameraChanged={this.props.onCameraChanged} onControlsSet={this.setupControls} sceneContext={this.state.sceneContext}>
-                        <BackgroundSwitcher changeLayerVisibility={this.setBaseLayer} layers={this.state.sceneContext.baseLayers} />
+                        <BackgroundSwitcher3D sceneContext={this.state.sceneContext} />
                         <BottomBar3D sceneContext={this.state.sceneContext} />
                         <Compare3D sceneContext={this.state.sceneContext} />
                         <Draw3D sceneContext={this.state.sceneContext} />
@@ -645,10 +648,10 @@ class Map3D extends React.Component {
                         <Map3DLight sceneContext={this.state.sceneContext} />
                         <MapExport3D sceneContext={this.state.sceneContext} />
                         <Measure3D sceneContext={this.state.sceneContext} />
-                        <OverviewMap3D baseLayer={overviewLayer} sceneContext={this.state.sceneContext} />
+                        <OverviewMap3D sceneContext={this.state.sceneContext} />
                         <Settings3D sceneContext={this.state.sceneContext} />
                         <TopBar3D sceneContext={this.state.sceneContext} searchProviders={this.props.searchProviders} />
-                        <View3DSwitcher position={2} />
+                        <View3DSwitcher position={1} />
                     </MapControls3D>
                 </UnloadWrapper>
             ) : null
@@ -729,20 +732,24 @@ class Map3D extends React.Component {
         }
 
         // Collect baselayers
-        let visibleBaseLayer = null;
-        const baseLayers = (this.props.theme.map3d?.basemaps || []).map(e => {
-            const baseLayer = {
-                ...this.props.layers.find(bl => bl.name === e.name),
-                visibility: e.visibility === true,
-                overview: e.overview === true
-            };
-            if (baseLayer.visibility) {
-                visibleBaseLayer = baseLayer;
-            }
-            return baseLayer;
-        });
-        if (visibleBaseLayer) {
-            this.setBaseLayer(visibleBaseLayer, true);
+        const externalLayers = {};
+        const baseLayers = ThemeUtils.createThemeBackgroundLayers(this.props.theme.map3d?.basemaps || [], this.props.themes, null, externalLayers);
+        for (const key of Object.keys(externalLayers)) {
+            const idx = key.indexOf(":");
+            const service = key.slice(0, idx);
+            const serviceUrl = key.slice(idx + 1);
+            ServiceLayerUtils.findLayers(service, serviceUrl, externalLayers[key], projection, (id, layer) => {
+                // Don't expose sublayers
+                if (layer) {
+                    layer.sublayers = null;
+                }
+                this.setState(state => ({
+                    sceneContext: {
+                        ...state.sceneContext,
+                        baseLayers: LayerUtils.replacePlaceholderLayer(state.sceneContext.baseLayers, id, layer)
+                    }
+                }));
+            });
         }
 
         // Collect color layers
@@ -826,52 +833,56 @@ class Map3D extends React.Component {
             this.inspector = new Inspector(inspectorContainer, this.instance);
         }
 
-        this.instance.addEventListener('update-start', () => {
-            const camera = this.instance.view.camera;
+        this.instance.addEventListener('update-start', this.instanceOnUpdateStart);
+        this.instance.addEventListener('update-end', this.instanceOnUpdateEnd);
+        this.instance.addEventListener('before-entity-update', this.instanceOnBeforeEntityUpdate);
+        this.instance.addEventListener('after-entity-update', this.instanceOnAfterEntityUpdate);
+    };
+    instanceOnUpdateStart = () => {
+        const camera = this.instance.view.camera;
+        const quality = this.state.sceneContext.settings.sceneQuality;
+        const isFirstPerson = this.state.sceneContext.scene.view.controls.isFirstPerson;
+        const maxDistance = isFirstPerson ? 200 + 20 * quality : 500 + quality * quality;
+        // Hide scene objects according to scene quality
+        Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
+            const object = this.objectMap[objId];
+            if (options.layertree && object.isObject3D) {
+                object.children.forEach(child => {
+                    const distance = camera.position.distanceTo(child.getWorldPosition(new Vector3()));
+                    child.userData.__wasVisible = child.visible;
+                    if (distance > maxDistance) {
+                        child.visible = false;
+                    }
+                });
+            }
+        });
+    };
+    instanceOnUpdateEnd = () => {
+        Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
+            const object = this.objectMap[objId];
+            if (options.layertree && object.isObject3D) {
+                object.children.forEach(child => {
+                    child.visible = child.userData.__wasVisible;
+                    delete child.userData.__wasVisible;
+                });
+            }
+        });
+    };
+    instanceOnBeforeEntityUpdate = ({entity}) => {
+        if (entity !== this.map) {
+            this.instance.view.camera.userData.__previousFar = this.instance.view.camera.far;
             const quality = this.state.sceneContext.settings.sceneQuality;
             const isFirstPerson = this.state.sceneContext.scene.view.controls.isFirstPerson;
-            const maxDistance = isFirstPerson ? 200 + 20 * quality : 500 + quality * quality;
-            // Hide scene objects according to scene quality
-            Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
-                const object = this.objectMap[objId];
-                if (options.layertree && object.isObject3D) {
-                    object.children.forEach(child => {
-                        const distance = camera.position.distanceTo(child.getWorldPosition(new Vector3()));
-                        child.userData.__wasVisible = child.visible;
-                        if (distance > maxDistance) {
-                            child.visible = false;
-                        }
-                    });
-                }
-            });
-        });
-        this.instance.addEventListener('update-end', () => {
-            Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
-                const object = this.objectMap[objId];
-                if (options.layertree && object.isObject3D) {
-                    object.children.forEach(child => {
-                        child.visible = child.userData.__wasVisible;
-                        delete child.userData.__wasVisible;
-                    });
-                }
-            });
-        });
-        this.instance.addEventListener('before-entity-update', ({entity}) => {
-            if (entity !== this.map) {
-                this.instance.view.camera.userData.__previousFar = this.instance.view.camera.far;
-                const quality = this.state.sceneContext.settings.sceneQuality;
-                const isFirstPerson = this.state.sceneContext.scene.view.controls.isFirstPerson;
-                this.instance.view.camera.far = isFirstPerson ? 200 + 20 * quality : 500 + quality * quality;
-                this.instance.view.camera.updateProjectionMatrix();
-            }
-        });
-        this.instance.addEventListener('after-entity-update', ({entity}) => {
-            if (entity !== this.map) {
-                this.instance.view.camera.far = this.instance.view.camera.userData.__previousFar;
-                delete this.instance.view.camera.userData.__previousFar;
-                this.instance.view.camera.updateProjectionMatrix();
-            }
-        });
+            this.instance.view.camera.far = isFirstPerson ? 200 + 20 * quality : 500 + quality * quality;
+            this.instance.view.camera.updateProjectionMatrix();
+        }
+    };
+    instanceOnAfterEntityUpdate = ({entity}) => {
+        if (entity !== this.map) {
+            this.instance.view.camera.far = this.instance.view.camera.userData.__previousFar;
+            delete this.instance.view.camera.userData.__previousFar;
+            this.instance.view.camera.updateProjectionMatrix();
+        }
     };
     loadTilesetStyle = (objectId, options) => {
         const url = options.styles?.[options.style];
@@ -892,6 +903,10 @@ class Map3D extends React.Component {
         }
     };
     disposeInstance = () => {
+        this.instance.removeEventListener('update-start', this.instanceOnUpdateStart);
+        this.instance.removeEventListener('update-end', this.instanceOnUpdateEnd);
+        this.instance.removeEventListener('before-entity-update', this.instanceOnBeforeEntityUpdate);
+        this.instance.removeEventListener('after-entity-update', this.instanceOnAfterEntityUpdate);
         if (this.inspector) {
             this.inspector.detach();
         }
@@ -1111,6 +1126,7 @@ class Map3D extends React.Component {
 
 export default connect((state) => ({
     theme: state.theme.current,
+    themes: state.theme.themes,
     layers: state.layers.flat
 }), {
     setCurrentTask: setCurrentTask
