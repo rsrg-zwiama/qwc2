@@ -12,11 +12,9 @@ import url from 'url';
 import {v4 as uuidv4} from 'uuid';
 
 import {LayerRole} from '../actions/layers';
-import {NotificationType, showNotification} from '../actions/windows';
 import {SearchResultType} from '../utils/SearchProviders';
 import ConfigUtils from './ConfigUtils';
 import LayerUtils from './LayerUtils';
-import LocaleUtils from './LocaleUtils';
 
 const ThemeUtils = {
     getThemeById(themes, id) {
@@ -247,7 +245,7 @@ const ThemeUtils = {
     allowedItems(items, theme, filter = null) {
         return (items || []).map(item => {
             if (item.subitems) {
-                const subitems = ThemeUtils.allowedItems(item.subitems, items);
+                const subitems = ThemeUtils.allowedItems(item.subitems, items, filter).filter(Boolean);
                 if (!isEmpty(subitems)) {
                     return {...item, subitems};
                 } else {

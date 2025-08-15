@@ -28,7 +28,7 @@ class PluginsContainer extends React.Component {
         className: PropTypes.string,
         mapMargins: PropTypes.object,
         plugins: PropTypes.object,
-        pluginsConfig: PropTypes.object,
+        pluginsConfig: PropTypes.array,
         theme: PropTypes.object
     };
     state = {
@@ -37,8 +37,7 @@ class PluginsContainer extends React.Component {
     };
     renderPlugins = () => {
         const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
-        const pluginsConfig = this.props.pluginsConfig;
-        return pluginsConfig.map((pluginConf, idx) => {
+        return this.props.pluginsConfig.map(pluginConf => {
             const Plugin = this.props.plugins[pluginConf.name + "Plugin"];
             if (!Plugin) {
                 return null;
@@ -46,13 +45,13 @@ class PluginsContainer extends React.Component {
             const themeDevicePluginConfig = this.props.theme?.config?.[device]?.plugins?.[pluginConf.name] || {};
             const themePluginConfig = this.props.theme?.config?.plugins?.[pluginConf.name] || {};
             const cfg = {...(pluginConf.cfg || {}), ...themePluginConfig, ...themeDevicePluginConfig};
-            return (<Plugin key={pluginConf.name + idx} {...cfg} />);
+            return (<Plugin key={pluginConf.key ?? pluginConf.name} {...cfg} />);
         });
     };
     render() {
-        const left = this.props.mapMargins.left;
+        const left = this.props.mapMargins.left + this.props.mapMargins.outerLeft;
         const top = this.props.mapMargins.top;
-        const right = this.props.mapMargins.right;
+        const right = this.props.mapMargins.right + this.props.mapMargins.outerRight;
         const bottom = this.props.mapMargins.bottom;
         const mapContainerStyle = {
             left: 'calc(' + left + 'px)',

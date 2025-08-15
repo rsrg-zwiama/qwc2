@@ -20,7 +20,8 @@
     "tr-TR",
     "cs-CZ",
     "no-NO",
-    "ca-ES"
+    "ca-ES",
+    "uk-UA"
   ],
   "extra_strings": [
     "appmenu.items.AttributeTable",
@@ -212,6 +213,7 @@
     "geomdigitizer.send",
     "geomdigitizer.wait",
     "heightprofile.asl",
+    "heightprofile.dhmdefaultname",
     "heightprofile.distance",
     "heightprofile.drawnodes",
     "heightprofile.error",

@@ -26,13 +26,14 @@ import StandardApp from '../components/StandardApp';
 import View3DSwitcher from '../components/map3d/View3DSwitcher';
 import Spinner from '../components/widgets/Spinner';
 import ReducerIndex from '../reducers/index';
+import personIcon from '../resources/person.png';
 import searchProvidersSelector from '../selectors/searchproviders';
 import {createStore} from '../stores/StandardStore';
 import ConfigUtils from '../utils/ConfigUtils';
 import LocaleUtils from '../utils/LocaleUtils';
 import MapUtils from '../utils/MapUtils';
 import {UrlParams} from '../utils/PermaLinkUtils';
-import personIcon from '../utils/img/person.png';
+import PluginStore from '../utils/PluginStore';
 
 import './style/View3D.css';
 
@@ -256,11 +257,16 @@ class View3D extends React.Component {
                 this.setState({componentLoaded: true});
             });
         } else if (this.props.view3dMode === View3DMode.DISABLING && prevProps.view3dMode !== View3DMode.DISABLING) {
-            this.map3dComponentRef.store3dState().then(storedState => {
-                this.setState({storedState});
+            if (this.map3dComponentRef) {
+                this.map3dComponentRef.store3dState().then(storedState => {
+                    this.setState({storedState});
+                    UrlParams.updateParams({v3d: undefined, bl3d: undefined});
+                    this.props.setView3dMode(View3DMode.DISABLED);
+                });
+            } else {
                 UrlParams.updateParams({v3d: undefined, bl3d: undefined});
                 this.props.setView3dMode(View3DMode.DISABLED);
-            });
+            }
         } else if (this.props.view3dMode === View3DMode.DISABLED && prevProps.view3dMode !== View3DMode.DISABLED) {
             this.map3dComponent = null;
             this.map3dComponentRef = null;
@@ -341,6 +347,9 @@ class View3D extends React.Component {
                 importedTilesBaseUrl: this.props.importedTilesBaseUrl
             };
             const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
+            const pluginsConfig = this.props.pluginsConfig[device].filter(entry => {
+                return entry.availableIn3D && (!entry.availableIn2D || this.props.view3dMode === View3DMode.FULLSCREEN);
+            });
             return (
                 <ResizeableWindow
                     extraControls={extraControls}
@@ -363,7 +372,7 @@ class View3D extends React.Component {
                 >
                     {this.state.componentLoaded ? (
                         <Provider role="body" store={this.store}>
-                            <PluginsContainer className="plugins-container-3d" plugins={this.props.plugins} pluginsConfig={this.props.pluginsConfig[device]}>
+                            <PluginsContainer className="plugins-container-3d" plugins={PluginStore.getPlugins()} pluginsConfig={pluginsConfig}>
                                 <Map3D
                                     innerRef={this.setRef}
                                     onCameraChanged={this.onCameraChanged}

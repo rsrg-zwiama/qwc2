@@ -1,5 +1,5 @@
 {
-  "locale": "no-NO",
+  "locale": "uk-UA",
   "messages": {
     "app": {
       "missingbg": "",
@@ -13,52 +13,52 @@
       "items": {
         "Bookmark": "",
         "Compare3D": "",
-        "Editing": "Rediger",
+        "Editing": "Редагування",
         "ExportObjects3D": "",
-        "Help": "Hjelp",
+        "Help": "Допомога",
         "HideObjects3D": "",
-        "LayerTree": "Lag & tegnforklaring",
+        "LayerTree": "Шари і легенда",
         "LayerTree3D": "",
-        "MapExport": "Eksport kart",
+        "MapExport": "Експортувати карту",
         "MapExport3D": "",
         "MapFilter": "",
         "MapLight3D": "",
-        "Print": "Skriv ut",
+        "Print": "Друк",
         "Reports": "",
         "Settings": "",
         "Settings3D": "",
-        "Share": "Del lenke",
-        "ThemeSwitcher": "Tema",
+        "Share": "Поділитися лінком",
+        "ThemeSwitcher": "Тема",
         "AttributeTable": "",
-        "AuthenticationLogin": "Logg inn",
-        "AuthenticationLogout": "Logg ut - {0}",
+        "AuthenticationLogin": "",
+        "AuthenticationLogout": "",
         "Cyclomedia": "",
         "Draw3D": "",
         "FeatureForm": "",
         "FeatureSearch": "",
         "GeometryDigitizer": "",
         "IdentifyPoint": "",
-        "IdentifyRegion": "Identifiser med område",
+        "IdentifyRegion": "Визначити регіон",
         "LayerCatalog": "",
-        "Login": "Logg inn",
-        "Logout": "Logg ut",
+        "Login": "",
+        "Logout": "",
         "MapLegend": "",
-        "Measure": "Mål",
+        "Measure": "Виміряти",
         "Measure3D": "",
-        "MeasureLineString": "Måle en linje",
-        "MeasurePolygon": "Måle en polygon",
+        "MeasureLineString": "Поміряти відрізок",
+        "MeasurePolygon": "Виміряти полігон",
         "NewsPopup": "",
         "Panoramax": "",
         "Portal": "",
         "PrintScreen3D": "",
-        "Redlining": "Redlining",
+        "Redlining": "Розмітка",
         "Routing": "",
-        "Tools": "Kartverktøy",
+        "Tools": "Інструменти карти",
         "TourGuide": "",
         "TimeManager": "",
         "View3D": ""
       },
-      "menulabel": "Kart & Verktøy"
+      "menulabel": "Карта та інструменти"
     },
     "attribtable": {
       "addfeature": "",
@@ -83,7 +83,7 @@
       "zoomtoselection": ""
     },
     "bgswitcher": {
-      "nobg": "Ingen bakgrunn"
+      "nobg": "Фон відсутній"
     },
     "bookmark": {
       "add": "",
@@ -102,10 +102,10 @@
       "zoomToExtent": ""
     },
     "bottombar": {
-      "mousepos_label": "Koordinater",
-      "scale_label": "Skala",
-      "terms_label": "Vilkår",
-      "viewertitle_label": ""
+      "mousepos_label": "Координати",
+      "scale_label": "Масштаб",
+      "terms_label": "Правила користування",
+      "viewertitle_label": "Домашня сторінка"
     },
     "compare3d": {
       "clipplane": "",
@@ -117,8 +117,8 @@
       "message": ""
     },
     "copybtn": {
-      "click_to_copy": "Klikk for å kopiere",
-      "copied": "Kopiert",
+      "click_to_copy": "Копіювати",
+      "copied": "Скопійовано",
       "copyfailed": ""
     },
     "cyclomedia": {
@@ -160,28 +160,28 @@
     "editing": {
       "add": "",
       "attrtable": "",
-      "canceldelete": "Ikke slett",
+      "canceldelete": "Не видаляти",
       "clearpicture": "",
-      "commit": "Bekreft",
+      "commit": "Підтвердити зміни",
       "commitfailed": "",
       "contraintviolation": "",
       "create": "",
-      "delete": "Slett",
-      "discard": "Forkast",
-      "draw": "Tegn",
-      "feature": "Objekt",
+      "delete": "Видалити",
+      "discard": "Скасувати зміни",
+      "draw": "Намалювати",
+      "feature": "",
       "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
-      "maximize": "Maksimer",
-      "minimize": "Minimer",
-      "noeditablelayers": "Ingen redigerbare lag",
+      "maximize": "Розгорнути",
+      "minimize": "Згорнути",
+      "noeditablelayers": "Немає шарів доступних для редагування.",
       "paint": "",
-      "pick": "Velg",
+      "pick": "Вибрати",
       "pickdrawfeature": "",
-      "reallydelete": "Virkelig slette",
+      "reallydelete": "Видалити",
       "relationcommitfailed": "",
-      "select": "Velg",
+      "select": "Виберіть...",
       "takepicture": "",
       "unsavedchanged": ""
     },
@@ -199,7 +199,7 @@
     },
     "fileselector": {
       "files": "",
-      "placeholder": "Velg fil..."
+      "placeholder": "Выберіть файл..."
     },
     "geomdigitizer": {
       "applink": "",
@@ -216,14 +216,13 @@
       "wait": ""
     },
     "heightprofile": {
-      "asl": "m.o.h.",
-      "dhmdefaultname": "",
-      "distance": "Avstand",
+      "asl": "над р.м.",
+      "distance": "Дистанція",
       "drawnodes": "",
       "error": "",
       "export": "",
-      "height": "Høyde",
-      "loading": "Beregner høydeprofil...",
+      "height": "Висота",
+      "loading": "Розрахунок профілю висот...",
       "loadingimage": "",
       "print": "",
       "title": ""
@@ -238,17 +237,17 @@
       "aggregatedreport": "",
       "clipboard": "",
       "download": "",
-      "export": "Eksporter",
-      "featureReport": "Objektrapport",
+      "export": "Експорт",
+      "featureReport": "Звіт по об’єкту",
       "featurecount": "",
       "layerall": "",
-      "link": "Lenke",
-      "noattributes": "Ingen attributt",
-      "noresults": "Ingen informasjon for valgt punkt",
-      "querying": "Søker...",
+      "link": "Посилання",
+      "noattributes": "Атрибути відсутні",
+      "noresults": "Для обраної точки інформація відсутня",
+      "querying": "Обробка запиту...",
       "reportfail": "",
       "selectreport": "",
-      "title": "Objektinformasjon"
+      "title": "Відомості про об’єкт"
     },
     "imageeditor": {
       "confirmclose": "",
@@ -260,24 +259,24 @@
     },
     "importlayer": {
       "addfailed": "",
-      "addlayer": "Legg til lag",
+      "addlayer": "Додати шар",
       "asgroup": "",
-      "connect": "Koble til",
-      "filter": "Filter...",
-      "loading": "Laster inn...",
-      "localfile": "Lokal fil",
-      "nofeatures": "Ingen objekt kunne importeres",
-      "noresults": "Ingen svar eller ugyldig URL",
+      "connect": "Підключитись",
+      "filter": "Фільтрувати...",
+      "loading": "",
+      "localfile": "",
+      "nofeatures": "Жоден об’єкт не доступний для імпорту",
+      "noresults": "",
       "notgeopdf": "",
       "shpreprojectionerror": "",
       "supportedformats": "",
       "unknownproj": "",
-      "url": "URL",
-      "urlplaceholder": "Skriv inn URL til WMS, WMTS, WFS..."
+      "url": "",
+      "urlplaceholder": "Введіть URL для WMS, WMTS, WFS..."
     },
     "infotool": {
       "clickhelpPoint": "",
-      "clickhelpPolygon": "Tegn et polygon rundt objektene som skal identifieres",
+      "clickhelpPolygon": "Обведіть об’єкти полігоном для отримання інформації…",
       "clickhelpRadius": "",
       "radius": ""
     },
@@ -285,28 +284,28 @@
       "windowtitle": ""
     },
     "layerinfo": {
-      "abstract": "Oppsummering",
-      "attribution": "Kilde",
-      "dataUrl": "Datalenke",
-      "keywords": "Nøkkelord",
-      "legend": "Tegnforklaring",
-      "maxscale": "Skala maksimum",
-      "metadataUrl": "Metadatalenke",
-      "minscale": "Skala minimum",
-      "title": "Informasjon om lag"
+      "abstract": "Опис",
+      "attribution": "Автор",
+      "dataUrl": "URL даних",
+      "keywords": "Ключові слова",
+      "legend": "Легенда",
+      "maxscale": "",
+      "metadataUrl": "URL метаданных",
+      "minscale": "",
+      "title": "Інформація про шар"
     },
     "layertree": {
-      "compare": "Sammenlign øverste lag",
-      "deletealllayers": "Slett alle lag",
-      "hidealllayers": "",
-      "importlayer": "Importer lag",
-      "maptip": "Vis karttips for lag",
-      "printlegend": "Skriv ut tegnforklaring",
-      "separator": "Separator",
-      "separatortooltip": "Legg til separator",
+      "compare": "Порівняти верхній шар",
+      "deletealllayers": "Видалити всі шари",
+      "hidealllayers": "Приховати всі шари",
+      "importlayer": "Імпортувати шар",
+      "maptip": "Показувати підказки на карті",
+      "printlegend": "Друкувати легенду",
+      "separator": "",
+      "separatortooltip": "",
       "transparency": "",
-      "visiblefilter": "Filtrer usynlige lag",
-      "zoomtolayer": "Zoom til lag"
+      "visiblefilter": "",
+      "zoomtolayer": ""
     },
     "layertree3d": {
       "customheight": "",
@@ -324,19 +323,19 @@
       "pickhint": ""
     },
     "locate": {
-      "feetUnit": "fot",
-      "metersUnit": "meter",
-      "popup": "Du er innenfor {distance} {unit} fra dette punktet",
+      "feetUnit": "футів",
+      "metersUnit": "метрів",
+      "popup": "Ви на відстані {distance} {unit} від цієї точки",
       "statustooltip": {
-        "DISABLED": "Posisjon: deaktivert",
-        "ENABLED": "Posisjon: aktivert",
-        "FOLLOWING": "Posisjon: følger GPS",
-        "LOCATING": "Posisjon: bestemt",
-        "PERMISSION_DENIED": "Posisjon: ikke tillatt"
+        "DISABLED": "Геолокація: відключена",
+        "ENABLED": "Геолокація: увімкена",
+        "FOLLOWING": "Геолокація: стеження",
+        "LOCATING": "Геолокація: визначення місцезнаходження…",
+        "PERMISSION_DENIED": "Геолокація: доступ заборонено"
       }
     },
     "map": {
-      "loading": "Laster inn...",
+      "loading": "Завантаження...",
       "resetrotation": ""
     },
     "map3d": {
@@ -347,9 +346,9 @@
     },
     "mapexport": {
       "configuration": "",
-      "format": "Format:",
+      "format": "Формат:",
       "projection": "",
-      "resolution": "Oppløsning:",
+      "resolution": "Роздільна здатність:",
       "scale": "",
       "size": "",
       "submit": "",
@@ -371,8 +370,8 @@
       "timeto": ""
     },
     "mapinfotooltip": {
-      "elevation": "Høyde",
-      "title": "Posisjon"
+      "elevation": "Висота над рівнем моря",
+      "title": "Позиція"
     },
     "maplegend": {
       "bboxdependent": "",
@@ -402,14 +401,14 @@
     },
     "measureComponent": {
       "absolute": "",
-      "areaLabel": "Areal",
-      "bearingLabel": "Orientering",
+      "areaLabel": "Площа",
+      "bearingLabel": "",
       "ground": "",
       "heightDiffLabel": "",
       "imperial": "",
-      "lengthLabel": "Lengde",
+      "lengthLabel": "Довжина",
       "metric": "",
-      "pointLabel": "Posisjon"
+      "pointLabel": "Позиція"
     },
     "misc": {
       "ctrlclickhint": ""
@@ -448,59 +447,59 @@
       "download_as_onepdf": "",
       "download_as_onezip": "",
       "download_as_single": "",
-      "format": "Format",
-      "grid": "Rutenett",
-      "layout": "Layout",
+      "format": "Формат",
+      "grid": "Сітка",
+      "layout": "Макет",
       "legend": "",
-      "maximize": "Maksimer",
-      "minimize": "Minimer",
-      "nolayouts": "Valgt tema støtter ikke utskrift",
-      "notheme": "Ingen tema valgt",
-      "output": "Utskrift",
+      "maximize": "Розгорнути",
+      "minimize": "Згорнути",
+      "nolayouts": "Вибранна тема не підтримує друк",
+      "notheme": "Тема не вибрана",
+      "output": "",
       "overlap": "",
       "pickatlasfeature": "",
-      "resolution": "Oppløsning",
-      "rotation": "Rotasjon",
+      "resolution": "Роздільна здатність",
+      "rotation": "Поворот",
       "save": "",
-      "scale": "Skala",
+      "scale": "Масштаб",
       "series": "",
-      "submit": "Skriv ut",
-      "wait": "Venter..."
+      "submit": "Друк",
+      "wait": ""
     },
     "qtdesignerform": {
       "loading": ""
     },
     "redlining": {
-      "border": "Kant",
-      "buffer": "Buffer",
-      "buffercompute": "Beregner",
-      "bufferdistance": "Avstand",
-      "bufferlayer": "Mållag",
-      "bufferlayername": "Buffer",
-      "bufferselectfeature": "Velg et objekt fra buffer",
+      "border": "Межа",
+      "buffer": "",
+      "buffercompute": "",
+      "bufferdistance": "",
+      "bufferlayer": "",
+      "bufferlayername": "",
+      "bufferselectfeature": "",
       "circle": "",
-      "delete": "Slett",
-      "draw": "Tegn",
-      "edit": "Rediger",
+      "delete": "",
+      "draw": "",
+      "edit": "",
       "ellipse": "",
       "export": "",
-      "freehand": "Frihånd",
-      "label": "Etikett",
-      "layer": "Lag",
+      "freehand": "",
+      "label": "Напис",
+      "layer": "",
       "layertitle": "",
-      "line": "Linje",
+      "line": "Лінія",
       "markers": "",
       "measurements": "",
       "numericinput": "",
-      "pick": "Velg",
-      "point": "Punkt",
-      "polygon": "Polygon",
+      "pick": "Вибрати",
+      "point": "Точка",
+      "polygon": "Полігон",
       "rectangle": "",
-      "size": "Størrelse",
+      "size": "Розмір",
       "square": "",
-      "text": "Tekst",
+      "text": "Текст",
       "transform": "",
-      "width": "Bredde"
+      "width": "Ширина"
     },
     "reports": {
       "all": "",
@@ -553,25 +552,25 @@
       "finish": ""
     },
     "search": {
-      "all": "Alle",
+      "all": "Все",
       "circleradius": "",
       "clearfilter": "",
       "coordinates": "",
-      "existinglayer": "Laget finnes allerede på kartet",
-      "filter": "Filtrer",
+      "existinglayer": "",
+      "filter": "",
       "layers": "",
       "limittoarea": "",
-      "more": "{0} flere resultater",
-      "nodescription": "Beskrivelse ikke tilgjengelig",
+      "more": "",
+      "nodescription": "",
       "none": "",
       "noresults": "",
-      "placeholder": "Søk etter steder eller legg til kart",
+      "placeholder": "",
       "places": "",
       "providerselection": "",
-      "recent": "Nylige søk",
-      "search": "Søk",
+      "recent": "",
+      "search": "Пошук",
       "themelayers": "",
-      "themes": "Tema",
+      "themes": "",
       "unknownmore": ""
     },
     "serviceinfo": {
@@ -600,15 +599,15 @@
       "quality": ""
     },
     "share": {
-      "QRCodeLinkTitle": "QR kode",
-      "directLinkTitle": "Direktelenke",
+      "QRCodeLinkTitle": "QR-код",
+      "directLinkTitle": "За прямим посиланням",
       "expires": "",
       "norestriction": "",
       "refresh": "",
       "restricttogroup": "",
       "shareTitle": "QWC2",
       "showpin": "",
-      "socialIntro": "Sosiale nettvert"
+      "socialIntro": "У вашій улюбленій соцмережі"
     },
     "snapping": {
       "edge": "",
@@ -624,16 +623,16 @@
     },
     "themeswitcher": {
       "addlayerstotheme": "",
-      "addtotheme": "Legg til nåværende tema",
+      "addtotheme": "",
       "changedefaulttheme": "",
       "confirmswitch": "",
-      "filter": "Filtrer...",
+      "filter": "Фільтр...",
       "match": {
-        "abstract": "Sammendrag",
-        "keywords": "Nøkkelord",
-        "title": "Tittel"
+        "abstract": "",
+        "keywords": "",
+        "title": ""
       },
-      "openintab": "Åpne i nytt vindu",
+      "openintab": "",
       "restrictedthemeinfo": ""
     },
     "timemanager": {
@@ -686,12 +685,12 @@
       "zoomout": ""
     },
     "tooltip": {
-      "background": "Bytt bakgrunn",
+      "background": "Змінити фон",
       "fullscreendisable": "",
       "fullscreenenable": "",
-      "home": "Vis hele kartet",
-      "zoomin": "Zoom inn",
-      "zoomout": "Zoom ut"
+      "home": "Показати всю карту",
+      "zoomin": "Збільшити",
+      "zoomout": "Зменшити"
     },
     "tourguide": {
       "done": "",
@@ -726,13 +725,13 @@
       "storingstate": ""
     },
     "window": {
-      "close": "Lukk",
+      "close": "",
       "detach": "",
-      "dock": "Fest",
+      "dock": "",
       "embed": "",
       "maximize": "",
       "minimize": "",
-      "undock": "Utløs",
+      "undock": "",
       "unmaximize": "",
       "unminimize": ""
     },
