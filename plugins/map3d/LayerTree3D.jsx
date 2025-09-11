@@ -23,12 +23,18 @@ import LocaleUtils from '../../utils/LocaleUtils';
 import './style/LayerTree3D.css';
 
 
+/**
+ * Layer and object tree for the 3D map
+ */
 class LayerTree3D extends React.Component {
-    static availableIn3D = true;
-
     static propTypes = {
+        /** Base URL of imported tile sets. */
+        importedTilesBaseUrl: PropTypes.string,
         sceneContext: PropTypes.object,
         setCurrentTask: PropTypes.func
+    };
+    static defaultProps = {
+        importedTilesBaseUrl: ':/'
     };
     state = {
         activestylemenu: null,
@@ -64,7 +70,9 @@ class LayerTree3D extends React.Component {
                         <Icon icon={this.state.importvisible ? 'collapse' : 'expand'} /> {LocaleUtils.tr("layertree3d.importobjects")}
                     </div>
                 </div>
-                {this.state.importvisible ? (<ImportObjects3D sceneContext={this.props.sceneContext} />) : null}
+                {this.state.importvisible ? (
+                    <ImportObjects3D importedTilesBaseUrl={this.props.importedTilesBaseUrl} sceneContext={this.props.sceneContext} />
+                ) : null}
             </div>
         );
     };
@@ -194,7 +202,6 @@ class LayerTree3D extends React.Component {
         this.setState((state) => ({activemenu: state.activemenu === entryId ? null : entryId}));
     };
     editObject = (objectId) => {
-        this.props.sceneContext.zoomToObject(objectId);
         this.props.setCurrentTask("EditDataset3D", null, null, {objectId});
     };
 }

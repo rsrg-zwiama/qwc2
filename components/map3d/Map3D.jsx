@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import React from 'react';
+import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
@@ -30,19 +30,6 @@ import {v4 as uuidv4} from 'uuid';
 
 import {LayerRole} from '../../actions/layers';
 import {setCurrentTask} from '../../actions/task';
-import BackgroundSwitcher3D from '../../plugins/map3d/BackgroundSwitcher3D';
-import BottomBar3D from '../../plugins/map3d/BottomBar3D';
-import Compare3D from '../../plugins/map3d/Compare3D';
-import Draw3D from '../../plugins/map3d/Draw3D';
-import ExportObjects3D from '../../plugins/map3d/ExportObjects3D';
-import HideObjects3D from '../../plugins/map3d/HideObjects3D';
-import Identify3D from '../../plugins/map3d/Identify3D';
-import LayerTree3D from '../../plugins/map3d/LayerTree3D';
-import MapExport3D from '../../plugins/map3d/MapExport3D';
-import Measure3D from '../../plugins/map3d/Measure3D';
-import OverviewMap3D from '../../plugins/map3d/OverviewMap3D';
-import Settings3D from '../../plugins/map3d/Settings3D';
-import TopBar3D from '../../plugins/map3d/TopBar3D';
 import ConfigUtils from '../../utils/ConfigUtils';
 import CoordinatesUtils from '../../utils/CoordinatesUtils';
 import LayerUtils from '../../utils/LayerUtils';
@@ -52,7 +39,6 @@ import ServiceLayerUtils from '../../utils/ServiceLayerUtils';
 import ThemeUtils from '../../utils/ThemeUtils';
 import {MapContainerPortalContext} from '../PluginsContainer';
 import EditDataset3D from './EditDataset3D';
-import Map3DLight from './Map3DLight';
 import MapControls3D from './MapControls3D';
 import View3DSwitcher from './View3DSwitcher';
 import LayerRegistry from './layers/index';
@@ -60,6 +46,8 @@ import {importGltf, updateObjectLabel} from './utils/MiscUtils3D';
 import Tiles3DStyle from './utils/Tiles3DStyle';
 
 import './style/Map3D.css';
+
+
 
 // Ensures unUnload is called *after* all other children have unmounted
 class UnloadWrapper extends React.Component {
@@ -86,12 +74,15 @@ class UnloadWrapper extends React.Component {
 class Map3D extends React.Component {
     static contextType = MapContainerPortalContext;
     static propTypes = {
+        controlsPosition: PropTypes.string,
+        defaultSceneQuality: PropTypes.number,
         innerRef: PropTypes.func,
         layers: PropTypes.array,
+        mouseButtons: PropTypes.object,
         onCameraChanged: PropTypes.func,
         onMapInitialized: PropTypes.func,
-        options: PropTypes.object,
-        searchProviders: PropTypes.object,
+        pluginOptions: PropTypes.object,
+        plugins3d: PropTypes.object,
         setCurrentTask: PropTypes.func,
         theme: PropTypes.object,
         themes: PropTypes.object
@@ -130,7 +121,7 @@ class Map3D extends React.Component {
             setBaseLayer: (layer, visibility) => {},
 
             add3dTiles: (url, options) => {},
-            addSceneObject: (objectId, object, options = {}) => {},
+            addSceneObject: (objectId, object, options = {}, showEditTool = false) => {},
             getSceneObject: (objectId) => {},
             removeSceneObject: (objectId) => {},
             updateSceneObject: (objectId, options) => {},
@@ -157,8 +148,6 @@ class Map3D extends React.Component {
         this.sceneObjectGroup = null;
         this.objectMap = {};
         this.tilesetStyles = {};
-        this.sceneSettings = {};
-        this.state.sceneContext.options = this.props.options;
         this.state.sceneContext.addLayer = this.addLayer;
         this.state.sceneContext.getLayer = this.getLayer;
         this.state.sceneContext.removeLayer = this.removeLayer;
@@ -176,6 +165,9 @@ class Map3D extends React.Component {
         this.state.sceneContext.getSceneIntersection = this.getSceneIntersection;
         this.state.sceneContext.getSetting = this.getSetting;
         this.state.sceneContext.setSetting = this.setSetting;
+
+        this.state.sceneContext.settings.sceneQuality = props.defaultSceneQuality;
+
         registerPermalinkDataStoreHook("map3d", this.store3dState);
     }
     componentDidMount() {
@@ -495,7 +487,6 @@ class Map3D extends React.Component {
             }
             this.instance.notifyChange(tiles);
             if (showEditTool) {
-                this.zoomToObject(name);
                 this.props.setCurrentTask("EditDataset3D", null, null, {objectId: name});
             }
         });
@@ -540,7 +531,7 @@ class Map3D extends React.Component {
             };
         });
     };
-    addSceneObject = (objectId, object, options = {}) => {
+    addSceneObject = (objectId, object, options = {}, showEditTool = false) => {
         this.sceneObjectGroup.add(object);
         this.objectMap[objectId] = object;
         this.instance.notifyChange(object);
@@ -558,6 +549,9 @@ class Map3D extends React.Component {
                 }
             };
         });
+        if (showEditTool) {
+            this.props.setCurrentTask("EditDataset3D", null, null, {objectId: objectId});
+        }
     };
     getSceneObject = (objectId) => {
         return this.objectMap[objectId];
@@ -635,23 +629,20 @@ class Map3D extends React.Component {
             ), this.context),
             this.state.sceneContext.scene ? (
                 <UnloadWrapper key={this.state.sceneId} onUnload={this.onUnload} sceneId={this.state.sceneId}>
-                    <MapControls3D onCameraChanged={this.props.onCameraChanged} onControlsSet={this.setupControls} sceneContext={this.state.sceneContext}>
-                        <BackgroundSwitcher3D sceneContext={this.state.sceneContext} />
-                        <BottomBar3D sceneContext={this.state.sceneContext} />
-                        <Compare3D sceneContext={this.state.sceneContext} />
-                        <Draw3D sceneContext={this.state.sceneContext} />
+                    <MapControls3D
+                        controlsPosition={this.props.controlsPosition}
+                        mouseButtons={this.props.mouseButtons}
+                        onCameraChanged={this.props.onCameraChanged}
+                        onControlsSet={this.setupControls}
+                        sceneContext={this.state.sceneContext}
+                    >
                         <EditDataset3D sceneContext={this.state.sceneContext} />
-                        <ExportObjects3D sceneContext={this.state.sceneContext} />
-                        <HideObjects3D sceneContext={this.state.sceneContext} />
-                        <Identify3D sceneContext={this.state.sceneContext} />
-                        <LayerTree3D sceneContext={this.state.sceneContext} />
-                        <Map3DLight sceneContext={this.state.sceneContext} />
-                        <MapExport3D sceneContext={this.state.sceneContext} />
-                        <Measure3D sceneContext={this.state.sceneContext} />
-                        <OverviewMap3D sceneContext={this.state.sceneContext} />
-                        <Settings3D sceneContext={this.state.sceneContext} />
-                        <TopBar3D sceneContext={this.state.sceneContext} searchProviders={this.props.searchProviders} />
                         <View3DSwitcher position={1} />
+                        {Object.entries(this.props.plugins3d).map(([name, Component]) => (
+                            <Suspense key={name}>
+                                <Component sceneContext={this.state.sceneContext} {...this.props.pluginOptions[name]} />
+                            </Suspense>
+                        ))}
                     </MapControls3D>
                 </UnloadWrapper>
             ) : null
@@ -671,6 +662,9 @@ class Map3D extends React.Component {
     setupInstance = () => {
         if (this.instance) {
             this.disposeInstance();
+        }
+        if (!this.props.theme) {
+            return;
         }
         const projection = this.props.theme.mapCrs;
 
@@ -846,12 +840,16 @@ class Map3D extends React.Component {
         // Hide scene objects according to scene quality
         Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
             const object = this.objectMap[objId];
-            if (options.layertree && object.isObject3D) {
+            if (options.layertree && object.isObject3D && object.visible) {
                 object.children.forEach(child => {
-                    const distance = camera.position.distanceTo(child.getWorldPosition(new Vector3()));
-                    child.userData.__wasVisible = child.visible;
-                    if (distance > maxDistance) {
-                        child.visible = false;
+                    if (child.geometry) {
+                        const localCenter = child.geometry.boundingBox.getCenter(new Vector3());
+                        const worldCenter = localCenter.applyMatrix4(child.matrixWorld);
+                        const distance = camera.position.distanceTo(worldCenter);
+                        child.userData.__wasVisible = child.visible;
+                        if (distance > maxDistance) {
+                            child.visible = false;
+                        }
                     }
                 });
             }

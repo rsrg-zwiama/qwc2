@@ -110,6 +110,8 @@
     "compare3d": {
       "clipplane": "Kırpma düzlemi",
       "compare_objects": "Objeleri karşılaştır",
+      "info_message": "",
+      "modify": "",
       "toggleall": "Tümünü aç-kapat"
     },
     "cookiepopup": {
@@ -156,6 +158,10 @@
       "undoBool": "",
       "union": "",
       "wedge": "Kama"
+    },
+    "editdataset3d": {
+      "moveobj": "",
+      "zoomto": ""
     },
     "editing": {
       "add": "Ekle",
@@ -272,6 +278,7 @@
       "shpreprojectionerror": "",
       "supportedformats": "Desteklenen formatlar: KML, GeoJSON, GeoPDF, SHP (zip içinde)",
       "unknownproj": "Seçilen GeoPDF bilinmeyen projeksiyon kullanıyor: {0}.",
+      "unsupportedfile": "",
       "url": "URL",
       "urlplaceholder": "WMS, WMTS, WFS Adresini giriniz..."
     },

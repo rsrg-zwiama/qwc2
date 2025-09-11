@@ -35,7 +35,7 @@ export const SWITCHING_THEME = 'SWITCHING_THEME';
 export function themesLoaded(themes) {
     return {
         type: THEMES_LOADED,
-        themes
+        themes: themes
     };
 }
 
@@ -111,8 +111,7 @@ export function finishThemeSetup(dispatch, theme, themes, layerConfigs, insertPo
 
     dispatch({
         type: SET_CURRENT_THEME,
-        theme: theme,
-        layer: themeLayer.id
+        theme: theme
     });
     if (initialView === null) {
         if (theme.startupView === "2d") {
@@ -122,6 +121,8 @@ export function finishThemeSetup(dispatch, theme, themes, layerConfigs, insertPo
         } else if (theme.startupView === "3d") {
             dispatch(setView3dMode(View3DMode.FULLSCREEN));
         }
+    } else {
+        UrlParams.updateParams({v: initialView});
     }
 
     dispatch({

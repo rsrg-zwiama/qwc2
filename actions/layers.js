@@ -11,6 +11,8 @@ import layersReducer from '../reducers/layers';
 ReducerIndex.register("layers", layersReducer);
 
 import ConfigUtils from '../utils/ConfigUtils';
+import LayerUtils from '../utils/LayerUtils';
+import LocaleUtils from '../utils/LocaleUtils';
 
 export const SET_LAYER_LOADING = 'SET_LAYER_LOADING';
 export const ADD_LAYER = 'ADD_LAYER';
@@ -41,12 +43,21 @@ export const LayerRole = {
 
 
 export function addLayer(layer, pos = null, options = null) {
-    return {
-        type: ADD_LAYER,
-        layer,
-        pos,
-        options
-    };
+    if (layer.serverType === 'qgis' && !layer.translations) {
+        return dispatch => LocaleUtils.loadThemeTranslations(layer.url).then(translations => dispatch({
+            type: ADD_LAYER,
+            layer: {...LayerUtils.applyTranslations(layer, translations), translations},
+            pos,
+            options
+        }));
+    } else {
+        return {
+            type: ADD_LAYER,
+            layer,
+            pos,
+            options
+        };
+    }
 }
 
 export function addLayerSeparator(title, afterLayerId, afterSublayerPath) {

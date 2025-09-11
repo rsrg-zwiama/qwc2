@@ -61,7 +61,7 @@ export function updateObjectLabel(sceneObject, sceneContext) {
     }
 }
 
-export function importGltf(dataOrUrl, name, sceneContext, options = {}) {
+export function importGltf(dataOrUrl, name, sceneContext, options = {}, showEditTool = false) {
     const loader = new GLTFLoader();
     const processor = (gltf) => {
         // GLTF is Y-UP, we need Z-UP
@@ -74,6 +74,8 @@ export function importGltf(dataOrUrl, name, sceneContext, options = {}) {
             title: name,
             ...options
         };
+        gltf.scene.castShadow = true;
+        gltf.scene.receiveShadow = true;
         gltf.scene.traverse(c => {
             if (c.geometry) {
                 c.castShadow = true;
@@ -81,18 +83,23 @@ export function importGltf(dataOrUrl, name, sceneContext, options = {}) {
             }
             updateObjectLabel(c, sceneContext);
         });
-        // Center group on object
-        const bbox = new Box3().setFromObject(gltf.scene);
-        const center = bbox.getCenter(new Vector3());
-        const offset = new Vector3().subVectors(center, gltf.scene.position).applyQuaternion(
-            gltf.scene.quaternion.clone().invert()
-        );
-        gltf.scene.children.forEach(child => {
-            child.position.sub(offset);
-        });
-        gltf.scene.position.copy(center);
+
+        // Shift root position to center of object
         gltf.scene.updateMatrixWorld(true);
-        sceneContext.addSceneObject(objectId, gltf.scene, options);
+
+        const box = new Box3().setFromObject(gltf.scene);
+        const centerWorld = box.getCenter(new Vector3());
+        centerWorld.z = box.min.z;
+        const centerLocal = gltf.scene.worldToLocal(centerWorld.clone());
+        gltf.scene.position.add(centerWorld);
+
+        // Offset children back so the world positions remain unchanged
+        gltf.scene.children.forEach(child => {
+            child.position.sub(centerLocal);
+        });
+        gltf.scene.updateMatrixWorld(true);
+
+        sceneContext.addSceneObject(objectId, gltf.scene, options, showEditTool);
     };
     if (typeof dataOrUrl === 'string') {
         loader.load(dataOrUrl, processor, () => {}, (err) => {
@@ -129,6 +136,7 @@ export class TileMeshHelper {
         while (this.tileObject.parent && !this.tileObject.parent.isTilesGroup) {
             this.tileObject = this.tileObject.parent;
         }
+        this.propertiesCache = {};
     }
     isValid() {
         return this.featureIdAttr !== null;
@@ -147,13 +155,16 @@ export class TileMeshHelper {
         return featureIds;
     }
     getFeatureProperties(featureId) {
-        if (this.object.userData.structuralMetadata) {
-            return this.object.userData.structuralMetadata.getPropertyTableData([this.featureSet.propertyTable], [featureId])[0];
+        if (featureId in this.propertiesCache) {
+            return this.propertiesCache[featureId];
+        } else if (this.object.userData.structuralMetadata) {
+            this.propertiesCache[featureId] = this.object.userData.structuralMetadata.getPropertyTableData([this.featureSet.propertyTable], [featureId])[0];
         } else if (this.tileObject.batchTable) {
-            return this.tileObject.batchTable.getDataFromId(featureId);
+            this.propertiesCache[featureId] = this.tileObject.batchTable.getDataFromId(featureId);
         } else {
-            return {};
+            this.propertiesCache[featureId] = {};
         }
+        return this.propertiesCache[featureId];
     }
     getTileUserData() {
         return this.tileObject.userData;

@@ -20,8 +20,8 @@ Plugin reference
 * [LayerCatalog](#layercatalog)
 * [LayerTree](#layertree)
 * [LocateButton](#locatebutton)
-* [MapPlugin](#mapplugin)
-* [MapComparePlugin](#mapcompareplugin)
+* [Map](#map)
+* [MapCompare](#mapcompare)
 * [MapCopyright](#mapcopyright)
 * [MapExport](#mapexport)
 * [MapFilter](#mapfilter)
@@ -45,14 +45,35 @@ Plugin reference
 * [ThemeSwitcher](#themeswitcher)
 * [TimeManager](#timemanager)
 * [TopBar](#topbar)
+* [TourGuide](#tourguide)
 * [ValueTool](#valuetool)
 * [View3D](#view3d)
 * [ZoomButton](#zoombutton)
+
+Map support plugins
+
 * [EditingSupport](#editingsupport)
 * [LocateSupport](#locatesupport)
 * [MeasurementSupport](#measurementsupport)
 * [RedliningSupport](#redliningsupport)
 * [SnappingSupport](#snappingsupport)
+
+3D Plugins
+
+* [BackgroundSwitcher3D](#backgroundswitcher3d)
+* [BottomBar3D](#bottombar3d)
+* [Compare3D](#compare3d)
+* [Draw3D](#draw3d)
+* [ExportObjects3D](#exportobjects3d)
+* [HideObjects3D](#hideobjects3d)
+* [Identify3D](#identify3d)
+* [LayerTree3D](#layertree3d)
+* [MapCopyright3D](#mapcopyright3d)
+* [MapExport3D](#mapexport3d)
+* [Measure3D](#measure3d)
+* [OverviewMap3D](#overviewmap3d)
+* [Settings3D](#settings3d)
+* [TopBar3D](#topbar3d)
 
 ---
 API<a name="api"></a>
@@ -224,7 +245,7 @@ Return the current application state.
 
 AttributeTable<a name="attributetable"></a>
 ----------------------------------------------------------------
-Displaying the attribute table of layers in a dialog.
+Display the attribute table of layers in a dialog.
 
 To make a layer available in the attribute table, create a a data resource and matching permissions for it in the `qwc-admin-gui`.
 
@@ -237,7 +258,7 @@ This plugin queries the dataset via the editing service specified by
 |----------|------|-------------|---------------|
 | allowAddForGeometryLayers | `bool` | Whether to allow adding records for datasets which have a geometry column. | `undefined` |
 | showEditFormButton | `bool` | Whether to show a button to open the edit form for selected layer. Requires the Editing plugin to be enabled. | `true` |
-| showLimitToExtent | `bool` | Whether to show the "Limit to extent" checkbox | `undefined` |
+| showLimitToExtent | `bool` | Whether to show the "Limit to extent" checkbox | `true` |
 | zoomLevel | `number` | The zoom level for zooming to point features. | `1000` |
 
 Authentication<a name="authentication"></a>
@@ -563,7 +584,7 @@ Map button for controling the locate (GPS) state.
 | themeFlagBlacklist | `[string]` | Omit the button in themes matching one of these flags. | `undefined` |
 | themeFlagWhitelist | `[string]` | Only show the button in themes matching one of these flags. | `undefined` |
 
-MapPlugin<a name="mapplugin"></a>
+Map<a name="map"></a>
 ----------------------------------------------------------------
 The main map component.
 
@@ -573,9 +594,9 @@ The main map component.
 | showLoading | `bool` | Whether to display the loading spinner when layers are loading. | `true` |
 | swipeGeometryTypeBlacklist | `[string]` | A list of layer geometry types to ignore when determining the top-most layer to compare. | `[]` |
 | swipeLayerNameBlacklist | `[string]` | A list of layer names to ignore when determining the top-most layer to compare. You can use `*` as a wildcard character. | `[]` |
-| toolsOptions | `object` | Map tool configuraiton options. Refer to the sample config.json. | `{}` |
+| toolsOptions | `object` | Options to pass to the map support plugins, in the form `{"<Name>": {<options>}}`.<br />Refer to the documentation of the <a href="#mapSupportPlugins">Map support plugins</a> for settable options. | `{}` |
 
-MapComparePlugin<a name="mapcompareplugin"></a>
+MapCompare<a name="mapcompare"></a>
 ----------------------------------------------------------------
 Allows comparing the top layer with the rest of the map.
 
@@ -811,7 +832,7 @@ Routing<a name="routing"></a>
 ----------------------------------------------------------------
 Compute routes and isochrones.
 
-Requites `routingServiceUrl` in `config.json` pointing to a Valhalla routing service.
+Requires `routingServiceUrl` in `config.json` pointing to a Valhalla routing service.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
@@ -935,6 +956,14 @@ Top bar, containing the logo, searchbar, task buttons and app menu.
 | toolbarItems | `array` | The toolbar. Refer to the corresponding chapter of the viewer documentation and the sample config.json. | `[]` |
 | toolbarItemsShortcutPrefix | `string` | The keyboard shortcut prefix for triggering toolbar tasks. I.e. alt+shift. The task are then triggered by <prefix>+{1,2,3,...} for the 1st, 2nd, 3rd... toolbar icon. | `undefined` |
 
+TourGuide<a name="tourguide"></a>
+----------------------------------------------------------------
+Launches a tour guide of the application, as configured by a configuration file.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| tourGuideUrl | `string` | Url of the Tourguide JSON configuration. | `undefined` |
+
 ValueTool<a name="valuetool"></a>
 ----------------------------------------------------------------
 Displays raster band values of active raster layers at the hovered mouse position,
@@ -949,99 +978,16 @@ View3D<a name="view3d"></a>
 ----------------------------------------------------------------
 Displays a 3D map view.
 
-### Configuration
-
-To add a 3D View to a theme, add the following configuration block to a theme item in `themesConfig.json`:
-```
-"map3d": {
-    "dtm": {"url": "<url_to_dtm.tif>", "crs": "<dtm_epsg_code>},
-    "basemaps": [
-         {"name": "<name_of_background_layer>", "visibility": true, "overview": true},
-         {"name": "<name_of_background_layer>"},
-         ...
-    ],
-    "tiles3d": [
-         {
-             "name": "<name>",
-             "url": "<url_to_tileset.json>",
-             "title": "<title>",
-             "baseColor": "<css RGB(A) color string>",
-             "idAttr": "<tile_feature_attr>",
-             "styles": {"<styleName>", "<url_to_tilesetStyle.json>", ...},
-             "style": "<styleName>",
-             "colorAttr": "<tile_feature_attr>",
-             "alphaAttr": "<tile_feature_attr>",
-             "labelAttr": "<tile_feature_attr>",
-         }
-    ],
-    "objects3d": [
-        {
-             "name": "<name>",
-             "url": "<url_to_file.gltf>",
-             "title": "<title>"
-        }
-    ]
-}
-```
-Where:
-
-- The DTM should be a cloud optimized GeoTIFF.
-- The background layer names refer to the names of the entries defined in `backgroundLayers` in the `themesConfig.json`. Additionally:
-  - `visibility` controls the initially visibile background layer
-  - `overview: true` controls the name of background layer to display in the overview map. If no background layer is marked with `overview: true`, the currently visibile background layer id dipslayed in the overview map.
-- The `tiles3d` entry contains an optional list of 3d tiles to add to the scene, with:
-  - `idAttr`: feature properties table attribute which stores the object id, used for styling and passed to `tileInfoServiceUrl`. Default: `id`.
-  - `styles`: optional, available tileset styles. Takes precedente over `colorAttr`, `alphaAttr`, `labelAttr`.
-  - `style`: optional, tileset style enabled by default.
-  - `baseColor`: the fallback color for the tile objects, defaults to white.
-  - `colorAttr`: optional, feature properties table attribute which stores the feature color, as a 0xRRGGBB integer.
-  - `alphaAttr`: optional, feature properties table attribute which stores the feature alpha (transparency), as a [0, 255] integer.
-  - `labelAttr`: optional, feature properties table attribute which stores the feature label, displayed above the geometry.
-- The `objects3d` entry contains an optional list of GLTF objects to add to the scene.
-
-
-### Styling
-
-The tileset style JSON is a [3D Tiles stylesheet](https://github.com/CesiumGS/3d-tiles/tree/main/specification/Styling),
-of which currently the `color` section is supported, and which may in addition also contain a `featureStyles` section as follows:
-```
-{
-    "color": {
-       ...
-    },
-    "featureStyles": {
-      "<object_id>": {
-          "label": "<label>",
-          "labelOffset": <offset>,
-          "color": "<css RGB(A) color string>"
-      }
-   }
-}
-```
-Where:
-
-- `label` is an optional string with which to label the object.
-- `labelOffset` is an optional number which represents the vertical offset between the object top and the label. Defaults to 80.
-- `color` is an optional CSS color string which defines the object color.
-
-*Note*:
-
-- The color declarations in the `featureStyles` section override any color resulting from a color expression in the `color` section.
-- You must ensure that your 3D tiles properties table contains all attributes which are referenced as variables in a color expression!
-
-### Import
-
-To import scene objects in formats other than GLTF, a `ogcProcessesUrl` in `config.json` needs to point to a BBOX OGC processes server.
+See [3D View](../../topics/View3D).
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | buttonPosition | `number` | The position slot index of the 3d switch map button, from the bottom (0: bottom slot). | `6` |
-| defaultDay | `number` | Default viewer day (1-365) | `182` |
-| defaultTime | `string` | Default viewer time (00:00-23:59) | `'12:00'` |
+| controlsPosition | `string` | The position of the navigation controls. Either `top` or `bottom`. | `'top'` |
+| defaultSceneQuality | `number` | The default scene quality factor (`20`: min, `100`: max). | `undefined` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`}` | Default window geometry. | `{`<br />`    initialWidth: 600,`<br />`    initialHeight: 800,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true`<br />`}` |
-| importedTilesBaseUrl | `string` | Base URL of imported tile sets. | `':/'` |
-| searchMinScaleDenom | `number` | Minimum scale denominator when zooming to search result. | `1000` |
-| tileInfoServiceUrl | `string` | URL to service for querying additional tile information.<br />Can contain the `{tileset}` and `{objectid}` placeholders.<br />Expected to return a JSON dict with attributes. | `undefined` |
+| mouseButtons | `{`<br />`  left: string,`<br />`  middle: string,`<br />`  right: string,`<br />`}` | Mouse buttons assignment. You can assign `pan`, `rotate`, `zoom` to each button. | `{`<br />`    left: 'pan',`<br />`    middle: 'zoom',`<br />`    right: 'rotate'`<br />`}` |
+| pluginOptions | `object` | Options to pass to the 3D plugins, in the form `{"<PluginName>": {<options>}}`.<br />Refer to the documentation of the <a href="#plugins3d">3D plugins</a> for settable options. | `{}` |
 
 ZoomButton<a name="zoombutton"></a>
 ----------------------------------------------------------------
@@ -1056,6 +1002,10 @@ Two specific plugins exist: ZoomInPlugin and ZoomOutPlugin, which are instances 
 | themeFlagBlacklist | `[string]` | Omit the button in themes matching one of these flags. | `undefined` |
 | themeFlagWhitelist | `[string]` | Only show the button in themes matching one of these flags. | `undefined` |
 
+---
+# Map support plugins<a name="mapSupportPlugins"></a>
+
+These plugins must be listed as children of the [Map](#map) plugin.
 EditingSupport<a name="editingsupport"></a>
 ----------------------------------------------------------------
 Editing support for the map component.
@@ -1063,6 +1013,15 @@ Editing support for the map component.
 LocateSupport<a name="locatesupport"></a>
 ----------------------------------------------------------------
 GPS locate support for the map component.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| drawCircle | `bool` | Whether to draw an accuracy circle around the location point. | `true` |
+| metric | `bool` | Whether to display the accuracy in meters (`true`) or in feet (`false`). | `true` |
+| showPopup | `bool` | Whether to show a popup displaying accuracy information when clicking on the location point. | `false` |
+| startupMode | `string` | The geolocation startup mode. Either `DISABLED`, `ENABLED` or `FOLLOWING`. | `"DISABLED"` |
+| stopFollowingOnDrag | `bool` | Whether to stop following when the map is dragged. | `false` |
+| trackingOptions | `object` | Tracking options, as documented in the [HTML5 Geolocation spec](https://www.w3.org/TR/geolocation-API/#position_options_interface) | `{`<br />`    maximumAge: 2000,`<br />`    enableHighAccuracy: true,`<br />`    timeout: 10000`<br />`}` |
 
 MeasurementSupport<a name="measurementsupport"></a>
 ----------------------------------------------------------------
@@ -1075,4 +1034,84 @@ Redlining support for the map component.
 SnappingSupport<a name="snappingsupport"></a>
 ----------------------------------------------------------------
 Snapping support for the map component.
+
+---
+# 3D Plugins<a name="plugins3d"></a>
+
+These plugins must be listed as children of the [View3D](#view3d) plugin.
+BackgroundSwitcher3D<a name="backgroundswitcher3d"></a>
+----------------------------------------------------------------
+Map button for switching the background layer of the 3D map.
+
+BottomBar3D<a name="bottombar3d"></a>
+----------------------------------------------------------------
+Bottom bar of the 3D map, displaying coordinates, projection, etc.
+
+Compare3D<a name="compare3d"></a>
+----------------------------------------------------------------
+Split-screen and compare objects in the 3D map.
+
+Draw3D<a name="draw3d"></a>
+----------------------------------------------------------------
+Draw objects in the 3D map.
+
+ExportObjects3D<a name="exportobjects3d"></a>
+----------------------------------------------------------------
+Export objects from the 3D map.
+
+HideObjects3D<a name="hideobjects3d"></a>
+----------------------------------------------------------------
+Hide objects in the 3D map.
+
+Identify3D<a name="identify3d"></a>
+----------------------------------------------------------------
+Query attributes of objects in the 3D map.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 240,`<br />`    initialHeight: 320,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
+| tileInfoServiceUrl | `string` | URL to service for querying additional tile information.<br />Can contain the `{tileset}` and `{objectid}` placeholders.<br />Expected to return a JSON dict with attributes. | `undefined` |
+
+LayerTree3D<a name="layertree3d"></a>
+----------------------------------------------------------------
+Layer and object tree for the 3D map
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| importedTilesBaseUrl | `string` | Base URL of imported tile sets. | `':/'` |
+
+MapCopyright3D<a name="mapcopyright3d"></a>
+----------------------------------------------------------------
+Displays layer attributions in the bottom right corner of the 3D map.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| prefixCopyrightsWithLayerNames | `bool` | Whether to prepend the layer name to the attribution string. | `undefined` |
+| showThemeCopyrightOnly | `bool` | Whether to only display the attribution of the theme, omitting external layers. | `undefined` |
+
+MapExport3D<a name="mapexport3d"></a>
+----------------------------------------------------------------
+Export the 3D map image to raster formats.
+
+Measure3D<a name="measure3d"></a>
+----------------------------------------------------------------
+Measure in the 3D map.
+
+OverviewMap3D<a name="overviewmap3d"></a>
+----------------------------------------------------------------
+Overview map for the 3D map.
+
+Settings3D<a name="settings3d"></a>
+----------------------------------------------------------------
+Settings panel for the 3D map.
+
+TopBar3D<a name="topbar3d"></a>
+----------------------------------------------------------------
+Bottom bar of the 3D map, including the search bar, tool bar and menu.
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| menuItems | `array` | The menu items, in the same format as the 2D `TopBar` menu items.<br />You can include entries for the View3D plugins.<br />You can also include entries for 2D plugins which are compatible with the 3D view (i.e. `ThemeSwitcher`, `Share`, etc.),<br />these will be displayed only in fullsceen 3D mode. | `undefined` |
+| searchOptions | `{`<br />`  minScaleDenom: number,`<br />`}` | Options passed down to the search component. | `{`<br />`    minScaleDenom: 1000`<br />`}` |
+| toolbarItems | `array` | The toolbar, in the same format as the 2D `TopBar` toolbar items.<br />You can include entries for the View3D plugins.<br />You can also include entries for 2D plugins which are compatible with the 3D view (i.e. `ThemeSwitcher`, `Share`, etc.),<br />these will be displayed only in fullsceen 3D mode. | `undefined` |
 

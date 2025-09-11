@@ -139,7 +139,8 @@ const ThemeUtils = {
                     LayerUtils.completeExternalLayer(res[cur.internalLayer], LayerUtils.searchSubLayer(theme, 'name', cur.internalLayer));
                     return res;
                 }, {})
-            }
+            },
+            translations: theme.translations
         };
         layer = LayerUtils.recomputeLayerBBox(layer);
         // Drawing order only makes sense if layer reordering is disabled
@@ -272,6 +273,16 @@ const ThemeUtils = {
                 return item;
             }
         }).filter(Boolean);
+    },
+    applyTranslations(group) {
+        return {
+            ...group,
+            subdirs: group.subdirs ? group.subdirs.map(ThemeUtils.applyTranslations) : null,
+            items: group.items ? group.items.map(item => ({
+                ...LayerUtils.applyTranslations(item, item.translations),
+                title: item.translations?.theme?.title ?? item.title
+            })) : null
+        };
     }
 };
 

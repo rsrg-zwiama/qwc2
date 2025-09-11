@@ -110,6 +110,8 @@
     "compare3d": {
       "clipplane": "Плоскост на изрязване",
       "compare_objects": "Сравняване на обекти",
+      "info_message": "",
+      "modify": "",
       "toggleall": "Превключване на всички"
     },
     "cookiepopup": {
@@ -156,6 +158,10 @@
       "undoBool": "",
       "union": "",
       "wedge": "Клин"
+    },
+    "editdataset3d": {
+      "moveobj": "",
+      "zoomto": ""
     },
     "editing": {
       "add": "Добавяне на",
@@ -272,6 +278,7 @@
       "shpreprojectionerror": "",
       "supportedformats": "Поддържани формати: KML, GeoJSON, GeoPDF, SHP (в zip)",
       "unknownproj": "Избраният GeoPDF използва неизвестна проекция: {0}.",
+      "unsupportedfile": "",
       "url": "URL",
       "urlplaceholder": "Въведете URL адреса на WMS, WMTS, WFS..."
     },

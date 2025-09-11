@@ -26,7 +26,7 @@
         "Print": "Imprimer",
         "Reports": "Rapports",
         "Settings": "Paramètres",
-        "Settings3D": "Paramètres",
+        "Settings3D": "Paramètres 3D",
         "Share": "Partager",
         "ThemeSwitcher": "Thèmes",
         "AttributeTable": "Table d'attributs",
@@ -110,6 +110,8 @@
     "compare3d": {
       "clipplane": "Plan d'écrêtage",
       "compare_objects": "Comparer objets",
+      "info_message": "La comparaison d'objets est active",
+      "modify": "Modifier",
       "toggleall": "Tous"
     },
     "cookiepopup": {
@@ -156,6 +158,10 @@
       "undoBool": "Annuler l'opération",
       "union": "Unir",
       "wedge": "Coin"
+    },
+    "editdataset3d": {
+      "moveobj": "Déplacer l'objet dans la vue",
+      "zoomto": "Zoomer sur l'objet"
     },
     "editing": {
       "add": "Ajouter",
@@ -272,6 +278,7 @@
       "shpreprojectionerror": "La géométrie du fichier Shapefile n'a pas pu être reprojetée et peut être mal placée.",
       "supportedformats": "Formats supportés: KML, GeoJSON, GeoPDF, SHP (zip)",
       "unknownproj": "Le GeoPDF sélectionné utilise une projection inconnue: {0}.",
+      "unsupportedfile": "Format de fichier non supporté",
       "url": "URL",
       "urlplaceholder": "Entrer l'URL d'un WMS, WMTS, WFS..."
     },

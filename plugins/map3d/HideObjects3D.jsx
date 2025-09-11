@@ -21,9 +21,10 @@ import LocaleUtils from '../../utils/LocaleUtils';
 import './style/HideObjects3D.css';
 
 
+/**
+ * Hide objects in the 3D map.
+ */
 class HideObjects3D extends React.Component {
-    static availableIn3D = true;
-
     static propTypes = {
         enabled: PropTypes.bool,
         sceneContext: PropTypes.object
@@ -52,7 +53,7 @@ class HideObjects3D extends React.Component {
                                     onMouseEnter={() => this.showHighlight(entry)}
                                     onMouseLeave={() => this.hideHighlight(entry)}
                                 >
-                                    <span>{LocaleUtils.tr("hideobjects3d.object")}</span>
+                                    <span>{LocaleUtils.tr("hideobjects3d.object") + " " + entry.featureId ?? ""}</span>
                                     <Icon icon="eye" onClick={() => this.restoreObject(entry)} title={LocaleUtils.tr("hideobjects3d.restore")} />
                                 </div>
 

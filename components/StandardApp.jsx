@@ -55,9 +55,9 @@ class AppContainerComponent extends React.Component {
         appConfig: PropTypes.object,
         customPlugins: PropTypes.array,
         defaultUrlParams: PropTypes.string,
-        haveLocale: PropTypes.bool,
         haveMapSize: PropTypes.bool,
         localConfig: PropTypes.object,
+        locale: PropTypes.string,
         setBottombarHeight: PropTypes.func,
         setCurrentTask: PropTypes.func,
         setCurrentTheme: PropTypes.func,
@@ -95,8 +95,8 @@ class AppContainerComponent extends React.Component {
         }
 
         // Load themes.json
-        axios.get("themes.json").then(response => {
-            const themes = response.data.themes || {};
+        axios.get("themes.json", {params: {lang: this.props.locale}}).then(response => {
+            const themes = ThemeUtils.applyTranslations(response.data.themes || {});
             this.props.appConfig.themePreprocessor?.(themes);
             this.props.themesLoaded(themes);
 
@@ -163,18 +163,15 @@ class AppContainerComponent extends React.Component {
     render() {
         // Filter 2D plugins
         const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
-        const pluginsConf = this.props.localConfig.plugins[device].filter(entry => entry.availableIn2D);
+        const pluginsConf = this.props.localConfig.plugins[device];
         return (
-            <PluginsContainer
-                plugins={PluginStore.getPlugins()}
-                pluginsConfig={pluginsConf}
-            />
+            <PluginsContainer pluginsConfig={pluginsConf} />
         );
     }
 }
 
 const AppContainer = connect(state => ({
-    haveLocale: state.locale.current !== null,
+    locale: state.locale.current,
     haveMapSize: state.map.size !== null,
     defaultUrlParams: state.localConfig.user_infos?.default_url_params || "",
     localConfig: state.localConfig
@@ -261,12 +258,10 @@ export default class StandardApp extends React.Component {
                 return Object.entries(pluginConfig).map(([key, entry]) => {
                     const plugin = this.props.appConfig.pluginsDef.plugins[entry.name + "Plugin"];
                     const component = plugin?.WrappedComponent ?? plugin;
-                    const availableIn2D = component?.availableIn2D ?? true;
                     const availableIn3D = component?.availableIn3D ?? false;
                     return {
                         ...entry,
                         key,
-                        availableIn2D,
                         availableIn3D,
                         cfg: {
                             ...entry.cfg,

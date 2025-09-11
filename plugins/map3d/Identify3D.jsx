@@ -21,12 +21,36 @@ import LocaleUtils from '../../utils/LocaleUtils';
 import '../../components/style/IdentifyViewer.css';
 
 
+/**
+ * Query attributes of objects in the 3D map.
+ */
 class Identify3D extends React.Component {
-    static availableIn3D = true;
-
     static propTypes = {
+        /** Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). */
+        geometry: PropTypes.shape({
+            initialWidth: PropTypes.number,
+            initialHeight: PropTypes.number,
+            initialX: PropTypes.number,
+            initialY: PropTypes.number,
+            initiallyDocked: PropTypes.bool,
+            side: PropTypes.string
+        }),
         identifyEnabled: PropTypes.bool,
-        sceneContext: PropTypes.object
+        sceneContext: PropTypes.object,
+        /** URL to service for querying additional tile information.
+         * Can contain the `{tileset}` and `{objectid}` placeholders.
+         * Expected to return a JSON dict with attributes.*/
+        tileInfoServiceUrl: PropTypes.string
+    };
+    static defaultProps = {
+        geometry: {
+            initialWidth: 240,
+            initialHeight: 320,
+            initialX: 0,
+            initialY: 0,
+            initiallyDocked: false,
+            side: 'left'
+        }
     };
     state = {
         pickAttrs: null
@@ -44,10 +68,10 @@ class Identify3D extends React.Component {
             return null;
         }
         return (
-            <ResizeableWindow dockable={"left"} icon="info-sign"
-                initialHeight={320} initialWidth={240}
-                initialX={0} initialY={0}
-                initiallyDocked
+            <ResizeableWindow dockable={this.props.geometry.side} icon="info-sign"
+                initialHeight={this.props.geometry.initialHeight} initialWidth={this.props.geometry.initialWidth}
+                initialX={this.props.geometry.initialX} initialY={this.props.geometry.initialY}
+                initiallyDocked={this.props.geometry.initiallyDocked}
                 onClose={this.clear} title={LocaleUtils.tr("identify.title")}
             >
                 <div className="identify-body" role="body">
@@ -150,18 +174,22 @@ class Identify3D extends React.Component {
         this.addHiglightGeometry(pick.object.matrixWorld, pickPosition, pickNormal);
 
         // Gather extra attributes
-        if (this.props.sceneContext.options.tileInfoServiceUrl) {
+        if (this.props.tileInfoServiceUrl) {
             const {tilesetName, featureIdAttr} = helper.getTileUserData();
-            const url = this.props.sceneContext.options.tileInfoServiceUrl.replace(
+            const url = this.props.tileInfoServiceUrl.replace(
                 '{tileset}', tilesetName
             ).replace(
                 '{objectid}', featureAttrs[featureIdAttr]
             );
             axios.get(url).then(response => {
-                this.setState({pickAttrs: {
-                    ...featureAttrs,
-                    ...response.data
-                }});
+                response.data.forEach(attr => {
+                    if (attr.name in featureAttrs && featureAttrs[attr.name] === attr.value) {
+                        // Use attribute alias
+                        delete featureAttrs[attr.name];
+                    }
+                    featureAttrs[attr.alias] = attr.value;
+                });
+                this.setState({pickAttrs: featureAttrs});
             }).catch(() => {
                 this.setState({pickAttrs: featureAttrs});
             });
@@ -174,7 +202,7 @@ class Identify3D extends React.Component {
         const norAttr = pick.object.geometry.getAttribute('normal');
         const index = pick.object.geometry.getIndex();
         // Add selection object
-        this.addHiglightGeometry(pick.object.matrixWorld, posAttr.array, norAttr.array, index);
+        this.addHiglightGeometry(pick.object.matrixWorld, posAttr.array, norAttr?.array, index);
 
         // Set pick attrs
         this.setState({pickAttrs: pick.object.userData});
@@ -183,7 +211,9 @@ class Identify3D extends React.Component {
         const material = new MeshStandardMaterial({color: 0xff0000});
         const geometry = new BufferGeometry();
         geometry.setAttribute('position', new Float32BufferAttribute(position, 3));
-        geometry.setAttribute('normal', new Float32BufferAttribute(normal, 3));
+        if (normal) {
+            geometry.setAttribute('normal', new Float32BufferAttribute(normal, 3));
+        }
         geometry.setIndex(index);
         const mesh = new Mesh(geometry, material);
         mesh.applyMatrix4(matrixWorld);

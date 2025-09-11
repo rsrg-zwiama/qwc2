@@ -29,9 +29,10 @@ import MeasureUtils from '../../utils/MeasureUtils';
 import '../../plugins/style/Measure.css';
 
 
+/**
+ * Measure in the 3D map.
+ */
 export default class Measure3D extends React.Component {
-    static availableIn3D = true;
-
     static propTypes = {
         maxSampleCount: PropTypes.number,
         minMeasureLength: PropTypes.number,
@@ -79,6 +80,7 @@ export default class Measure3D extends React.Component {
             })
         });
         this.props.sceneContext.map.addLayer(this.drawLayer);
+        this.props.sceneContext.scene.domElement.addEventListener('pointerdown', this.clearResultOnUp);
     };
     onHide = () => {
         this.clearResult();
@@ -89,6 +91,7 @@ export default class Measure3D extends React.Component {
         this.measureTool = null;
         this.props.sceneContext.map.removeLayer(this.drawLayer, {dispose: true});
         this.drawLayer = null;
+        this.props.sceneContext.scene.domElement.removeEventListener('pointerdown', this.clearResultOnUp);
     };
     renderModeSwitcher = () => {
         const buttons = [
@@ -194,22 +197,28 @@ export default class Measure3D extends React.Component {
         return [
             new ol.style.Style({
                 fill: new ol.style.Fill({
-                    color: [41, 120, 180, 0.5]
+                    color: [255, 0, 0, 0.5]
                 })
             }),
             new ol.style.Style({
                 stroke: new ol.style.Stroke({
-                    color: [255, 255, 255],
+                    color: [255, 0, 0],
                     width: 4
                 })
             }),
             new ol.style.Style({
                 stroke: new ol.style.Stroke({
-                    color: [41, 120, 180],
+                    color: [255, 0, 0],
                     width: 1.5
                 })
             })
         ];
+    };
+    clearResultOnUp = (ev) => {
+        ev.view.addEventListener("pointermove", () => {
+            ev.view.removeEventListener("pointerup", this.clearResult);
+        }, {once: true});
+        ev.view.addEventListener("pointerup", this.clearResult, {once: true});
     };
     clearResult = () => {
         this.drawLayer.source.clear();
@@ -226,6 +235,7 @@ export default class Measure3D extends React.Component {
         this.abortController = new AbortController();
         const terrainPick = (e) => this.props.sceneContext.scene.pickObjectsAt(e, {sortByDistance: true, where: [this.props.sceneContext.getMap()]});
         const options = {
+            color: '#ff0000',
             signal: this.abortController.signal,
             endCondition: conditions.doubleClick,
             pick: null // default pick
@@ -458,7 +468,7 @@ export default class Measure3D extends React.Component {
         this.restart();
     };
     getElevation = (point) => {
-        return this.props.sceneContext.getTerrainHeightFromMap(point);
+        return this.props.sceneContext.getTerrainHeightFromMap(point) ?? 0;
     };
     triangleArea = (u, v) => {
         const cross = [u[1] * v[2] - u[2] * v[1], u[0] * v[2] - u[2] * v[0], u[0] * v[1] - u[1] * v[0]];

@@ -8,42 +8,51 @@
 
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {connect} from 'react-redux';
 
 import DOMPurify from 'dompurify';
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
 
-import {MapContainerPortalContext} from '../components/PluginsContainer';
-import LayerUtils from '../utils/LayerUtils';
-import LocaleUtils from '../utils/LocaleUtils';
+import {MapContainerPortalContext} from '../../components/PluginsContainer';
+import LocaleUtils from '../../utils/LocaleUtils';
 
-import './style/MapCopyright.css';
+import '../style/MapCopyright.css';
 
 
 /**
- * Displays layer attributions in the bottom right corner of the map.
+ * Displays layer attributions in the bottom right corner of the 3D map.
  */
-class MapCopyright extends React.Component {
+export default class MapCopyright3D extends React.Component {
     static contextType = MapContainerPortalContext;
 
     static propTypes = {
-        layers: PropTypes.array,
-        map: PropTypes.object,
         /** Whether to prepend the layer name to the attribution string. */
         prefixCopyrightsWithLayerNames: PropTypes.bool,
+        sceneContext: PropTypes.object,
         /** Whether to only display the attribution of the theme, omitting external layers. */
         showThemeCopyrightOnly: PropTypes.bool
     };
     state = {
         currentCopyrights: {}
     };
-    static getDerivedStateFromProps(nextProps) {
-        if (nextProps.map && nextProps.map.bbox && nextProps.layers) {
-            const copyrights = nextProps.layers.reduce((res, layer) => ({...res, ...LayerUtils.getAttribution(layer, nextProps.map, nextProps.showThemeCopyrightOnly)}), {});
-            return {currentCopyrights: copyrights};
+    componentDidUpdate(prevProps) {
+        if (
+            this.props.sceneContext.baseLayers !== prevProps.sceneContext.baseLayers ||
+            this.props.sceneContext.colorLayers !== prevProps.sceneContext.colorLayers
+        ) {
+            const layers = this.props.sceneContext.baseLayers.concat(this.props.sceneContext.colorLayers);
+            const copyrights = layers.reduce((res, layer) => {
+                if (layer.attribution && layer.attribution.Title) {
+                    const key = layer.attribution.OnlineResource || layer.attribution.Title;
+                    res[key] = {
+                        title: layer.attribution.OnlineResource ? layer.attribution.Title : null,
+                        layers: [ ...(res[key]?.layers || []), layer]
+                    };
+                }
+                return res;
+            }, {});
+            this.setState({currentCopyrights: copyrights});
         }
-        return null;
     }
     render() {
         // If attribution has both url and label, "key" is the url and "value.title" the label.
@@ -59,7 +68,7 @@ class MapCopyright extends React.Component {
             return null;
         }
         return ReactDOM.createPortal((
-            <div className="MapCopyright">
+            <div className="MapCopyright MapCopyright3D">
                 {copyrights}
             </div>
         ), this.context);
@@ -72,10 +81,3 @@ class MapCopyright extends React.Component {
         }
     };
 }
-
-const selector = (state) => ({
-    layers: state.layers.flat,
-    map: state.map
-});
-
-export default connect(selector, {})(MapCopyright);

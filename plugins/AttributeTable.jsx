@@ -17,10 +17,9 @@ import ResizeableWindow from '../components/ResizeableWindow';
 import EditingInterface from '../utils/EditingInterface';
 import LocaleUtils from '../utils/LocaleUtils';
 
-import './style/AttributeTable.css';
 
 /**
- * Displaying the attribute table of layers in a dialog.
+ * Display the attribute table of layers in a dialog.
  *
  * To make a layer available in the attribute table, create a a data resource and matching permissions for it in the `qwc-admin-gui`.
  *
@@ -47,7 +46,8 @@ class AttributeTable extends React.Component {
     };
     static defaultProps = {
         zoomLevel: 1000,
-        showEditFormButton: true
+        showEditFormButton: true,
+        showLimitToExtent: true
     };
     render() {
         if (!this.props.active) {

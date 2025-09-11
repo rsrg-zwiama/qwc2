@@ -11,7 +11,6 @@ import {connect, Provider} from 'react-redux';
 
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
-import {createSelector} from 'reselect';
 
 import * as displayExports from '../actions/display';
 import {setView3dMode, View3DMode} from '../actions/display';
@@ -27,13 +26,11 @@ import View3DSwitcher from '../components/map3d/View3DSwitcher';
 import Spinner from '../components/widgets/Spinner';
 import ReducerIndex from '../reducers/index';
 import personIcon from '../resources/person.png';
-import searchProvidersSelector from '../selectors/searchproviders';
 import {createStore} from '../stores/StandardStore';
 import ConfigUtils from '../utils/ConfigUtils';
 import LocaleUtils from '../utils/LocaleUtils';
 import MapUtils from '../utils/MapUtils';
 import {UrlParams} from '../utils/PermaLinkUtils';
-import PluginStore from '../utils/PluginStore';
 
 import './style/View3D.css';
 
@@ -41,99 +38,17 @@ import './style/View3D.css';
 /**
  * Displays a 3D map view.
  *
- * ### Configuration
- *
- * To add a 3D View to a theme, add the following configuration block to a theme item in `themesConfig.json`:
- * ```
- * "map3d": {
- *     "dtm": {"url": "<url_to_dtm.tif>", "crs": "<dtm_epsg_code>},
- *     "basemaps": [
- *          {"name": "<name_of_background_layer>", "visibility": true, "overview": true},
- *          {"name": "<name_of_background_layer>"},
- *          ...
- *     ],
- *     "tiles3d": [
- *          {
- *              "name": "<name>",
- *              "url": "<url_to_tileset.json>",
- *              "title": "<title>",
- *              "baseColor": "<css RGB(A) color string>",
- *              "idAttr": "<tile_feature_attr>",
- *              "styles": {"<styleName>", "<url_to_tilesetStyle.json>", ...},
- *              "style": "<styleName>",
- *              "colorAttr": "<tile_feature_attr>",
- *              "alphaAttr": "<tile_feature_attr>",
- *              "labelAttr": "<tile_feature_attr>",
- *          }
- *     ],
- *     "objects3d": [
- *         {
- *              "name": "<name>",
- *              "url": "<url_to_file.gltf>",
- *              "title": "<title>"
- *         }
- *     ]
- * }
- * ```
- * Where:
- *
- * - The DTM should be a cloud optimized GeoTIFF.
- * - The background layer names refer to the names of the entries defined in `backgroundLayers` in the `themesConfig.json`. Additionally:
- *   - `visibility` controls the initially visibile background layer
- *   - `overview: true` controls the name of background layer to display in the overview map. If no background layer is marked with `overview: true`, the currently visibile background layer id dipslayed in the overview map.
- * - The `tiles3d` entry contains an optional list of 3d tiles to add to the scene, with:
- *   - `idAttr`: feature properties table attribute which stores the object id, used for styling and passed to `tileInfoServiceUrl`. Default: `id`.
- *   - `styles`: optional, available tileset styles. Takes precedente over `colorAttr`, `alphaAttr`, `labelAttr`.
- *   - `style`: optional, tileset style enabled by default.
- *   - `baseColor`: the fallback color for the tile objects, defaults to white.
- *   - `colorAttr`: optional, feature properties table attribute which stores the feature color, as a 0xRRGGBB integer.
- *   - `alphaAttr`: optional, feature properties table attribute which stores the feature alpha (transparency), as a [0, 255] integer.
- *   - `labelAttr`: optional, feature properties table attribute which stores the feature label, displayed above the geometry.
- * - The `objects3d` entry contains an optional list of GLTF objects to add to the scene.
- *
- *
- * ### Styling
- *
- * The tileset style JSON is a [3D Tiles stylesheet](https://github.com/CesiumGS/3d-tiles/tree/main/specification/Styling),
- * of which currently the `color` section is supported, and which may in addition also contain a `featureStyles` section as follows:
- * ```
- * {
- *     "color": {
- *        ...
- *     },
- *     "featureStyles": {
- *       "<object_id>": {
- *           "label": "<label>",
- *           "labelOffset": <offset>,
- *           "color": "<css RGB(A) color string>"
- *       }
- *    }
- * }
- * ```
- * Where:
- *
- * - `label` is an optional string with which to label the object.
- * - `labelOffset` is an optional number which represents the vertical offset between the object top and the label. Defaults to 80.
- * - `color` is an optional CSS color string which defines the object color.
- *
- * *Note*:
- *
- * - The color declarations in the `featureStyles` section override any color resulting from a color expression in the `color` section.
- * - You must ensure that your 3D tiles properties table contains all attributes which are referenced as variables in a color expression!
- *
- * ### Import
- *
- * To import scene objects in formats other than GLTF, a `ogcProcessesUrl` in `config.json` needs to point to a BBOX OGC processes server.
+ * See [3D View](../../topics/View3D).
  */
 class View3D extends React.Component {
     static propTypes = {
         addLayerFeatures: PropTypes.func,
         /** The position slot index of the 3d switch map button, from the bottom (0: bottom slot). */
         buttonPosition: PropTypes.number,
-        /** Default viewer day (1-365) */
-        defaultDay: PropTypes.number,
-        /** Default viewer time (00:00-23:59) */
-        defaultTime: PropTypes.string,
+        /** The position of the navigation controls. Either `top` or `bottom`. */
+        controlsPosition: PropTypes.string,
+        /** The default scene quality factor (`20`: min, `100`: max). */
+        defaultSceneQuality: PropTypes.number,
         display: PropTypes.object,
         /** Default window geometry. */
         geometry: PropTypes.shape({
@@ -143,31 +58,32 @@ class View3D extends React.Component {
             initialY: PropTypes.number,
             initiallyDocked: PropTypes.bool
         }),
-        /** Base URL of imported tile sets. */
-        importedTilesBaseUrl: PropTypes.string,
         layers: PropTypes.object,
         localConfig: PropTypes.object,
         map: PropTypes.object,
+        /** Mouse buttons assignment. You can assign `pan`, `rotate`, `zoom` to each button.  */
+        mouseButtons: PropTypes.shape({
+            left: PropTypes.string,
+            middle: PropTypes.string,
+            right: PropTypes.string
+        }),
         panTo: PropTypes.func,
-        plugins: PropTypes.object,
-        pluginsConfig: PropTypes.object,
+        /** Options to pass to the 3D plugins, in the form `{"<PluginName>": {<options>}}`.
+         * Refer to the documentation of the <a href="#plugins3d">3D plugins</a> for settable options. */
+        pluginOptions: PropTypes.object,
+        plugins3d: PropTypes.object,
         removeLayer: PropTypes.func,
-        /** Minimum scale denominator when zooming to search result. */
-        searchMinScaleDenom: PropTypes.number,
         searchProviders: PropTypes.object,
         setView3dMode: PropTypes.func,
         startupParams: PropTypes.object,
         startupState: PropTypes.object,
         theme: PropTypes.object,
-        /** URL to service for querying additional tile information.
-         * Can contain the `{tileset}` and `{objectid}` placeholders.
-         * Expected to return a JSON dict with attributes.*/
-        tileInfoServiceUrl: PropTypes.string,
         view3dMode: PropTypes.number,
         zoomToPoint: PropTypes.func
     };
     static defaultProps = {
         buttonPosition: 6,
+        controlsPosition: 'top',
         geometry: {
             initialWidth: 600,
             initialHeight: 800,
@@ -175,10 +91,12 @@ class View3D extends React.Component {
             initialY: 0,
             initiallyDocked: true
         },
-        defaultDay: 182,
-        defaultTime: '12:00',
-        searchMinScaleDenom: 1000,
-        importedTilesBaseUrl: ':/'
+        pluginOptions: {},
+        mouseButtons: {
+            left: 'pan',
+            middle: 'zoom',
+            right: 'rotate'
+        }
     };
     state = {
         componentLoaded: false,
@@ -245,6 +163,7 @@ class View3D extends React.Component {
             this.props.setView3dMode(View3DMode.SPLITSCREEN);
         }
         window.addEventListener('focus', this.trackFocus, true);
+        this.syncParentStore({});
     }
     componentWillUnmount() {
         window.removeEventListener('focus', this.trackFocus);
@@ -277,21 +196,8 @@ class View3D extends React.Component {
             }
         }
         // Sync parts of parent store
-        if (this.props.display !== prevProps.display) {
-            this.store.dispatch({type: "SYNC_DISPLAY_FROM_PARENT_STORE", display: this.props.display});
-        }
-        if (this.props.theme !== prevProps.theme) {
-            this.store.dispatch({type: "SYNC_THEME_FROM_PARENT_STORE", theme: this.props.theme});
-        }
-        if (this.props.localConfig !== prevProps.localConfig) {
-            this.store.dispatch({type: "SYNC_LOCAL_CONFIG_FROM_PARENT_STORE", localConfig: this.props.localConfig});
-        }
-        if (this.props.layers !== prevProps.layers) {
-            this.store.dispatch({type: "SYNC_LAYERS_FROM_PARENT_STORE", layers: this.props.layers});
-        }
-        if (this.props.map !== prevProps.map) {
-            this.store.dispatch({type: "SYNC_MAP_FROM_PARENT_STORE", map: this.props.map});
-        }
+        this.syncParentStore(prevProps);
+        // Handle view mode change
         if (this.props.view3dMode !== prevProps.view3dMode) {
             if (this.props.view3dMode === View3DMode.FULLSCREEN) {
                 UrlParams.updateParams({v: "3d"});
@@ -299,7 +205,7 @@ class View3D extends React.Component {
             } else if (this.props.view3dMode === View3DMode.SPLITSCREEN) {
                 UrlParams.updateParams({v: "3d2d"});
             } else {
-                UrlParams.updateParams({v: undefined});
+                UrlParams.updateParams({v: "2d"});
             }
         }
         // Switch to 2D mode if new theme has no 3D configuration
@@ -317,6 +223,23 @@ class View3D extends React.Component {
         // Clear stored state when switching away from a theme
         if (prevProps.theme.current && this.props.theme.current !== prevProps.theme.current) {
             this.setState({storedState: null});
+        }
+    }
+    syncParentStore(prevProps) {
+        if (this.props.display !== prevProps.display) {
+            this.store.dispatch({type: "SYNC_DISPLAY_FROM_PARENT_STORE", display: this.props.display});
+        }
+        if (this.props.theme !== prevProps.theme) {
+            this.store.dispatch({type: "SYNC_THEME_FROM_PARENT_STORE", theme: this.props.theme});
+        }
+        if (this.props.localConfig !== prevProps.localConfig) {
+            this.store.dispatch({type: "SYNC_LOCAL_CONFIG_FROM_PARENT_STORE", localConfig: this.props.localConfig});
+        }
+        if (this.props.layers !== prevProps.layers) {
+            this.store.dispatch({type: "SYNC_LAYERS_FROM_PARENT_STORE", layers: this.props.layers});
+        }
+        if (this.props.map !== prevProps.map) {
+            this.store.dispatch({type: "SYNC_MAP_FROM_PARENT_STORE", map: this.props.map});
         }
     }
     render3DWindow = () => {
@@ -339,17 +262,10 @@ class View3D extends React.Component {
                 });
             }
             const Map3D = this.map3dComponent;
-            const options = {
-                defaultDay: this.props.defaultDay,
-                defaultTime: this.props.defaultTime,
-                searchMinScaleDenom: this.props.searchMinScaleDenom,
-                tileInfoServiceUrl: this.props.tileInfoServiceUrl,
-                importedTilesBaseUrl: this.props.importedTilesBaseUrl
-            };
             const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
-            const pluginsConfig = this.props.pluginsConfig[device].filter(entry => {
-                return entry.availableIn3D && (!entry.availableIn2D || this.props.view3dMode === View3DMode.FULLSCREEN);
-            });
+            const pluginsConfig = this.props.view3dMode === View3DMode.FULLSCREEN ? this.props.localConfig.plugins[device].filter(entry => {
+                return entry.availableIn3D;
+            }) : [];
             return (
                 <ResizeableWindow
                     extraControls={extraControls}
@@ -372,12 +288,16 @@ class View3D extends React.Component {
                 >
                     {this.state.componentLoaded ? (
                         <Provider role="body" store={this.store}>
-                            <PluginsContainer className="plugins-container-3d" plugins={PluginStore.getPlugins()} pluginsConfig={pluginsConfig}>
+                            <PluginsContainer pluginsConfig={pluginsConfig}>
                                 <Map3D
+                                    controlsPosition={this.props.controlsPosition}
+                                    defaultSceneQuality={this.props.defaultSceneQuality}
                                     innerRef={this.setRef}
+                                    mouseButtons={this.props.mouseButtons}
                                     onCameraChanged={this.onCameraChanged}
                                     onMapInitialized={this.setupMap}
-                                    options={options}
+                                    pluginOptions={this.props.pluginOptions}
+                                    plugins3d={this.props.plugins3d}
                                     searchProviders={this.props.searchProviders}
                                     theme={this.props.theme} />
                                 {
@@ -476,6 +396,8 @@ class View3D extends React.Component {
         if (this.map3dComponentRef) {
             if (!isEmpty(this.state.storedState)) {
                 this.map3dComponentRef.restore3dState(this.state.storedState);
+            } else if (this.props.theme.current.map3d.initialView) {
+                this.map3dComponentRef.restore3dState(this.props.theme.current.map3d.initialView);
             } else {
                 this.sync2DExtent();
             }
@@ -499,19 +421,18 @@ class View3D extends React.Component {
     };
 }
 
-export default connect(
-    createSelector([state => state, searchProvidersSelector], (state, searchProviders) => ({
+export default (plugins3d) => connect(
+    (state) => ({
+        plugins3d: plugins3d,
         display: state.display,
         map: state.map,
         layers: state.layers,
-        pluginsConfig: state.localConfig.plugins,
         theme: state.theme,
         localConfig: state.localConfig,
         view3dMode: state.display.view3dMode,
         startupParams: state.localConfig.startupParams,
-        startupState: state.localConfig.startupState,
-        searchProviders
-    })), {
+        startupState: state.localConfig.startupState
+    }), {
         addLayerFeatures: addLayerFeatures,
         removeLayer: removeLayer,
         panTo: panTo,

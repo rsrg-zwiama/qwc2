@@ -110,6 +110,8 @@
     "compare3d": {
       "clipplane": "",
       "compare_objects": "",
+      "info_message": "",
+      "modify": "",
       "toggleall": ""
     },
     "cookiepopup": {
@@ -156,6 +158,10 @@
       "undoBool": "",
       "union": "",
       "wedge": ""
+    },
+    "editdataset3d": {
+      "moveobj": "",
+      "zoomto": ""
     },
     "editing": {
       "add": "",
@@ -217,6 +223,7 @@
     },
     "heightprofile": {
       "asl": "над р.м.",
+      "dhmdefaultname": "",
       "distance": "Дистанція",
       "drawnodes": "",
       "error": "",
@@ -271,6 +278,7 @@
       "shpreprojectionerror": "",
       "supportedformats": "",
       "unknownproj": "",
+      "unsupportedfile": "",
       "url": "",
       "urlplaceholder": "Введіть URL для WMS, WMTS, WFS..."
     },

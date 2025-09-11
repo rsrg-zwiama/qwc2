@@ -73,6 +73,7 @@ class QtDesignerForm extends React.Component {
         setFormBusy: PropTypes.func,
         setRelationTables: PropTypes.func,
         switchEditContext: PropTypes.func,
+        translations: PropTypes.object,
         updateField: PropTypes.func,
         updateRelationField: PropTypes.func
     };
@@ -295,8 +296,10 @@ class QtDesignerForm extends React.Component {
             if (widget.name.startsWith("img__")) {
                 value = (feature.properties || [])[widget.name.split("__")[1]] ?? widget.property.text;
                 return (<div className="qt-designer-form-image"><a href={value} rel="noreferrer" target="_blank"><img src={value} /></a></div>);
+            } else if (widget.name.startsWith("ext__")) {
+                return (<div style={fontStyle}>{value}</div>);
             } else {
-                const text = widget.name.startsWith("ext__") ? value : widget.property.text;
+                const text = widget.property.fieldLabel ? this.translateFieldName(widget.property.text, editConfig.layerName) : widget.property.text;
                 return (<div style={fontStyle}>{text}</div>);
             }
         } else if (widget.class === "Line") {
@@ -325,7 +328,9 @@ class QtDesignerForm extends React.Component {
             }
             return (
                 <div className="qt-designer-form-container">
-                    <div className="qt-designer-form-frame-title" style={fontStyle}>{prop.title}</div>
+                    <div className="qt-designer-form-frame-title" style={fontStyle}>
+                        {this.translateFormString(prop.title, editConfig.layerName)}
+                    </div>
                     <div className="qt-designer-form-frame">
                         {widget.name.startsWith("nrel__") ? this.renderNRelation(widget) : this.renderLayout(widget.layout, feature, editConfig, updateField, nametransform)}
                     </div>
@@ -340,7 +345,10 @@ class QtDesignerForm extends React.Component {
                 return null;
             }
             const activetab = this.state.activetabs[widget.name] || tabwidgets[0].name;
-            const tabs = tabwidgets.map(tab => ({key: tab.name, label: tab.attribute.title}));
+            const tabs = tabwidgets.map(tab => ({
+                key: tab.name,
+                label: this.translateFormString(tab.attribute.title, editConfig.layerName)
+            }));
             return (
                 <div className="qt-designer-form-container">
                     <ButtonBar active={activetab} buttons={tabs} className="qt-designer-form-tabbar"
@@ -412,7 +420,7 @@ class QtDesignerForm extends React.Component {
                 return (
                     <EditComboField
                         editIface={this.props.iface} fieldId={fieldId} filterExpr={filterExpr} key={fieldId}
-                        keyvalrel={keyvalrel} multiSelect={widget.allowMulti === "true"}
+                        keyvalrel={keyvalrel} multiSelect={widget.property.allowMulti === true || widget.allowMulti === "true"}
                         name={nametransform(fieldId)} placeholder={inputConstraints.placeholder}
                         readOnly={inputConstraints.readOnly || fieldConstraints.readOnly}
                         required={inputConstraints.required || fieldConstraints.required}
@@ -664,40 +672,41 @@ class QtDesignerForm extends React.Component {
     };
     parseForm = (data) => {
         const loadingReqId = uuidv1();
-        this.setState({loading: true, loadingReqId: loadingReqId});
-        const parserOpts = {
-            isArray: () => false,
-            ignoreAttributes: false,
-            attributeNamePrefix: ""
-        };
-        const json = (new XMLParser(parserOpts)).parse(data);
-        const relationTables = {};
-        const externalFields = {};
-        const widgets = {};
-        const fields = {};
-        const buttons = {};
-        const nrels = {};
-        const counters = {
-            widget: 0,
-            layout: 0
-        };
-        this.reformatWidget(json.ui.widget, relationTables, fields, buttons, nrels, externalFields, widgets, counters);
-        // console.log(json);
-        json.externalFields = externalFields;
-        json.widgets = widgets;
-        json.fields = fields;
-        json.buttons = buttons;
-        json.nrels = nrels;
-        if (FormPreprocessors[this.props.editConfig.editDataset]) {
-            FormPreprocessors[this.props.editConfig.editDataset](json, this.props.feature, (formData) => {
-                if (this.state.loadingReqId === loadingReqId) {
-                    this.setState({formData: formData, loading: false, loadingReqId: null});
-                }
-            });
-        } else {
-            this.setState({formData: json, loading: false, loadingReqId: null});
-        }
-        this.props.setRelationTables(relationTables);
+        this.setState({loading: true, loadingReqId: loadingReqId}, () => {
+            const parserOpts = {
+                isArray: () => false,
+                ignoreAttributes: false,
+                attributeNamePrefix: ""
+            };
+            const json = (new XMLParser(parserOpts)).parse(data);
+            const relationTables = {};
+            const externalFields = {};
+            const widgets = {};
+            const fields = {};
+            const buttons = {};
+            const nrels = {};
+            const counters = {
+                widget: 0,
+                layout: 0
+            };
+            this.reformatWidget(json.ui.widget, relationTables, fields, buttons, nrels, externalFields, widgets, counters);
+            // console.log(json);
+            json.externalFields = externalFields;
+            json.widgets = widgets;
+            json.fields = fields;
+            json.buttons = buttons;
+            json.nrels = nrels;
+            if (FormPreprocessors[this.props.editConfig.editDataset]) {
+                FormPreprocessors[this.props.editConfig.editDataset](json, this.props.feature, (formData) => {
+                    if (this.state.loadingReqId === loadingReqId) {
+                        this.setState({formData: formData, loading: false, loadingReqId: null});
+                    }
+                });
+            } else {
+                this.setState({formData: json, loading: false, loadingReqId: null});
+            }
+            this.props.setRelationTables(relationTables);
+        });
     };
     reformatWidget = (widget, relationTables, fields, buttons, nrels, externalFields, widgets, counters) => {
         if (widget.property) {
@@ -801,6 +810,12 @@ class QtDesignerForm extends React.Component {
             message += ":\n - " + errorDetails.validation_errors.join("\n - ");
         }
         return message;
+    };
+    translateFormString = (label, layerName) => {
+        return this.props.translations?.layers?.[layerName]?.form?.[label] ?? label;
+    };
+    translateFieldName = (fieldName, layerName) => {
+        return this.props.translations?.layers?.[layerName]?.fields?.[fieldName] ?? fieldName;
     };
 }
 

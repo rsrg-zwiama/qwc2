@@ -26,7 +26,7 @@
         "Print": "Print",
         "Reports": "Reports",
         "Settings": "Settings",
-        "Settings3D": "Settings",
+        "Settings3D": "3D Settings",
         "Share": "Share Link",
         "ThemeSwitcher": "Theme",
         "AttributeTable": "Attribute Table",
@@ -110,6 +110,8 @@
     "compare3d": {
       "clipplane": "Clipping plane",
       "compare_objects": "Compare objects",
+      "info_message": "Object comparison is active",
+      "modify": "Modify",
       "toggleall": "Toggle all"
     },
     "cookiepopup": {
@@ -156,6 +158,10 @@
       "undoBool": "Undo operation",
       "union": "Union",
       "wedge": "Wedge"
+    },
+    "editdataset3d": {
+      "moveobj": "Move object into view",
+      "zoomto": "Zoom to object"
     },
     "editing": {
       "add": "Add",
@@ -272,6 +278,7 @@
       "shpreprojectionerror": "The Shapefile geometry could not be reprojected, and may be misplaced.",
       "supportedformats": "Supported formats: KML, GeoJSON, GeoPDF, SHP (in zip)",
       "unknownproj": "The selected GeoPDF uses an unknown projection: {0}.",
+      "unsupportedfile": "Unsupported file format.",
       "url": "URL",
       "urlplaceholder": "Enter URL to WMS, WMTS, WFS..."
     },

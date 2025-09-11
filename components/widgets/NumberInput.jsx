@@ -22,6 +22,7 @@ export default class NumberInput extends React.Component {
         decimals: PropTypes.number,
         disabled: PropTypes.bool,
         fitParent: PropTypes.bool,
+        hideArrows: PropTypes.bool,
         max: PropTypes.number,
         min: PropTypes.number,
         mobile: PropTypes.bool,
@@ -58,8 +59,9 @@ export default class NumberInput extends React.Component {
     render() {
         const className = classNames({
             "number-input": true,
-            "number-input-mobile": this.props.mobile,
-            "number-input-normal": !this.props.mobile,
+            "number-input-mobile": this.props.mobile && !this.props.hideArrows,
+            "number-input-normal": !this.props.mobile && !this.props.hideArrows,
+            "number-input-noarrows": this.props.hideArrows,
             "number-input-disabled": this.props.disabled || this.props.readOnly,
             "number-input-invalid": this.props.required && !this.state.value
         });
@@ -86,8 +88,11 @@ export default class NumberInput extends React.Component {
                     readOnly={this.props.readOnly} required={this.props.required}
                     style={style} type="text" value={this.props.prefix + this.state.value + this.props.suffix} />
                 <input name={this.props.name} required={this.props.required} type="hidden" value={this.state.value} />
-                <Icon icon={plusIcon} onPointerDown={() => this.startStep(+step)} />
-                <Icon icon={minusIcon} onPointerDown={() => this.startStep(-step)} />
+                {!this.props.hideArrows ? [(
+                    <Icon icon={plusIcon} key="ArrowPlus" onPointerDown={() => this.startStep(+step)} />
+                ), (
+                    <Icon icon={minusIcon} key="ArrowMinus" onPointerDown={() => this.startStep(-step)} />
+                )] : null}
             </div>
         );
     }

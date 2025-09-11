@@ -168,18 +168,18 @@ class AttributeTableWidget extends React.Component {
                     <thead>
                         <tr>
                             <th />
-                            <th onClick={() => this.sortBy("id")}>
+                            <th onClick={() => this.sortBy("id")} title={this.translateFieldName("id", this.state.loadedLayer)}>
                                 <span>
-                                    <span className="attribtable-table-headername">id</span>
+                                    <span className="attribtable-table-headername">{this.translateFieldName("id", this.state.loadedLayer)}</span>
                                     {this.renderSortIndicator("id")}
                                     {this.renderColumnResizeHandle(1, 'r')}
                                 </span>
                             </th>
                             {fields.map((field, idx) => (
-                                <th key={field.id} onClick={() => this.sortBy(field.id)} title={field.name}>
+                                <th key={field.id} onClick={() => this.sortBy(field.id)} title={this.translateFieldName(field.name, this.state.loadedLayer)}>
                                     <span>
                                         {this.renderColumnResizeHandle(idx + 1, 'l')}
-                                        <span className="attribtable-table-headername">{field.name}</span>
+                                        <span className="attribtable-table-headername">{this.translateFieldName(field.name, this.state.loadedLayer)}</span>
                                         {this.renderSortIndicator(field.id)}
                                         {idx < fields.length - 1 ? this.renderColumnResizeHandle(idx + 2, 'r') : null}
                                     </span>
@@ -240,9 +240,9 @@ class AttributeTableWidget extends React.Component {
                     <div className="attribtable-filter controlgroup">
                         <Icon icon="filter" />
                         <select disabled={this.state.changedFeatureIdx !== null} onChange={ev => this.updateFilter("filterField", ev.target.value)} value={this.state.filterField}>
-                            <option value="id">id</option>
+                            <option value="id">{this.translateFieldName("id", this.state.loadedLayer)}</option>
                             {fields.map(field => (
-                                <option key={field.id} value={field.id}>{field.name}</option>
+                                <option key={field.id} value={field.id}>{this.translateFieldName(field.name, this.state.loadedLayer)}</option>
                             ))}
                         </select>
                         <select disabled={this.state.changedFeatureIdx !== null} onChange={ev => this.updateFilter("filterOp", ev.target.value)} value={this.state.filterOp}>
@@ -290,9 +290,13 @@ class AttributeTableWidget extends React.Component {
                             <option disabled value="">{LocaleUtils.tr("attribtable.selectlayer")}</option>
                             {Object.keys(editConfig).map(layerId => {
                                 const layerName = editConfig[layerId].layerName;
-                                const match = LayerUtils.searchLayer(this.props.layers, this.props.theme.url, layerName);
+                                const layerTitle = editConfig[layerId].layerTitle ? (
+                                    this.props.theme.translations?.layertree?.[layerName] ?? editConfig[layerId].layerTitle
+                                ) : (
+                                    LayerUtils.searchLayer(this.props.layers, this.props.theme.url, layerName)?.sublayer?.title ?? layerName
+                                );
                                 return (
-                                    <option key={layerId} value={layerId}>{match?.sublayer?.title ?? layerName}</option>
+                                    <option key={layerId} value={layerId}>{layerTitle}</option>
                                 );
                             })}
                         </select>
@@ -788,6 +792,9 @@ class AttributeTableWidget extends React.Component {
             }).join(",") + "\n";
         });
         FileSaver.saveAs(new Blob([data], {type: "text/plain;charset=utf-8"}), this.state.loadedLayer + ".csv");
+    };
+    translateFieldName = (fieldName, layerName) => {
+        return this.props.theme.translations?.layers?.[layerName]?.fields?.[fieldName] ?? fieldName;
     };
 }
 
