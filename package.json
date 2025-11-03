@@ -1,6 +1,6 @@
 {
     "name": "qwc2",
-    "version": "2025.09.04",
+    "version": "2025.10.30",
     "description": "QGIS Web Client",
     "author": "Sourcepole AG",
     "license": "BSD-2-Clause",
@@ -17,15 +17,17 @@
     ],
     "dependencies": {
         "@furkot/webfonts-generator": "^2.0.2",
-        "@giro3d/giro3d": "^0.43.2",
+        "@giro3d/giro3d": "^0.43.4",
         "@kayahr/text-encoding": "^2.0.0",
         "@loaders.gl/core": "^4.3.3",
         "@loaders.gl/shapefile": "^4.3.3",
         "@loaders.gl/zip": "^4.3.3",
+        "@mapbox/shp-write": "^0.4.3",
         "@panoramax/web-viewer": "^4.0.1",
         "@reduxjs/toolkit": "^2.4.0",
         "@turf/buffer": "^6.5.0",
         "@turf/helpers": "^6.5.0",
+        "@vtaits/react-color-picker": "^2.0.0",
         "any-date-parser": "^1.5.4",
         "axios": "^1.11.0",
         "chart.js": "^4.4.7",
@@ -90,7 +92,8 @@
         "toposort": "^2.0.2",
         "url": "^0.11.4",
         "utif": "^3.1.0",
-        "uuid": "^11.0.3"
+        "uuid": "^11.0.3",
+        "xlsx": "^0.18.5"
     },
     "devDependencies": {
         "@babel/cli": "^7.27.0",
@@ -110,7 +113,7 @@
         "eslint": "^8.56.0",
         "eslint-plugin-perfectionist": "^2.10.0",
         "eslint-plugin-react": "^7.37.2",
-        "html-webpack-plugin": "^5.6.3",
+        "html-webpack-plugin": "^5.6.4",
         "react-docgen": "^5.4.3",
         "source-map-loader": "^5.0.0",
         "style-loader": "^4.0.0",
