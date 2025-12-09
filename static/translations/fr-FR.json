@@ -169,6 +169,14 @@
       "attrtable": "Table",
       "canceldelete": "Annuler la suppression",
       "clearpicture": "Réinitialiser",
+      "clone_all": "Tous",
+      "clone_copy": "Copier sélectionnés",
+      "clone_defaulted": "(valuer predef.)",
+      "clone_dontcopy": "Ne rien copier",
+      "clone_hidden": "(masqué)",
+      "clone_none": "Aucun",
+      "clone_select_attrs": "Attributs à copier:",
+      "clone_visible": "Visibles sans valeur predef.",
       "commit": "Appliquer",
       "commitfailed": "Échec de l'enregistrement",
       "contraintviolation": "Violation de contrainte",
@@ -189,6 +197,7 @@
       "reallydelete": "Supprimer",
       "relationcommitfailed": "Certaines relations n'ont pas pu être enregistrées. Pour plus de détails consulter le bouton d'informations",
       "select": "Sélectionner",
+      "selectlayer": "Sélectionner une couche...",
       "takepicture": "Ajouter une photo",
       "unsavedchanged": "Il y a des modifications non enregistrées. Faut-il quand même quitter la page?"
     },
@@ -447,7 +456,7 @@
       "angle": "Angle",
       "featureunsupported": "Entrée numérique non disponible pour cette géométrie",
       "height": "Hauteur",
-      "nofeatureormultiple": "",
+      "nofeatureormultiple": "Aucun ou plusieurs objets actifs",
       "side": "Côté",
       "width": "Largeur",
       "windowtitle": "Entrée numérique"
@@ -641,6 +650,7 @@
       "vertex": "Snapping aux sommets"
     },
     "themelayerslist": {
+      "addanyway": "Ajouter quand même",
       "addlayer": "Ajouter la couche",
       "addlayerstotheme": "Ajouter des couches à la carte",
       "addselectedlayers": "Ajouter les couches sélectionnées",

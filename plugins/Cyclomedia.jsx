@@ -97,7 +97,7 @@ class Cyclomedia extends React.Component {
         super(props);
         this.iframe = null;
         this.iframePollIntervall = null;
-        if (props.credentialUserInfoFields) {
+        if (props.credentialUserInfoFields && props.userInfos) {
             this.state.username = props.userInfos[props.credentialUserInfoFields.username];
             this.state.password = props.userInfos[props.credentialUserInfoFields.password];
         }
@@ -208,7 +208,7 @@ class Cyclomedia extends React.Component {
                 initiallyDocked={this.props.geometry.initiallyDocked}
                 onClose={this.onClose} splitScreenWhenDocked title={LocaleUtils.tr("cyclomedia.title")} usePortal={false}
             >
-                <div className="cyclomedia-body" role="body">
+                <div className="cyclomedia-body">
                     {this.props.mapScale > this.props.maxMapScale && this.state.status > Status.LOGIN ? (
                         <div className="cyclomedia-scale-hint">
                             {LocaleUtils.tr("cyclomedia.scalehint", this.props.maxMapScale)}

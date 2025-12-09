@@ -611,12 +611,13 @@ const LayerUtils = {
         }
         return null;
     },
-    searchLayer(layers, layerUrl, layerName) {
+    searchLayer(layers, attr, value, subattr, subval) {
         let match = null;
         layers.find(layer => {
             let sublayer = null;
-            if (layer.url === layerUrl && (sublayer = LayerUtils.searchSubLayer(layer, 'name', layerName))) {
-                match = {layer, sublayer};
+            const path = [];
+            if (layer[attr] === value && (sublayer = LayerUtils.searchSubLayer(layer, subattr, subval, path))) {
+                match = {layer, sublayer, path};
                 return true;
             }
             return false;
@@ -1126,17 +1127,18 @@ const LayerUtils = {
         });
         return reports;
     },
-    computeVisbilityPreset(layer) {
+    computeVisbilityPreset(layer, path = "") {
         const result = {};
         if (layer.sublayers) {
+            const istoplevel = !!layer.url;
             layer.sublayers.forEach(sublayer =>
-                Object.assign(result, LayerUtils.computeVisbilityPreset(sublayer))
+                Object.assign(result, LayerUtils.computeVisbilityPreset(sublayer, !istoplevel ? path + layer.name + "/" : ""))
             );
-            if (layer.visibility && !layer.url) {
-                result[layer.name] = "";
+            if (layer.visibility && !istoplevel) {
+                result[path + layer.name] = "";
             }
         } else if (layer.visibility) {
-            result[layer.name] = layer.style;
+            result[path + layer.name] = layer.style;
         }
         return result;
     },
@@ -1158,24 +1160,21 @@ const LayerUtils = {
         }
         return null;
     },
-    applyVisibilityPreset(layer, preset) {
+    applyVisibilityPreset(layer, preset, path = []) {
         const newLayer = {...layer};
+        const itempath = [...path.slice(1), newLayer.name].join("/");
         if (newLayer.sublayers) {
-            let haveVisibileSublayer = false;
-            newLayer.sublayers = newLayer.sublayers.map(sublayer => {
-                const newSublayer = LayerUtils.applyVisibilityPreset(sublayer, preset);
-                haveVisibileSublayer ||= (newSublayer.visibility === true);
-                return newSublayer;
-            });
-            newLayer.visibility = haveVisibileSublayer;
-            if (newLayer.name in preset) {
-                newLayer.visibility = true;
-            }
-        } else if (newLayer.name in preset) {
-            newLayer.visibility = true;
-            newLayer.style = preset[newLayer.name];
+            newLayer.visibility = itempath in preset || path.length === 0;
+            newLayer.sublayers = newLayer.sublayers.map(sublayer =>
+                LayerUtils.applyVisibilityPreset(sublayer, preset, [...path, layer.name])
+            );
         } else {
-            newLayer.visibility = false;
+            if (itempath in preset) {
+                newLayer.visibility = true;
+                newLayer.style = preset[itempath];
+            } else {
+                newLayer.visibility = false;
+            }
         }
         return newLayer;
     },

@@ -22,6 +22,7 @@ import {setCurrentTask} from '../actions/task';
 import {setCurrentTheme, setThemeLayersList} from '../actions/theme';
 import ConfigUtils from '../utils/ConfigUtils';
 import LocaleUtils from '../utils/LocaleUtils';
+import MiscUtils from '../utils/MiscUtils';
 import ThemeUtils from '../utils/ThemeUtils';
 import Icon from './Icon';
 
@@ -37,6 +38,7 @@ class ThemeList extends React.Component {
         collapsibleGroups: PropTypes.bool,
         defaultUrlParams: PropTypes.string,
         dontPreserveSettingsOnSwitch: PropTypes.bool,
+        expandGroups: PropTypes.bool,
         filter: PropTypes.string,
         layers: PropTypes.array,
         setActiveLayerInfo: PropTypes.func,
@@ -48,7 +50,7 @@ class ThemeList extends React.Component {
         themes: PropTypes.object
     };
     state = {
-        expandedGroups: [],
+        expandedGroups: {},
         visibleThemeInfoMenu: null
     };
     groupMatchesFilter = (group, filter) => {
@@ -71,20 +73,24 @@ class ThemeList extends React.Component {
         return false;
     };
     renderThemeGroup = (group, filter) => {
+        const defaultExpanded = this.props.expandGroups;
         const assetsPath = ConfigUtils.getAssetsPath();
         let subdirs = (group && group.subdirs ? group.subdirs : []);
         if (filter) {
             subdirs = subdirs.filter(subdir => this.groupMatchesFilter(subdir, filter));
         }
         const subtree = subdirs.map((subdir) => {
-            const expanded = !this.props.collapsibleGroups || filter || this.state.expandedGroups.includes(subdir.id) || (this.props.activeTheme && this.groupContainsActiveTheme(subdir));
+            const expanded = !this.props.collapsibleGroups || filter || (this.state.expandedGroups[subdir.id] ?? defaultExpanded) || (this.props.activeTheme && this.groupContainsActiveTheme(subdir));
             if (isEmpty(subdir.items) && isEmpty(subdir.subdirs)) {
                 return null;
             }
             return (
                 <li className={"theme-group-header " + (expanded ? "theme-group-header-expanded" : "")} key={subdir.id}>
-                    <span onClick={() => this.setState((state) => ({expandedGroups: expanded ? state.expandedGroups.filter(id => id !== subdir.id) : [...state.expandedGroups, subdir.id]}))}>
-                        {this.props.collapsibleGroups ? (<Icon icon={expanded ? "collapse" : "expand"} />) : null} {subdir.title}
+                    <span
+                        onClick={() => this.setState((state) => ({expandedGroups: {...state.expandedGroups, [subdir.id]: !expanded}}))}
+                        onKeyDown={MiscUtils.checkKeyActivate} tabIndex="0"
+                    >
+                        {this.props.collapsibleGroups ? (<Icon icon={expanded ? "collapse" : "expand"} />) : null} {subdir.titleMsgId ? LocaleUtils.tr(subdir.titleMsgId) : subdir.title}
                     </span>
                     {expanded ? this.renderThemeGroup(subdir, filter) : null}
                 </li>
@@ -146,7 +152,7 @@ class ThemeList extends React.Component {
                                     </div>
                                 ) : null}
                             </div>) : null}
-                            <div className="theme-item-body">
+                            <div className="theme-item-body" onKeyDown={MiscUtils.checkKeyActivate} tabIndex={0}>
                                 {item.description ? (<div className="theme-item-description" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(item.description)}} />) : null}
                                 <img className="theme-item-thumbnail" src={assetsPath + "/" + item.thumbnail} />
                             </div>

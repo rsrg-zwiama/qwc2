@@ -567,7 +567,7 @@ class IdentifyViewer extends React.Component {
                 rows.push(
                     <tr key={"__featurereport" + idx}>
                         <td className={"identify-attr-title " + this.props.longAttributesDisplay}><i>{LocaleUtils.tr("identify.featureReport") + ": " + report.title}</i></td>
-                        <td className={"identify-attr-value " + this.props.longAttributesDisplay}><a href={this.getFeatureReportUrl(report, feature)}>{LocaleUtils.tr("identify.link")}</a></td>
+                        <td className={"identify-attr-value " + this.props.longAttributesDisplay}><a href={this.getFeatureReportUrl(report, feature)} rel="noreferrer" target="_blank">{LocaleUtils.tr("identify.link")}</a></td>
                     </tr>
                 );
             });
@@ -929,7 +929,7 @@ class IdentifyViewer extends React.Component {
     };
     showLayerInfo = (layer) => {
         const [layerUrl, layerName] = layer.split('#');
-        const match = LayerUtils.searchLayer(this.props.layers, layerUrl, layerName);
+        const match = LayerUtils.searchLayer(this.props.layers, 'url', layerUrl, 'name', layerName);
         if (match) {
             this.props.setActiveLayerInfo(match.layer, match.sublayer);
         }
@@ -961,7 +961,7 @@ class IdentifyViewer extends React.Component {
         return htmlReactParser(text, options);
     };
     attributeLinkClicked = (ev) => {
-        this.props.openExternalUrl(ev.target.href, ev.target.target, {docked: this.props.iframeDialogsInitiallyDocked});
+        this.props.openExternalUrl(ev.currentTarget.href, ev.currentTarget.target, {docked: this.props.iframeDialogsInitiallyDocked});
         ev.preventDefault();
     };
     zoomToResult = (result) => {

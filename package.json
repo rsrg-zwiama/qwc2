@@ -1,6 +1,6 @@
 {
     "name": "qwc2",
-    "version": "2025.11.05",
+    "version": "2025.12.04",
     "description": "QGIS Web Client",
     "author": "Sourcepole AG",
     "license": "BSD-2-Clause",
@@ -17,12 +17,13 @@
     ],
     "dependencies": {
         "@furkot/webfonts-generator": "^2.0.2",
-        "@giro3d/giro3d": "^0.43.4",
+        "@sourcepole/qwc-giro3d": "^0.44.0-dev",
         "@kayahr/text-encoding": "^2.0.0",
         "@loaders.gl/core": "^4.3.3",
         "@loaders.gl/shapefile": "^4.3.3",
         "@loaders.gl/zip": "^4.3.3",
         "@mapbox/shp-write": "^0.4.3",
+        "@norbulcz/num-parse": "^0.1.0",
         "@panoramax/web-viewer": "^4.0.1",
         "@reduxjs/toolkit": "^2.4.0",
         "@turf/buffer": "^6.5.0",
