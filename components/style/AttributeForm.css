@@ -5,11 +5,15 @@ div.AttributeForm {
     padding: 0.25em;
 }
 
-div.AttributeForm > form {
+div.AttributeForm > form.parent-form {
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+}
+
+div.AttributeForm.has-child > form.parent-form {
+    display: none;
 }
 
 div.AttributeForm > form > * {
@@ -44,4 +48,9 @@ div.link-feature-form-container {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+.AttributeForm.has-child > .link-feature-form-container {
+    flex: 1 1 auto;
+    min-height: 0;
 }
