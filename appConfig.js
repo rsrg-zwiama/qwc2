@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+/* eslint-disable new-cap */
+
 import {lazy} from 'react';
 
 import AppMenu from './components/AppMenu';
@@ -19,12 +21,9 @@ import BackgroundSwitcherPlugin from './plugins/BackgroundSwitcher';
 import BookmarkPlugin from './plugins/Bookmark';
 import BottomBarPlugin from './plugins/BottomBar';
 import CookiePopupPlugin from './plugins/CookiePopup';
-import CyclomediaPlugin from './plugins/Cyclomedia';
 import EditingPlugin from './plugins/Editing';
 import FeatureFormPlugin from './plugins/FeatureForm';
 import FeatureSearchPlugin from './plugins/FeatureSearch';
-import GeometryDigitizerPlugin from './plugins/GeometryDigitizer';
-import HeightProfilePlugin from './plugins/HeightProfile';
 import HelpPlugin from './plugins/Help';
 import HomeButtonPlugin from './plugins/HomeButton';
 import IdentifyPlugin from './plugins/Identify';
@@ -32,6 +31,11 @@ import LayerCatalogPlugin from './plugins/LayerCatalog';
 import LayerTreePlugin from './plugins/LayerTree';
 import LocateButtonPlugin from './plugins/LocateButton';
 import MapPlugin from './plugins/Map';
+import EditingSupport from './plugins/map/EditingSupport';
+import LocateSupport from './plugins/map/LocateSupport';
+import MeasurementSupport from './plugins/map/MeasurementSupport';
+import RedliningSupport from './plugins/map/RedliningSupport';
+import SnappingSupport from './plugins/map/SnappingSupport';
 import MapComparePlugin from './plugins/MapCompare';
 import MapCopyrightPlugin from './plugins/MapCopyright';
 import MapExportPlugin from './plugins/MapExport';
@@ -43,10 +47,10 @@ import MeasurePlugin from './plugins/Measure';
 import NewsPopupPlugin from './plugins/NewsPopup';
 import ObjectListPlugin from './plugins/ObjectList';
 import OverviewMapPlugin from './plugins/OverviewMap';
-import PanoramaxPlugin from './plugins/Panoramax';
 import PortalPlugin from './plugins/Portal';
 import PrintPlugin from './plugins/Print';
 import RedliningPlugin from './plugins/Redlining';
+import BufferSupport from './plugins/redlining/RedliningBufferSupport';
 import ReportsPlugin from './plugins/Reports';
 import RoutingPlugin from './plugins/Routing';
 import ScratchDrawingPlugin from './plugins/ScratchDrawing';
@@ -57,16 +61,8 @@ import TaskButtonPlugin from './plugins/TaskButton';
 import ThemeSwitcherPlugin from './plugins/ThemeSwitcher';
 import TimeManagerPlugin from './plugins/TimeManager';
 import TopBarPlugin from './plugins/TopBar';
-import TourGuidePlugin from './plugins/TourGuide';
-import ValueToolPlugin from './plugins/ValueTool';
 import View3DPlugin from './plugins/View3D';
 import {ZoomInPlugin, ZoomOutPlugin} from './plugins/ZoomButtons';
-import EditingSupport from './plugins/map/EditingSupport';
-import LocateSupport from './plugins/map/LocateSupport';
-import MeasurementSupport from './plugins/map/MeasurementSupport';
-import RedliningSupport from './plugins/map/RedliningSupport';
-import SnappingSupport from './plugins/map/SnappingSupport';
-import BufferSupport from './plugins/redlining/RedliningBufferSupport';
 import defaultLocaleData from './static/translations/en-US.json';
 
 export default {
@@ -91,11 +87,11 @@ export default {
             BookmarkPlugin: BookmarkPlugin,
             BottomBarPlugin: BottomBarPlugin,
             CookiePopupPlugin: CookiePopupPlugin,
-            CyclomediaPlugin: CyclomediaPlugin,
+            CyclomediaPlugin: lazy(() => import('./plugins/Cyclomedia')),
             EditingPlugin: EditingPlugin(/* CustomEditingInterface */),
             FeatureFormPlugin: FeatureFormPlugin(/* CustomEditingInterface */),
-            GeometryDigitizerPlugin: GeometryDigitizerPlugin,
-            HeightProfilePlugin: HeightProfilePlugin,
+            GeometryDigitizerPlugin: lazy(() => import('./plugins/GeometryDigitizer')),
+            HeightProfilePlugin: lazy(() => import('./plugins/HeightProfile')),
             HelpPlugin: HelpPlugin(),
             HomeButtonPlugin: HomeButtonPlugin,
             IdentifyPlugin: IdentifyPlugin,
@@ -112,8 +108,9 @@ export default {
             MeasurePlugin: MeasurePlugin,
             NewsPopupPlugin: NewsPopupPlugin,
             ObjectListPlugin: ObjectListPlugin(/* CustomEditingInterface */),
+            ObliqueViewPlugin: lazy(() => import('./plugins/ObliqueView')),
             OverviewMapPlugin: OverviewMapPlugin,
-            PanoramaxPlugin: PanoramaxPlugin,
+            PanoramaxPlugin: lazy(() => import('./plugins/Panoramax')),
             PortalPlugin: PortalPlugin,
             PrintPlugin: PrintPlugin,
             RedliningPlugin: RedliningPlugin({
@@ -135,8 +132,8 @@ export default {
                 Toolbar: Toolbar,
                 FullscreenSwitcher: FullscreenSwitcher
             }),
-            TourGuidePlugin: TourGuidePlugin,
-            ValueToolPlugin: ValueToolPlugin,
+            TourGuidePlugin: lazy(() => import('./plugins/TourGuide')),
+            ValueToolPlugin: lazy(() => import('./plugins/ValueTool')),
             View3DPlugin: View3DPlugin({
                 BackgroundSwitcher3D: lazy(() => import('./plugins/map3d/BackgroundSwitcher3D')),
                 BottomBar3D: lazy(() => import('./plugins/map3d/BottomBar3D')),

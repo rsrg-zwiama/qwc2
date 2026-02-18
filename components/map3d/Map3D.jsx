@@ -10,11 +10,11 @@ import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
-import Instance from '@giro3d/giro3d/core/Instance.js';
-import Coordinates, { crsIsGeographic } from '@giro3d/giro3d/core/geographic/Coordinates';
+import CoordinateSystem from '@giro3d/giro3d/core/geographic/coordinate-system/CoordinateSystem';
+import Coordinates, {crsIsGeographic} from '@giro3d/giro3d/core/geographic/Coordinates';
 import Ellipsoid from '@giro3d/giro3d/core/geographic/Ellipsoid';
 import Extent from '@giro3d/giro3d/core/geographic/Extent.js';
-import CoordinateSystem from '@giro3d/giro3d/core/geographic/coordinate-system/CoordinateSystem';
+import Instance from '@giro3d/giro3d/core/Instance.js';
 import ElevationLayer from '@giro3d/giro3d/core/layer/ElevationLayer.js';
 import DrapedFeatureCollection from '@giro3d/giro3d/entities/DrapedFeatureCollection';
 import Map from '@giro3d/giro3d/entities/Map.js';
@@ -35,23 +35,23 @@ import {setCurrentTask} from '../../actions/task';
 import ConfigUtils from '../../utils/ConfigUtils';
 import CoordinatesUtils from '../../utils/CoordinatesUtils';
 import LayerUtils from '../../utils/LayerUtils';
+import LocaleUtils from '../../utils/LocaleUtils';
 import MiscUtils from '../../utils/MiscUtils';
 import {registerPermalinkDataStoreHook, unregisterPermalinkDataStoreHook, UrlParams} from '../../utils/PermaLinkUtils';
 import ServiceLayerUtils from '../../utils/ServiceLayerUtils';
 import ThemeUtils from '../../utils/ThemeUtils';
 import {MapContainerPortalContext} from '../PluginsContainer';
+import ViewSwitcher from '../ViewSwitcher';
 import EditDataset3D from './EditDataset3D';
-import MapControls3D from './MapControls3D';
-import View3DSwitcher from './View3DSwitcher';
 import LayerRegistry from './layers/index';
+import MapControls3D from './MapControls3D';
 import {importGltf, updateObjectLabel} from './utils/MiscUtils3D';
 import Tiles3DStyle from './utils/Tiles3DStyle';
 
 import './style/Map3D.css';
 
 
-
-// Ensures unUnload is called *after* all other children have unmounted
+// Ensures onUnload is called *after* all other children have unmounted
 class UnloadWrapper extends React.Component {
     static propTypes = {
         children: PropTypes.oneOfType([PropTypes.node, PropTypes.func]),
@@ -77,6 +77,7 @@ class Map3D extends React.Component {
     static contextType = MapContainerPortalContext;
     static propTypes = {
         controlsPosition: PropTypes.string,
+        defaultFov: PropTypes.number,
         defaultSceneQuality: PropTypes.number,
         innerRef: PropTypes.func,
         layers: PropTypes.array,
@@ -109,8 +110,11 @@ class Map3D extends React.Component {
         sceneObjects: {},
         collisionObjects: [],
         settings: {
+            fov: 30,
             sceneQuality: 100
-        }
+        },
+        sceneId: null,
+        rebuildInstance: false
     };
     state = {
         sceneContext: {
@@ -138,8 +142,7 @@ class Map3D extends React.Component {
 
             getSetting: (key) => {},
             setSetting: (key, value) => {}
-        },
-        sceneId: null
+        }
     };
     constructor(props) {
         super(props);
@@ -168,6 +171,7 @@ class Map3D extends React.Component {
         this.state.sceneContext.getSetting = this.getSetting;
         this.state.sceneContext.setSetting = this.setSetting;
 
+        this.state.sceneContext.settings.fov = props.defaultFov;
         this.state.sceneContext.settings.sceneQuality = props.defaultSceneQuality;
 
         registerPermalinkDataStoreHook("map3d", this.store3dState);
@@ -180,16 +184,21 @@ class Map3D extends React.Component {
     }
     componentDidUpdate(prevProps, prevState) {
         if (this.props.theme !== prevProps.theme) {
-            this.setupInstance();
-        } else if (this.props.layers !== prevProps.layers) {
-            this.setState((state) => (
-                {
+            if (this.props.theme.map3d) {
+                this.setState(state => ({
                     sceneContext: {
                         ...state.sceneContext,
-                        colorLayers: this.collectColorLayers(state.sceneContext.colorLayers, prevProps.layers)
+                        rebuildInstance: true
                     }
+                }));
+            }
+        } else if (this.props.layers !== prevProps.layers) {
+            this.setState((state) => ({
+                sceneContext: {
+                    ...state.sceneContext,
+                    colorLayers: this.collectColorLayers(state.sceneContext.colorLayers, prevProps.layers)
                 }
-            ));
+            }));
         }
 
         // Update map layers
@@ -218,6 +227,10 @@ class Map3D extends React.Component {
                 }
             }));
         }
+        if (this.state.sceneContext.settings.fov !== prevState.sceneContext.settings.fov) {
+            this.instance.view.camera.fov = this.state.sceneContext.settings.fov;
+            this.instance.notifyChange(this.instance.view.camera);
+        }
         if (this.state.sceneContext.settings.sceneQuality !== prevState.sceneContext.settings.sceneQuality) {
             const quality = Math.max(20, this.state.sceneContext.settings.sceneQuality);
             this.map.segments = Math.pow(2, Math.floor(quality / 20));
@@ -227,7 +240,7 @@ class Map3D extends React.Component {
     applyBaseLayer = () => {
         const baseLayer = this.state.sceneContext.baseLayers.find(e => e.visibility === true);
         this.removeLayer("__baselayer");
-        UrlParams.updateParams({bl3d: baseLayer?.name ?? ''});
+        UrlParams.updateParams({bl3d: baseLayer?.name ?? 'null'});
         if (!baseLayer) {
             return;
         }
@@ -240,9 +253,16 @@ class Map3D extends React.Component {
     };
     setBaseLayer = (layer, visibility) => {
         const currentBaseLayer = this.state.sceneContext.baseLayers.find(l => l.visibility === true)?.name || "";
-        if (visibility && layer?.name === currentBaseLayer) {
+        if (visibility && layer.name === currentBaseLayer) {
             // Nothing changed
             return;
+        }
+        const dtm = this.getLayer("__dtm");
+        if (visibility !== dtm.visible) {
+            dtm.visible = visibility;
+            this.map.receiveShadow = visibility;
+            this.map.backgroundOpacity = visibility ? 1 : 0;
+            this.instance.notifyChange(this.map);
         }
         this.setState(state => ({
             sceneContext: {
@@ -472,7 +492,7 @@ class Map3D extends React.Component {
             url: MiscUtils.resolveAssetsPath(url)
         });
         // Recenter tile group
-        tiles.tiles.addEventListener('load-tile-set', ({tileSet}) => {
+        tiles.tiles.addEventListener('load-tileset', ({tileSet}) => {
             if (tileSet.root.parent === null) {
                 const bbox = new Box3();
                 tiles.tiles.getBoundingBox(bbox);
@@ -632,8 +652,8 @@ class Map3D extends React.Component {
             ReactDOM.createPortal((
                 <div className="map3d-map" id="map3d" key="Map3D" ref={this.setupContainer} />
             ), this.context),
-            this.state.sceneContext.scene ? (
-                <UnloadWrapper key={this.state.sceneId} onUnload={this.onUnload} sceneId={this.state.sceneId}>
+            this.state.sceneContext.scene && !this.state.sceneContext.rebuildInstance ? (
+                <UnloadWrapper key={this.state.sceneContext.sceneId} onUnload={this.onUnload} sceneId={this.state.sceneContext.sceneId}>
                     <MapControls3D
                         controlsPosition={this.props.controlsPosition}
                         mouseButtons={this.props.mouseButtons}
@@ -642,7 +662,7 @@ class Map3D extends React.Component {
                         sceneContext={this.state.sceneContext}
                     >
                         <EditDataset3D sceneContext={this.state.sceneContext} />
-                        <View3DSwitcher position={1} />
+                        <ViewSwitcher position={1} />
                         {Object.entries(this.props.plugins3d).map(([name, Component]) => (
                             <Suspense key={name}>
                                 <Component sceneContext={this.state.sceneContext} {...this.props.pluginOptions[name]} />
@@ -703,7 +723,7 @@ class Map3D extends React.Component {
             const position = Ellipsoid.WGS84.toCartesian(
                 center.latitude,
                 center.longitude,
-                center.altitude,
+                center.altitude
             );
             this.instance.view.camera.position.set(position.x, position.y, 0.5 * (extent.east - extent.west));
         } else {
@@ -745,6 +765,11 @@ class Map3D extends React.Component {
         // Collect baselayers
         const externalLayers = {};
         const baseLayers = ThemeUtils.createThemeBackgroundLayers(this.props.theme.map3d?.basemaps || [], this.props.themes, null, externalLayers);
+        baseLayers.push({
+            type: "blank",
+            name: "",
+            title: LocaleUtils.tr("bgswitcher.nobg")
+        });
         for (const key of Object.keys(externalLayers)) {
             const idx = key.indexOf(":");
             const service = key.slice(0, idx);
@@ -774,7 +799,7 @@ class Map3D extends React.Component {
                 url: MiscUtils.resolveAssetsPath(entry.url),
                 errorTarget: 32
             });
-            tiles.tiles.addEventListener('load-tile-set', () => {
+            tiles.tiles.addEventListener('load-tileset', () => {
                 this.instance.notifyChange(tiles);
             });
             tiles.tiles.addEventListener('needs-update', () => {
@@ -852,6 +877,9 @@ class Map3D extends React.Component {
         this.instance.addEventListener('after-entity-update', this.instanceOnAfterEntityUpdate);
     };
     instanceOnUpdateStart = () => {
+        if (!this.state.sceneContext.scene?.view?.controls) {
+            return;
+        }
         const camera = this.instance.view.camera;
         const quality = this.state.sceneContext.settings.sceneQuality;
         const isFirstPerson = this.state.sceneContext.scene.view.controls.isFirstPerson;
@@ -878,6 +906,9 @@ class Map3D extends React.Component {
         });
     };
     instanceOnUpdateEnd = () => {
+        if (!this.state.sceneContext.scene?.view?.controls) {
+            return;
+        }
         Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
             const object = this.objectMap[objId];
             if (options.layertree && object.isObject3D) {
@@ -889,6 +920,9 @@ class Map3D extends React.Component {
         });
     };
     instanceOnBeforeEntityUpdate = ({entity}) => {
+        if (!this.state.sceneContext.scene?.view?.controls) {
+            return;
+        }
         if (entity !== this.map) {
             this.instance.view.camera.userData.__previousFar = this.instance.view.camera.far;
             const quality = this.state.sceneContext.settings.sceneQuality;
@@ -898,6 +932,9 @@ class Map3D extends React.Component {
         }
     };
     instanceOnAfterEntityUpdate = ({entity}) => {
+        if (!this.state.sceneContext.scene?.view?.camera) {
+            return;
+        }
         if (entity !== this.map) {
             this.instance.view.camera.far = this.instance.view.camera.userData.__previousFar;
             delete this.instance.view.camera.userData.__previousFar;
@@ -947,8 +984,12 @@ class Map3D extends React.Component {
     };
     onUnload = (key) => {
         // Ensure scene has not already been disposed
-        if (this.state.sceneId === key) {
-            this.disposeInstance();
+        if (this.state.sceneContext.sceneId === key) {
+            if (this.state.sceneContext.rebuildInstance) {
+                this.setupInstance();
+            } else {
+                this.disposeInstance();
+            }
         }
     };
     setupControls = (instance) => {
@@ -1132,15 +1173,9 @@ class Map3D extends React.Component {
             }
         });
         this.state.sceneContext.restoreView(data);
-        if (data.baseLayer !== undefined) {
-            this.setState(state => ({
-                sceneContext: {
-                    ...state.sceneContext,
-                    baseLayers: state.sceneContext.baseLayers.map(l => ({...l, visibility: l.name === data.baseLayer}))
-                }
-            }));
-            UrlParams.updateParams({bl3d: data.baseLayer});
-        }
+        const bl3d = data.baseLayer ?? "";
+
+        this.setBaseLayer({name: bl3d}, bl3d !== "null");
         this.state.sceneContext.scene.notifyChange();
     };
 }

@@ -184,7 +184,7 @@ class MapExport extends React.Component {
                     <table className="options-table">
                         <tbody>
                             <tr>
-                                <td>{LocaleUtils.tr("mapexport.format")}</td>
+                                <td>{LocaleUtils.tr("common.format")}</td>
                                 <td>
                                     <select onChange={this.changeFormat} value={this.state.selectedFormat}>
                                         {this.state.availableFormats.map(format => {
@@ -218,7 +218,7 @@ class MapExport extends React.Component {
                                     </td>
                                 </tr>
                             ) : null}
-                            {scaleChooser && this.state.pageSize !== null ? (
+                            {scaleChooser ? (
                                 <tr>
                                     <td>{LocaleUtils.tr("mapexport.scale")}</td>
                                     <td>
@@ -228,7 +228,7 @@ class MapExport extends React.Component {
                             ) : null}
                             {this.props.dpis && this.state.selectedFormat !== "application/dxf" ? (
                                 <tr>
-                                    <td>{LocaleUtils.tr("mapexport.resolution")}</td>
+                                    <td>{LocaleUtils.tr("common.resolution")}</td>
                                     <td>
                                         <select onChange={this.changeResolution} value={this.state.dpi}>
                                             {this.props.dpis.map(dpi => {
@@ -255,8 +255,8 @@ class MapExport extends React.Component {
                     <div className="button-bar">
                         <button className="button" disabled={this.state.exporting || isEmpty(this.state.extents)} type="submit">
                             {this.state.exporting ? (
-                                <span className="mapexport-wait"><Spinner /> {LocaleUtils.tr("mapexport.wait")}</span>
-                            ) : LocaleUtils.tr("mapexport.submit")}
+                                <span className="mapexport-wait"><Spinner /> {LocaleUtils.tr("common.wait")}</span>
+                            ) : LocaleUtils.tr("common.export")}
                         </button>
                     </div>
                 </form>
@@ -278,7 +278,7 @@ class MapExport extends React.Component {
         }
     };
     render() {
-        const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("print.maximize") : LocaleUtils.tr("print.minimize");
+        const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("window.maximize") : LocaleUtils.tr("window.minimize");
         const extraTitlebarContent = (<Icon className="mapexport-minimize-maximize" icon={this.state.minimized ? 'chevron-down' : 'chevron-up'} onClick={() => this.setState((state) => ({minimized: !state.minimized}))} title={minMaxTooltip}/>);
         return (
             <SideBar extraClasses="MapExport" extraTitlebarContent={extraTitlebarContent} icon={"rasterexport"} id="MapExport" key="MapExport"
@@ -348,6 +348,7 @@ class MapExport extends React.Component {
 
         const format = this.state.selectedFormat.split(";")[0];
         const formatConfiguration = (this.props.formatConfiguration?.[format] || []).find(entry => entry.name === this.state.selectedFormatConfiguration);
+        const mapScale = Math.round(MapUtils.computeForZoom(this.props.map.scales, this.props.map.zoom));
 
         const version = this.props.theme.version;
         const crs = this.state.exportProjection;
@@ -356,11 +357,18 @@ class MapExport extends React.Component {
             extent[1] + "," + extent[0] + "," + extent[3] + "," + extent[2] :
             extent.join(',');
 
-        const getPixelFromCoordinate = MapUtils.getHook(MapUtils.GET_PIXEL_FROM_COORDINATES_HOOK);
-        const p1 = getPixelFromCoordinate(extent.slice(0, 2));
-        const p2 = getPixelFromCoordinate(extent.slice(2, 4));
-        const width = Math.round(Math.abs(p1[0] - p2[0]) * this.state.dpi / 96);
-        const height = Math.round(Math.abs(p1[1] - p2[1]) * this.state.dpi / 96);
+        let width = 0;
+        let height = 0;
+        if (this.state.pageSize !== null) {
+            width = Math.round((extent[2] - extent[0]) * this.state.dpi / (this.state.scale * 0.0254));
+            height = Math.round((extent[3] - extent[1]) * this.state.dpi / (this.state.scale * 0.0254));
+        } else {
+            const getPixelFromCoordinate = MapUtils.getHook(MapUtils.GET_PIXEL_FROM_COORDINATES_HOOK);
+            const p1 = getPixelFromCoordinate(extent.slice(0, 2));
+            const p2 = getPixelFromCoordinate(extent.slice(2, 4));
+            width = Math.round(Math.abs(p1[0] - p2[0]) * this.state.dpi / 96 * mapScale / this.state.scale);
+            height = Math.round(Math.abs(p1[1] - p2[1]) * this.state.dpi / 96 * mapScale / this.state.scale);
+        }
 
         const ext = format.split("/").pop();
         const timestamp = dayjs(new Date()).format("YYYYMMDD_HHmmss");
@@ -419,17 +427,17 @@ class MapExport extends React.Component {
         if (this.state.selectedFormat === "application/dxf") {
             this.dxfExport(params, fileName, formatConfiguration);
         } else {
-            this.genericExport(params, fileName, formatConfiguration);
+            this.genericExport(params, fileName, formatConfiguration, mapScale);
         }
     };
-    genericExport = (params, fileName, formatConfiguration) => {
+    genericExport = (params, fileName, formatConfiguration, mapScale) => {
         // Layer params
         const exportExternalLayers = this.props.exportExternalLayers && ConfigUtils.getConfigProp("qgisServerVersion", null, 3) >= 3;
         const exportParams = LayerUtils.collectPrintParams(this.props.layers, this.props.theme, this.state.scale, this.state.exportProjection, exportExternalLayers, !!formatConfiguration?.baseLayer);
         Object.assign(params, exportParams);
 
         // Highlight params
-        const highlightParams = VectorLayerUtils.createPrintHighlighParams(this.props.layers, this.state.exportProjection, this.state.scale, this.state.dpi);
+        const highlightParams = VectorLayerUtils.createPrintHighlighParams(this.props.layers, this.state.exportProjection, mapScale, this.state.dpi);
         params.HIGHLIGHT_GEOM = highlightParams.geoms.join(";");
         params.HIGHLIGHT_SYMBOL = highlightParams.styles.join(";");
         params.HIGHLIGHT_LABELSTRING = highlightParams.labels.join(";");

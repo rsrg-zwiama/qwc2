@@ -103,9 +103,9 @@ class ResizeableWindow extends React.Component {
         this.id = uuidv4();
         this.portalNode = props.usePortal ? portals.createHtmlPortalNode() : null;
         if (this.portalNode) {
-            this.portalNode.element.addEventListener('click', () => this.props.raiseWindow(this.id));
-            this.portalNode.element.addEventListener('focus', () => this.props.raiseWindow(this.id));
-            this.portalNode.element.addEventListener('focusin', () => this.props.raiseWindow(this.id));
+            this.portalNode.element.addEventListener('click', this.raiseWindow);
+            this.portalNode.element.addEventListener('focus', this.raiseWindow);
+            this.portalNode.element.addEventListener('focusin', this.raiseWindow);
         }
     }
     componentDidMount() {
@@ -129,6 +129,8 @@ class ResizeableWindow extends React.Component {
         if (this.rnd && this.props.visible && this.props.visible !== prevProps.visible) {
             this.props.onGeometryChanged(this.state.geometry);
             this.rnd.updatePosition(this.state.geometry);
+            // Set focus to first focusable element
+            this.rnd.resizableElement?.current?.querySelector?.('[tabindex="0"]')?.focus?.();
         }
         if (this.state.geometry !== prevState.geometry) {
             this.props.onGeometryChanged(this.state.geometry);
@@ -237,7 +239,7 @@ class ResizeableWindow extends React.Component {
                 ) : null}
                 {detachIcons}
                 {this.props.onClose ? (
-                    <Icon className={iconClasses} icon="remove" onClick={this.onClose} title={LocaleUtils.tr("window.close")} />
+                    <Icon className={iconClasses} icon="remove" onClick={this.onClose} title={LocaleUtils.tr("common.close")} />
                 ) : null}
             </div>
         );
@@ -325,13 +327,13 @@ class ResizeableWindow extends React.Component {
                 minHeight={this.props.minHeight} minWidth={this.props.minWidth}
                 onDragStart={this.onDragStart}
                 onDragStop={this.onDragStop}
-                onMouseDown={() => this.props.raiseWindow(this.id)}
+                onMouseDown={this.raiseWindow}
                 onResizeStop={this.onResizeStop}
                 ref={this.initRnd}
             >
-                <div className="resizeable-window-contents" onFocus={() => this.props.raiseWindow(this.id)}>
+                <div className="resizeable-window-contents" onFocus={this.raiseWindow}>
                     {this.renderTitleBar()}
-                    <div className={bodyclasses} onMouseDown={() => this.props.raiseWindow(this.id)}>
+                    <div className={bodyclasses} onMouseDown={this.raiseWindow} onScroll={this.preventScroll}>
                         <div className="resizeable-window-drag-shield" ref={el => {this.dragShield = el;}} />
                         {this.portalNode ? (
                             <div className="resizeable-window-portal-container">
@@ -342,6 +344,17 @@ class ResizeableWindow extends React.Component {
                 </div>
             </Rnd>
         );
+    };
+    preventScroll = (ev) => {
+        if (!this.props.scrollable) {
+            ev.target.scrollLeft = 0;
+            ev.target.scrollTop = 0;
+        }
+    };
+    raiseWindow = () => {
+        if (this.props.windowStacking[this.props.windowStacking.length - 1] !== this.id) {
+            this.props.raiseWindow(this.id);
+        }
     };
     setInitialSize = (container) => {
         if (!container) {
@@ -405,6 +418,10 @@ class ResizeableWindow extends React.Component {
         if (el) {
             this.rnd = el;
             this.rnd.updatePosition(this.state.geometry);
+            // Set focus to first focusable element
+            if (this.props.visible) {
+                this.rnd.resizableElement?.current?.querySelector?.('[tabindex="0"]')?.focus?.();
+            }
         }
     };
     onDragStart = () => {

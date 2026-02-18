@@ -38,11 +38,9 @@ export default class EditComboField extends React.Component {
     };
     componentDidMount() {
         if (this.props.values) {
-            // eslint-disable-next-line
             this.setState({values: this.props.values, showPlaceholder: !this.hasEmptyValue(this.props.values)});
         } else if (this.props.keyvalrel) {
             KeyValCache.get(this.props.editIface, this.props.keyvalrel, this.props.filterExpr ?? null).then(values => {
-                // eslint-disable-next-line
                 this.setState({values, showPlaceholder: !this.hasEmptyValue(values)});
             });
         }
@@ -50,7 +48,6 @@ export default class EditComboField extends React.Component {
     componentDidUpdate(prevProps) {
         if (this.props.keyvalrel && this.props.filterExpr !== prevProps.filterExpr) {
             KeyValCache.get(this.props.editIface, this.props.keyvalrel, this.props.filterExpr ?? null).then(values => {
-                // eslint-disable-next-line
                 this.setState({values, showPlaceholder: !this.hasEmptyValue(values)});
             });
         }
@@ -78,7 +75,7 @@ export default class EditComboField extends React.Component {
         let items = new Set();
         try {
             items = new Set(JSON.parse('[' + this.props.value.slice(1, -1) + ']'));
-        } catch (e) {
+        } catch {
             // pass
         }
         const serializeValue = (value, enabled) => {
@@ -115,7 +112,7 @@ export default class EditComboField extends React.Component {
             >
                 {this.state.showPlaceholder ? (
                     <option disabled={this.props.required} value="">
-                        {this.props.placeholder ?? LocaleUtils.tr("editing.select")}
+                        {this.props.placeholder ?? LocaleUtils.tr("common.select")}
                     </option>
                 ) : null}
                 {this.state.values.map((item, index) => {

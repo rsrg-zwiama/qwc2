@@ -54,7 +54,7 @@ class LayerCatalogWidget extends React.PureComponent {
         const key = (entry.resource || (entry.type + ":" + entry.name)) + ":" + idx;
         const indentSize = !this.props.levelBasedIndentSize && level > 0 ? 1.5 : level;
         return (
-            <div key={key} style={{paddingLeft: indentSize + 'em'}}>
+            <div key={key} style={{paddingLeft: (0.5 * indentSize) + 'em'}}>
                 <div className="layer-catalog-widget-entry">
                     {hasSublayers ? (
                         <Icon icon={entry.expanded ? 'tree_minus' : 'tree_plus'} onClick={() => this.toggleLayerListEntry(path)} />
@@ -79,7 +79,8 @@ class LayerCatalogWidget extends React.PureComponent {
     }
     toggleLayerListEntry = (path) => {
         this.setState((state) => {
-            const newCatalog = [...state.catalog];
+            const catalogKey = this.state.filteredCatalog ? "filteredCatalog" : "catalog";
+            const newCatalog = [...state[catalogKey]];
             newCatalog[path[0]] = {...newCatalog[path[0]]};
             let cur = newCatalog[path[0]];
             for (const idx of path.slice(1)) {
@@ -87,7 +88,7 @@ class LayerCatalogWidget extends React.PureComponent {
                 cur = cur.sublayers[idx];
             }
             cur.expanded = !cur.expanded;
-            return {catalog: newCatalog};
+            return {[catalogKey]: newCatalog};
         });
     };
     render() {
@@ -98,7 +99,7 @@ class LayerCatalogWidget extends React.PureComponent {
             );
         } else if (isEmpty(this.state.catalog)) {
             emptyEntry = (
-                <div className="layer-catalog-placeholder">{LocaleUtils.tr("importlayer.loading")}</div>
+                <div className="layer-catalog-placeholder">{LocaleUtils.tr("common.loading")}</div>
             );
         }
         const filterplaceholder = LocaleUtils.tr("importlayer.filter");
@@ -109,7 +110,7 @@ class LayerCatalogWidget extends React.PureComponent {
                     <input
                         onChange={ev => this.setFilter(ev.target.value)} placeholder={filterplaceholder}
                         role="input" type="text" value={this.state.filter} />
-                    <Icon icon="clear" onClick={() => this.setState({filter: ""})} role="suffix" />
+                    <Icon icon="clear" onClick={() => this.setState({filter: "", filteredCatalog: null})} role="suffix" />
                 </InputContainer>
                 <div className="layer-catalog-widget-body">
                     {catalog.map((entry, idx) => this.renderCatalogEntry(entry, [idx], 0, idx))}
@@ -125,10 +126,17 @@ class LayerCatalogWidget extends React.PureComponent {
             }
             const filter = new RegExp(removeDiacritics(text).replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&"), "i");
             const filterCatalogEntry = (res, entry) => {
+                const titleMatches = removeDiacritics(entry.title).match(filter);
                 if (entry.sublayers) {
-                    const newEntry = {...entry, sublayers: entry.sublayers.reduce(filterCatalogEntry, []), expanded: true};
-                    return newEntry.sublayers.length > 0 ? [...res, newEntry] : res;
-                } else if (removeDiacritics(entry.title).match(filter)) {
+                    const matchedSublayers = entry.sublayers.reduce(filterCatalogEntry, []);
+                    if (!isEmpty(matchedSublayers)) {
+                        return [...res, {...entry, sublayers: matchedSublayers, expanded: true}];
+                    } else if (titleMatches) {
+                        return [...res, {...entry, expanded: false}];
+                    } else {
+                        return res;
+                    }
+                } else if (titleMatches) {
                     return [...res, entry];
                 } else {
                     return res;
@@ -140,14 +148,15 @@ class LayerCatalogWidget extends React.PureComponent {
     };
     checkAddServiceLayer = (entry, asGroup = false) => {
         const resource = entry.resource ? LayerUtils.splitLayerUrlParam(entry.resource) : null;
+        const stripQuery = (url) => (url ?? "").split("?")[0];
         const existingSublayers = this.props.layers.reduce((res, layer) => {
-            if (layer.type === (entry.type ?? resource?.type) && layer.url === (entry.url ?? resource?.url)) {
+            if (layer.type === (entry.type ?? resource?.type) && stripQuery(layer.url) === stripQuery(entry.url ?? resource?.url)) {
                 return [...res, ...LayerUtils.getSublayerNames(layer), layer.name];
             }
             return res;
         }, []);
         if (existingSublayers.includes(entry.name ?? resource?.name)) {
-            const text = LocaleUtils.tr("themelayerslist.existinglayers") + ": " + entry.title ?? entry.name;
+            const text = LocaleUtils.tr("themelayerslist.existinglayers") + ": " + (entry.title ?? entry.name);
             const actions = [{
                 name: LocaleUtils.tr("themelayerslist.addanyway"),
                 onClick: () => {

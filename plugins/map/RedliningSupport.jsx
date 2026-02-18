@@ -20,8 +20,8 @@ import {LayerRole, addLayerFeatures, removeLayerFeatures} from '../../actions/la
 import {changeRedliningState} from '../../actions/redlining';
 import FeatureAttributesWindow from '../../components/FeatureAttributesWindow';
 import LocationRecorder from '../../components/LocationRecorder';
-import NumericInputWindow from '../../components/NumericInputWindow';
 import {OlLayerAdded, OlLayerUpdated} from '../../components/map/OlLayer';
+import NumericInputWindow from '../../components/NumericInputWindow';
 import FeatureStyles from '../../utils/FeatureStyles';
 import MapUtils from '../../utils/MapUtils';
 import MeasureUtils from '../../utils/MeasureUtils';
@@ -142,7 +142,7 @@ class RedliningSupport extends React.Component {
                 this.selectedFeatures.forEach(this.updateFeatureStyle);
             }
             // Update current feature measurements
-            if (this.props.redlining.measurements !== prevProps.redlining.measurements) {
+            if (this.props.redlining.showmeasurements !== prevProps.redlining.showmeasurements) {
                 this.selectedFeatures.forEach(this.toggleFeatureMeasurements);
             } else if (
                 this.props.map.displayCrs !== prevProps.map.displayCrs ||
@@ -227,7 +227,7 @@ class RedliningSupport extends React.Component {
         const isText = feature.get("shape") === "Text";
         const styleName = isText ? "text" : "default";
         const opts = this.styleOptions(styleProps, isText);
-        if (!feature.get('measurements')) {
+        if (!feature.get('measurements') && this.selectedFeatures.length <= 1 && !(isText && !styleProps.text)) {
             feature.set('label', styleProps.text);
         }
         feature.set('styleName', styleName);
@@ -235,7 +235,7 @@ class RedliningSupport extends React.Component {
         this.blockOnChange = false;
     };
     toggleFeatureMeasurements = (feature) => {
-        if (this.props.redlining.measurements) {
+        if (this.props.redlining.showmeasurements) {
             const settings = {
                 displayCrs: this.props.displayCrs,
                 lenUnit: this.props.redlining.lenUnit,
@@ -246,6 +246,7 @@ class RedliningSupport extends React.Component {
             feature.set('measurements', undefined);
             feature.set('segment_labels', undefined);
             feature.set('label', '');
+            feature.set('end_label', undefined);
         }
     };
     updateMeasurements = (ev) => {
@@ -332,7 +333,7 @@ class RedliningSupport extends React.Component {
             ev.feature.set('shape', this.props.redlining.geomType);
             this.updateFeatureStyle(ev.feature);
             this.toggleFeatureMeasurements(ev.feature);
-            this.selectFeatures([ev.feature]);
+            this.selectFeatures([ev.feature], false);
         }, this);
         drawInteraction.on('drawend', (ev) => {
             this.commitFeatures([ev.feature], this.props.redlining, true);
@@ -426,10 +427,7 @@ class RedliningSupport extends React.Component {
         if (this.selectedFeatures.length || (!this.props.redlining.drawMultiple && redliningLayer.getSource().getFeatures().length > 0)) {
             return;
         }
-        let featureHit = false;
-        this.props.map.forEachFeatureAtPixel(ev.pixel, (feature, layer) => {
-            featureHit |= (layer === redliningLayer);
-        }, {hitTolerance: 5});
+        const featureHit = this.props.map.hasFeatureAtPixel(ev.pixel, {hitTolerance: 5, layerFilter: layer => layer === redliningLayer});
         if (!redliningLayer || featureHit) {
             return;
         }
@@ -452,7 +450,7 @@ class RedliningSupport extends React.Component {
             evt.feature.set('shape', this.props.redlining.geomType);
             this.updateFeatureStyle(evt.feature);
             this.toggleFeatureMeasurements(evt.feature);
-            this.selectFeatures([evt.feature]);
+            this.selectFeatures([evt.feature], false);
         }, this);
         drawInteraction.on('drawend', () => {
             // Draw end
@@ -562,7 +560,6 @@ class RedliningSupport extends React.Component {
             cloneIds.push(featureObj.id);
             return featureObj;
         });
-        this.updateRedliningState(true);
         const layer = {
             id: this.props.redlining.layer,
             title: this.props.redlining.layerTitle,
@@ -571,7 +568,7 @@ class RedliningSupport extends React.Component {
         this.props.addLayerFeatures(layer, newFeatureObjs);
         this.waitForFeatureAndLayer(this.props.redlining.layer, cloneIds[0], (l) => {
             const features = cloneIds.map(id => l.getSource().getFeatureById(id));
-            this.selectFeatures(features);
+            this.selectFeatures(features, false);
             while (this.interactions.length > 0) {
                 this.props.map.removeInteraction(this.interactions.shift());
             }
@@ -600,14 +597,16 @@ class RedliningSupport extends React.Component {
             this.props.changeRedliningState({selectedFeature: null});
         }
     };
-    selectFeatures = (features) => {
+    selectFeatures = (features, updateState = true) => {
         const firstSelection = isEmpty(this.selectedFeatures);
         features.forEach(feature => {
             feature.setStyle(this.styleFunction);
             feature.on('change', this.updateMeasurements);
             this.selectedFeatures.push(feature);
         });
-        this.updateRedliningState(firstSelection);
+        if (updateState) {
+            this.updateRedliningState(firstSelection);
+        }
     };
     deselectFeature = (feature, updateState) => {
         const styleName = feature.get("shape") === "Text" ? "text" : "default";
@@ -648,7 +647,7 @@ class RedliningSupport extends React.Component {
             return featureObj;
         }).filter(Boolean);
         if (isEmpty(featureObjects)) {
-            return null;
+            return [];
         }
         const layer = {
             id: redliningProps.layer,

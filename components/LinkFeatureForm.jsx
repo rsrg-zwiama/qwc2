@@ -111,7 +111,7 @@ class LinkFeatureForm extends React.Component {
                     )}
                     <div className="link-feature-form-close">
                         <button className="button" disabled={editContext.changed} onClick={this.finish}>
-                            {LocaleUtils.tr("linkfeatureform.cancel")}
+                            {LocaleUtils.tr("common.cancel")}
                         </button>
                     </div>
                 </div>
@@ -134,7 +134,7 @@ class LinkFeatureForm extends React.Component {
                     )}
                     <div className="link-feature-form-close">
                         <button className="button" disabled={editContext.changed} onClick={this.finish}>
-                            {drawing ? LocaleUtils.tr("linkfeatureform.cancel") : LocaleUtils.tr("linkfeatureform.close")}
+                            {drawing ? LocaleUtils.tr("common.cancel") : LocaleUtils.tr("common.close")}
                         </button>
                     </div>
                 </div>

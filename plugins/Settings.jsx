@@ -18,7 +18,7 @@ import {setColorScheme, setUserInfoFields} from '../actions/localConfig';
 import SideBar from '../components/SideBar';
 import ConfigUtils from '../utils/ConfigUtils';
 import LocaleUtils from '../utils/LocaleUtils';
-import {getUserBookmarks} from '../utils/PermaLinkUtils';
+import {getBookmarks} from '../utils/PermaLinkUtils';
 import ThemeUtils from '../utils/ThemeUtils';
 
 import './style/Settings.css';
@@ -40,7 +40,7 @@ class Settings extends React.Component {
             value: PropTypes.string
         })),
         defaultUrlParams: PropTypes.string,
-        /** List of available languages. Value is the lang code, title/titleMsgId the display name. */
+        /** List of available languages. Value is the lang code, title/titleMsgId the display name. Falls back to the toplevel `availableLocales` `config.json` setting if not set. */
         languages: PropTypes.arrayOf(PropTypes.shape({
             title: PropTypes.string,
             titleMsgId: PropTypes.string,
@@ -56,7 +56,7 @@ class Settings extends React.Component {
     };
     static defaultProps = {
         colorSchemes: [],
-        languages: [],
+        languages: null,
         side: 'right',
         showDefaultThemeSelector: true
     };
@@ -66,7 +66,7 @@ class Settings extends React.Component {
     onShow = () => {
         const username = ConfigUtils.getConfigProp("username");
         if (this.props.showDefaultThemeSelector && username) {
-            getUserBookmarks(username, (bookmarks) => {
+            getBookmarks((bookmarks) => {
                 const bookmarkKeys = bookmarks.reduce((res, entry) => ({...res, [entry.key]: entry.description}), {});
                 this.setState({bookmarks: bookmarkKeys});
             });
@@ -95,7 +95,13 @@ class Settings extends React.Component {
         );
     };
     renderLanguageSelector = () => {
-        if (isEmpty(this.props.languages)) {
+        let languages = this.props.languages;
+        if (!languages) {
+            languages = Object.entries(ConfigUtils.getConfigProp("availableLocales", null, {})).map(([code, title]) => ({
+                title: title, value: code
+            }));
+        }
+        if (isEmpty(languages)) {
             return null;
         }
         const lang = LocaleUtils.lang();
@@ -105,7 +111,7 @@ class Settings extends React.Component {
                 <td>
                     <select onChange={this.changeLocale} value={lang}>
                         <option key="syslang" value="">{LocaleUtils.tr("settings.systemlang")}</option>
-                        {this.props.languages.map(entry => (
+                        {languages.map(entry => (
                             <option key={entry.value} value={entry.value}>{entry.title ?? LocaleUtils.tr(entry.titleMsgId)}</option>
                         ))}
                     </select>

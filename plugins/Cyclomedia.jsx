@@ -337,10 +337,10 @@ class Cyclomedia extends React.Component {
             <!DOCTYPE html>
             <html>
             <head>
-            <script type="text/javascript" src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
-            <script type="text/javascript" src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-            <script type="text/javascript" src="https://streetsmart.cyclomedia.com/api/v${this.props.cyclomediaVersion}/StreetSmartApi.js"></script>
-            <script type="text/javascript">
+            <script nonce="${window.__CSP_NONCE__ ?? ''}" type="text/javascript" src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+            <script nonce="${window.__CSP_NONCE__ ?? ''}" type="text/javascript" src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+            <script nonce="${window.__CSP_NONCE__ ?? ''}" type="text/javascript" src="https://streetsmart.cyclomedia.com/api/v${this.props.cyclomediaVersion}/StreetSmartApi.js"></script>
+            <script nonce="${window.__CSP_NONCE__ ?? ''}" type="text/javascript">
             let apiInitialized = false;
             let initCallback = null;
             let posCallback = null;
@@ -447,33 +447,44 @@ class Cyclomedia extends React.Component {
             id: 'cyclomedia-recordings',
             type: 'wfs',
             loader: (vectorSource, extent, resolution, projection, success, failure) => {
-                const bbox = CoordinatesUtils.reprojectBbox(extent, projection.getCode(), this.props.mapCrs);
-                const bboxstr = bbox.join(",");
+                const [minx, miny, maxx, maxy] = CoordinatesUtils.reprojectBbox(extent, projection.getCode(), this.props.mapCrs);
+                // Cyclomedia WFS only returns up to 3000 points per request. Split bbox in four to reduce chance of hitting the limit
+                const midx = 0.5 * (minx + maxx);
+                const midy = 0.5 * (miny + maxy);
+                const bboxes = [
+                    [minx, miny, midx, midy], // Bottom left
+                    [midx, miny, maxx, midy], // Bottom right
+                    [midx, midy, maxx, maxy], // Top right
+                    [minx, midy, midx, maxy]  // Top left
+                ];
+                bboxes.forEach(bbox => {
+                    const bboxstr = bbox.join(",");
 
-                const reqUrl = `https://atlasapi.cyclomedia.com/api/recording/wfs?service=WFS&version=1.1.0&request=GetFeature&typename=atlas:Recording&srsname=${this.props.mapCrs}&bbox=${bboxstr}&maxFeatures=10000000`;
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', reqUrl);
-                xhr.setRequestHeader("Authorization", "Basic " + btoa(this.state.username + ":" + this.state.password));
-                const onError = function() {
-                    vectorSource.removeLoadedExtent(extent);
-                    failure();
-                };
-                xhr.onerror = onError;
-                xhr.onload = () => {
-                    if (xhr.status === 200) {
-                        const features = vectorSource.getFormat().readFeatures(xhr.responseText,
-                            {
-                                dataProjection: this.props.mapCrs,
-                                featureProjection: projection.getCode()
-                            }
-                        );
-                        vectorSource.addFeatures(features);
-                        success(features);
-                    } else {
-                        onError();
-                    }
-                };
-                xhr.send();
+                    const reqUrl = `https://atlasapi.cyclomedia.com/api/recording/wfs?service=WFS&version=1.1.0&request=GetFeature&typename=atlas:Recording&srsname=${this.props.mapCrs}&bbox=${bboxstr}&maxFeatures=10000000`;
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('GET', reqUrl);
+                    xhr.setRequestHeader("Authorization", "Basic " + btoa(this.state.username + ":" + this.state.password));
+                    const onError = function() {
+                        vectorSource.removeLoadedExtent(extent);
+                        failure();
+                    };
+                    xhr.onerror = onError;
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            const features = vectorSource.getFormat().readFeatures(xhr.responseText,
+                                {
+                                    dataProjection: this.props.mapCrs,
+                                    featureProjection: projection.getCode()
+                                }
+                            );
+                            vectorSource.addFeatures(features);
+                            success(features);
+                        } else {
+                            onError();
+                        }
+                    };
+                    xhr.send();
+                });
             },
             name: 'atlas:Recording',
             version: '1.1.0',

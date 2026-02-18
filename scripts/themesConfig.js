@@ -8,16 +8,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-const urlUtil = require('url');
 const axios = require('axios');
+const urlUtil = require('url');
 const XMLParser = require('fast-xml-parser').XMLParser;
 const fs = require('fs');
-const path = require('path');
-const objectPath = require('object-path');
 const isEmpty = require('lodash.isempty');
+const objectPath = require('object-path');
+const path = require('path');
 const uuidv4 = require('uuid').v1;
-const os = require('os');
 const dns = require('dns');
+const os = require('os');
 
 const { lookup, lookupService } = dns.promises;
 
@@ -408,7 +408,7 @@ function getTheme(config, configItem, result, resultItem, proxy) {
                             const pk = layers.find(l => l.Name === atlasLayer).PrimaryKey.PrimaryKeyAttribute;
                             printTemplate.atlasCoverageLayer = atlasLayer;
                             printTemplate.atlas_pk = pk;
-                        } catch (e) {
+                        } catch {
                             /* eslint-disable-next-line */
                             console.warn("Failed to determine primary key for atlas layer " + atlasLayer);
                         }
@@ -484,9 +484,6 @@ function getTheme(config, configItem, result, resultItem, proxy) {
                 resultItem.print = printTemplates;
             }
             resultItem.drawingOrder = drawingOrder;
-            if (configItem.extraDxfParameters) {
-                resultItem.extraDxfParameters = configItem.extraDxfParameters;
-            }
             if (configItem.extraPrintParameters) {
                 resultItem.extraPrintParameters = configItem.extraPrintParameters;
             }
@@ -544,6 +541,7 @@ function getTheme(config, configItem, result, resultItem, proxy) {
             resultItem.mapTips = configItem.mapTips;
             resultItem.userMap = configItem.userMap;
             resultItem.map3d = configItem.map3d;
+            resultItem.obliqueDatasets = configItem.obliqueDatasets;
             resultItem.viewMode = configItem.viewMode;
             resultItem.editConfig = getEditConfig(configItem.editConfig);
 

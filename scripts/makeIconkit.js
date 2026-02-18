@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 
 const webfontsGenerator = require('@furkot/webfonts-generator');
+const fs = require('fs');
 const glob = require('glob');
 const mkdirp = require('mkdirp');
-const fs = require('fs');
 const path = require('path');
 
 const readJSON = (filename) => {
     try {
         return JSON.parse(fs.readFileSync(process.cwd() + filename, "utf8"));
-    } catch (e) {
+    } catch {
         return {};
     }
 };
@@ -17,7 +17,7 @@ const readJSON = (filename) => {
 // Determine workspaces / dependencies
 const packageJson = readJSON('/package.json');
 const workspaces = packageJson.workspaces || [];
-const qwcDeps = Object.keys(packageJson.dependencies ?? {qwc2: "0"}).filter(dep => dep.startsWith("qwc"));
+const qwcDeps = Object.keys(packageJson.dependencies ?? {}).filter(dep => dep.startsWith("qwc"));
 
 let icons = [];
 for (const workspace of workspaces) {

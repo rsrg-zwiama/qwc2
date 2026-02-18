@@ -6,13 +6,14 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import htmlReactParser, {domToReact} from 'html-react-parser';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
 import DOMPurify from 'dompurify';
-import htmlReactParser, {domToReact} from 'html-react-parser';
 import isEmpty from 'lodash.isempty';
+import ol from 'openlayers';
 import PropTypes from 'prop-types';
 import {v4 as uuidv4} from 'uuid';
 
@@ -87,11 +88,16 @@ class MapTip extends React.Component {
         }
     }
     getMapMousePos = (ev) => {
-        this.clearMaptip();
+        // Only clear maptip if a new one would be queried
+        if (ev.pixel !== null) {
+            this.clearMaptip();
+        }
         clearTimeout(this.mouseStateTimeout);
-        this.mouseStateTimeout = setTimeout(() => {
-            this.setState({mousePos: {coordinate: ev.coordinate, pixel: ev.pixel}});
-        }, 100);
+        if (ev.pixel !== null) {
+            this.mouseStateTimeout = setTimeout(() => {
+                this.setState({mousePos: {coordinate: ev.coordinate, pixel: ev.pixel}});
+            }, 100);
+        }
     };
     clearMaptip = () => {
         clearTimeout(this.timeoutId);
@@ -168,7 +174,7 @@ class MapTip extends React.Component {
                 top: (this.state.pos[1] - 8) + "px"
             };
             return ReactDOM.createPortal([(
-                <div id="MapTipPointerBuffer" key="MapTipPointerBuffer" style={bufferPos} />
+                <div id="MapTipPointerBuffer" key="MapTipPointerBuffer" onClick={this.pointBufferClicked} style={bufferPos} />
             ), (
                 <div
                     id="MapTip" key="MapTip"
@@ -197,6 +203,24 @@ class MapTip extends React.Component {
             return undefined;
         }};
         return htmlReactParser(text, options);
+    };
+    pointBufferClicked = (ev) => {
+        this.clearMaptip();
+        const map = MapUtils.getHook(MapUtils.GET_MAP);
+        const event = new ol.MapBrowserEvent(
+            'singleclick',
+            map,
+            new PointerEvent('pointerdown', {
+                clientX: ev.clientX,
+                clientY: ev.clientY,
+                bubbles: true
+            }),
+            false,
+            null,
+            [ev.clientX, ev.clientY],
+            MapUtils.getHook(MapUtils.GET_COORDINATES_FROM_PIXEL_HOOK)([ev.clientX, ev.clientY])
+        );
+        map.dispatchEvent(event);
     };
     attributeLinkClicked = (ev) => {
         this.props.openExternalUrl(ev.currentTarget.href, ev.currentTarget.target, {docked: this.props.iframeDialogsInitiallyDocked});

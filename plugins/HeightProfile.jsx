@@ -154,7 +154,8 @@ class HeightProfilePrintDialog_ extends React.PureComponent {
                         strokeWidth: 4,
                         strokeDash: [],
                         headmarker: this.props.measurement.lineHeadMarker,
-                        tailmarker: this.props.measurement.lineTailMarker
+                        tailmarker: this.props.measurement.lineTailMarker,
+                        markerscale: this.props.measurement.markerScale
                     },
                     properties: {
                         segment_labels: measurement.segment_lengths.map(length => MeasureUtils.formatMeasurement(length, false, measurement.lenUnit))
@@ -176,6 +177,7 @@ class HeightProfilePrintDialog_ extends React.PureComponent {
             REQUEST: 'GetMap',
             TRANSPARENT: 'true',
             TILED: 'false',
+            filename: 'heightprofile.png', // To make the ogc-service treat this as a raster export
             CRS: this.props.map.projection,
             BBOX: bounds,
             WIDTH: this.props.map.size.width,
@@ -281,14 +283,17 @@ class HeightProfile extends React.Component {
         this.profilePrintWindow = null;
     }
     componentDidUpdate(prevProps) {
-        if (this.props.measurement.coordinates !== prevProps.measurement.coordinates) {
-            if (this.props.measurement.drawing === false && this.props.measurement.geomType === "LineString" && !isEmpty(this.props.measurement.coordinates) ) {
-                this.queryElevations(this.props.measurement.coordinates, this.props.measurement.segment_lengths, this.props.projection);
-            } else if (!isEmpty(this.state.data)) {
-                this.setState({data: {}});
-                this.props.changeMeasurementState({...this.props.measurement, pickPositionCallback: null});
-            }
+        const measureIdChanged = this.props.measurement.measureId !== prevProps.measurement.measureId;
+        const coordsChanged = this.props.measurement.coordinates !== prevProps.measurement.coordinates;
+        if (this.props.measurement.mode === 'LineString' && !this.props.measurement.drawing && (measureIdChanged || coordsChanged) && !isEmpty(this.props.measurement.coordinates)) {
+            this.queryElevations(this.props.measurement.coordinates, this.props.measurement.segment_lengths, this.props.projection);
+        } else if (!isEmpty(this.state.data) && measureIdChanged) {
+            this.setState({data: {}});
+            this.props.changeMeasurementState({pickPositionCallback: null});
         }
+    }
+    componentWillUnmount() {
+        this.clearMarkerAndTooltip();
     }
     queryElevations(coordinates, distances, projection) {
         const reqId = uuidv4();
@@ -344,14 +349,14 @@ class HeightProfile extends React.Component {
                 reqId: null, data: data,
                 selectedDatasetIndices: prevState.selectedDatasetIndices.filter(i => i < data.length) ? prevState.selectedDatasetIndices : [0]
             }));
-            this.props.changeMeasurementState({...this.props.measurement, pickPositionCallback: this.pickPositionCallback});
+            this.props.changeMeasurementState({pickPositionCallback: this.pickPositionCallback});
         }).catch((error) => {
             this.setState({reqId: null, data: error ? {error} : {}});
         });
     }
     onClose = () => {
         this.setState({data: {}, isloading: false});
-        this.props.changeMeasurementState({...this.props.measurement, pickPositionCallback: null});
+        this.props.changeMeasurementState({pickPositionCallback: null});
     };
     render() {
         if (isEmpty(this.state.data) && !this.state.isloading) {
@@ -384,9 +389,6 @@ class HeightProfile extends React.Component {
         ) : null];
     }
     renderHeightProfile = (saveRef, interactive) => {
-        if (this.props.measurement.drawing ) {
-            return null;
-        }
         if (this.state.data.error) {
             return (
                 <div className="height-profile-error">
@@ -520,7 +522,7 @@ class HeightProfile extends React.Component {
             );
         }
         return (
-            <div className="height-profile-chart-container" style={{position: 'relative'}}>
+            <div className="height-profile-chart-container" onMouseLeave={this.clearMarkerAndTooltip} style={{position: 'relative'}}>
                 {datasetSelector}
                 <Line data={data} options={options} ref={saveRef}/>
             </div>

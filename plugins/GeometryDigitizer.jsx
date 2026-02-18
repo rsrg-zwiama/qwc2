@@ -22,6 +22,7 @@ import ButtonBar from '../components/widgets/ButtonBar';
 import NumberInput from '../components/widgets/NumberInput';
 import Spinner from '../components/widgets/Spinner';
 import ConfigUtils from '../utils/ConfigUtils';
+import {EXCLUDE_ATTRS, EXCLUDE_PROPS} from '../utils/IdentifyUtils';
 import LocaleUtils from '../utils/LocaleUtils';
 import MiscUtils from '../utils/MiscUtils';
 import VectorLayerUtils from '../utils/VectorLayerUtils';
@@ -47,21 +48,26 @@ import './style/Redlining.css';
  *   "pluginData": {
  *     "geometryLinks": [
  *       {
- *         "name": "<geomLinkName>",                // Link name referenced in theme item
- *         "title": "<geomLinkTitle>",              // Link title, displayed in the selection combo
- *         "geomType": ["<geomType>", "<geomType>"] // Supported geometry types (Point, LineString, Polygon)
- *         "url": "<targetApplicationUrl>",         // Application target URL, receiving the POST submit
- *         "params": {"<key>": "<value>", ...}      // Optional: additional form parameters to post to URL
- *         "target": "<target>" | {                 // Optional: form POST target which to display the result
- *           "iframedialog": true,                  // Use an iframe dialog
- *           "w": <dialogWidth>,                    // Dialog width
- *           "h": <dialogHeight>                    // Dialog height
+ *         "name": "<geomLinkName>",                 // Link name referenced in theme item
+ *         "title": "<geomLinkTitle>",               // Link title, displayed in the selection combo
+ *         "geomType": ["<geomType>", "<geomType>"], // Supported geometry types (Point, LineString, Polygon)
+ *         "format": "wkt|geojson",                  // Format of data to send to application
+ *         "url": "<targetApplicationUrl>",          // Application target URL, receiving the POST submit. Can contain the $username$ placeholder parameter.
+ *         "params": {"<key>": "<value>", ...}       // Optional: additional form parameters to post to URL
+ *         "target": "<target>" | {                  // Optional: form POST target which to display the result
+ *           "iframedialog": true,                   // Use an iframe dialog
+ *           "w": <dialogWidth>,                     // Dialog width
+ *           "h": <dialogHeight>                     // Dialog height
  *         }
  *       }
  *     ]
  *   }
  * }
  * ```
+ * If you are using `qwc-services`, you will need to explicitly permit the geometry links in the `qwc-admin-gui` as follows:
+ *
+ * * Create and permit a `Plugin` resource with name `geometryLinks`
+ * * Create and permit `Plugin data` resources with name equal to `<geomLinkName>`
  */
 class GeometryDigitizer extends React.Component {
     static propTypes = {
@@ -204,15 +210,15 @@ class GeometryDigitizer extends React.Component {
         const drawButtons = [
             (supportedGeomType.includes("Polygon") && !supportedGeomType.includes("Point")) ?
                 {key: "Point", tooltip: LocaleUtils.tr("geomdigitizer.point_buffer"), icon: "point_buffer", data: {action: "Draw", geomType: "Point", text: ""}} :
-                {key: "Point", tooltip: LocaleUtils.tr("redlining.point"), icon: "point", data: {action: "Draw", geomType: "Point", text: ""}, disabled: !supportedGeomType.includes("Point")},
+                {key: "Point", tooltip: LocaleUtils.tr("common.point"), icon: "point", data: {action: "Draw", geomType: "Point", text: ""}, disabled: !supportedGeomType.includes("Point")},
             (supportedGeomType.includes("Polygon") && !supportedGeomType.includes("LineString")) ?
                 {key: "LineString", tooltip: LocaleUtils.tr("geomdigitizer.line_buffer"), icon: "line_buffer", data: {action: "Draw", geomType: "LineString", text: ""}} :
-                {key: "LineString", tooltip: LocaleUtils.tr("redlining.line"), icon: "line", data: {action: "Draw", geomType: "LineString", text: ""}, disabled: !supportedGeomType.includes("LineString")},
-            {key: "Polygon", tooltip: LocaleUtils.tr("redlining.polygon"), icon: "polygon", data: {action: "Draw", geomType: "Polygon", text: ""}, disabled: !supportedGeomType.includes("Polygon")}
+                {key: "LineString", tooltip: LocaleUtils.tr("common.line"), icon: "line", data: {action: "Draw", geomType: "LineString", text: ""}, disabled: !supportedGeomType.includes("LineString")},
+            {key: "Polygon", tooltip: LocaleUtils.tr("common.polygon"), icon: "polygon", data: {action: "Draw", geomType: "Polygon", text: ""}, disabled: !supportedGeomType.includes("Polygon")}
         ];
         const editButtons = [
-            {key: "Pick", tooltip: LocaleUtils.tr("redlining.pick"), icon: "pick", data: {action: "Pick", geomType: null, text: ""}},
-            {key: "Delete", tooltip: LocaleUtils.tr("redlining.delete"), icon: "trash", data: {action: "Delete", geomType: null}, disabled: !this.props.redlining.selectedFeature},
+            {key: "Pick", tooltip: LocaleUtils.tr("common.pick"), icon: "pick", data: {action: "Pick", geomType: null, text: ""}},
+            {key: "Delete", tooltip: LocaleUtils.tr("common.delete"), icon: "trash", data: {action: "Delete", geomType: null}, disabled: !this.props.redlining.selectedFeature},
             {key: "Clear", tooltip: LocaleUtils.tr("geomdigitizer.clear"), icon: "clear", data: {action: "Clear"}}
         ];
         const pickButtons = [
@@ -235,7 +241,7 @@ class GeometryDigitizer extends React.Component {
                     <ButtonBar active={activeButton} buttons={editButtons} onClick={(key, data) => this.actionChanged(data)} />
                 </div>
                 <div className="redlining-groupcontrol">
-                    <div>{LocaleUtils.tr("redlining.pick")}</div>
+                    <div>{LocaleUtils.tr("common.pick")}</div>
                     <ButtonBar active={activeButton} buttons={pickButtons} onClick={(key, data) => this.actionChanged(data)} />
                 </div>
                 <div className="redlining-groupcontrol">
@@ -255,7 +261,7 @@ class GeometryDigitizer extends React.Component {
                                 <option key={entry} value={entry}>{this.geometryLinkData(entry).title}</option>
                             ))}
                         </select>
-                        <form action={geomLinkData.url} method="post" onSubmit={this.submitGeometryLink} target={target}>
+                        <form action={geomLinkData.url?.replace('$username$', ConfigUtils.getConfigProp("username") || "")} method="post" onSubmit={this.submitGeometryLink} target={target}>
                             <input name="csrf_token" type="hidden" value={MiscUtils.getCsrfToken()} />
                             <input name="GEOMETRIES" type="hidden" />
                             <input name="GEOMCOUNT" type="hidden" />
@@ -292,7 +298,7 @@ class GeometryDigitizer extends React.Component {
                 <div className="geomdigitizer-output-window-body">
                     {!this.state.outputLoaded ? (
                         <span className="geomdigitizer-output-window-wait">
-                            <Spinner /> <span>{LocaleUtils.tr("geomdigitizer.wait")}</span>
+                            <Spinner /> <span>{LocaleUtils.tr("common.loading")}</span>
                         </span>
                     ) : null}
                     <iframe name="geomdigitizer-output-window" onLoad={() => this.setState({outputLoaded: true})}/>
@@ -421,7 +427,7 @@ class GeometryDigitizer extends React.Component {
             features.push(this.props.redlining.selectedFeature);
         }
 
-        const invalidPoly = features.find(feature => feature.geometry.type === "Polygon" && !isEmpty(polySelfIntersections(feature).geometry.coordinates));
+        const invalidPoly = features.find(feature => feature.geometry.type === "Polygon" && !isEmpty(polySelfIntersections(feature)));
         if (invalidPoly) {
             /* eslint-disable-next-line */
             alert(LocaleUtils.tr("geomdigitizer.selfinter"));
@@ -430,19 +436,26 @@ class GeometryDigitizer extends React.Component {
         }
         const data = this.geometryLinkData(this.state.geomLink);
         const supportedGeomType = data.geomType || [];
-        const geometries = features.filter(
+        const supportedFeatures = features.filter(
             feature => supportedGeomType.includes(this.state.bufferDistance > 0 ? "Polygon" : feature.geometry.type.replace(/^Multi/, ''))
-        ).map(
-            feature => VectorLayerUtils.geoJSONGeomToWkt(feature.geometry)
         );
-        if (isEmpty(geometries)) {
+        if (isEmpty(supportedFeatures)) {
             ev.preventDefault();
             return;
-        } else {
-            ev.target.GEOMETRIES.value = geometries.join(";");
-            ev.target.GEOMCOUNT.value = geometries.length;
-            ev.target.BUFFERDIST.value = this.state.bufferDistance;
         }
+        const geometries = (data.format || "wkt").toLowerCase() === "wkt" ? supportedFeatures.map(
+            feature => VectorLayerUtils.geoJSONGeomToWkt(feature.geometry)
+        ).join(";") : JSON.stringify({
+            type: "FeatureCollection",
+            features: supportedFeatures.map(feature => {
+                const newFeature = MiscUtils.objectOmit(feature, EXCLUDE_PROPS);
+                newFeature.properties = MiscUtils.objectOmit(newFeature.properties, EXCLUDE_ATTRS);
+                return newFeature;
+            })
+        });
+        ev.target.GEOMETRIES.value = geometries;
+        ev.target.GEOMCOUNT.value = supportedFeatures.length;
+        ev.target.BUFFERDIST.value = this.state.bufferDistance;
         if (ev.target.target === "geomdigitizer-output-window") {
             this.setState({outputWindowVisible: true, outputLoaded: false, outputWindowSize: {w: data.target.w, h: data.target.h}, outputWindowTitle: data.target.iframedialog});
         } else {

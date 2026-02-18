@@ -12,9 +12,9 @@ import {v5 as uuidv5} from 'uuid';
 
 import StandardApp from '../components/StandardApp';
 import ConfigUtils from './ConfigUtils';
+import grammar from './expr_grammar/grammar';
 import LocaleUtils from './LocaleUtils';
 import MiscUtils from './MiscUtils';
-import grammar from './expr_grammar/grammar';
 
 const UUID_NS = '5ae5531d-8e21-4456-b45d-77e9840a5bb7';
 
@@ -43,7 +43,7 @@ export class FeatureCache {
                     } else {
                         resolve(null);
                     }
-                }, null, filterExpr);
+                }, {filter: filterExpr});
             });
             return this.requestPromises[key];
         }
@@ -123,7 +123,11 @@ function representValue(attr, editConfig, editIface, promises) {
         {...res, [entry.value]: entry.label}
     ), {});
     if (field.constraints.allowMulti) {
-        return '{' + [...new Set(JSON.parse('[' + value.slice(1, -1) + ']'))].map(x => keyvals[x] ?? x).join(", ") + '}';
+        try {
+            return '{' + [...new Set(JSON.parse('[' + value.slice(1, -1) + ']'))].map(x => keyvals[x] ?? x).join(", ") + '}';
+        } catch {
+            return '{}';
+        }
     } else {
         return keyvals[value] ?? value;
     }
@@ -150,7 +154,7 @@ export function parseExpression(expr, feature, editConfig, editIface, mapPrefix,
     try {
         parser.feed(expr.replace(/\n/, ' '));
         result = parser.results[0];
-    } catch (e) {
+    } catch {
         /* eslint-disable-next-line */
         console.warn("Failed to evaluate expression " + expr.replace(/\n/, ' '));
     }
@@ -193,7 +197,7 @@ export function parseExpressionsAsync(fieldExpressions, feature, editConfig, edi
                 // NOTE: include intermediate results in next context feature
                 newfeature.properties[field] = parser.results[0];
                 return {...res, [field]: parser.results[0]};
-            } catch (e) {
+            } catch {
                 /* eslint-disable-next-line */
                 console.warn("Failed to evaluate expression " + expression.replace(/\n/, ' '));
                 return res;
@@ -233,8 +237,8 @@ export function getFeatureTemplate(editConfig, feature, editIface, mapPrefix, ma
     parseExpressionsAsync(defaultFieldExpressions, feature, editConfig, editIface, mapPrefix, mapCrs).then(result => {
         // Adjust values based on field type
         editConfig.fields.forEach(field => {
-            if (field.id in result && field.type === "date") {
-                result[field.id] = result[field.id].split("T")[0];
+            if (field.id in result && result[field.id] && field.type === "date") {
+                result[field.id] = String(result[field.id]).split("T")[0];
             }
         });
         callback({...feature, properties: {...feature.properties, ...result}});
@@ -271,7 +275,7 @@ export function computeExpressionFields(editConfig, feature, editIface, mapCrs, 
                 return res;
             }
         }, []);
-    } catch (e) {
+    } catch {
         /* eslint-disable-next-line */
         console.warn("Failed to sort expressions, they probably contain cyclic dependencies");
         fieldExpressions = Object.entries(fieldExpressions).map(([field, expression]) => (

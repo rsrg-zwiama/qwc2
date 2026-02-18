@@ -156,11 +156,12 @@ export default function layers(state = defaultState, action) {
             // Compress layers if possible
             newLayers = LayerUtils.implodeLayers(LayerUtils.explodeLayers(newLayers));
         }
-        for (const lyr of newLayers) {
-            if (lyr.type === "wms") {
-                Object.assign(lyr, LayerUtils.buildWMSLayerParams(lyr, state.filter));
+        newLayers = newLayers.map(layer => {
+            if (layer.type === "wms") {
+                return {...layer, ...LayerUtils.buildWMSLayerParams(layer, state.filter)};
             }
-        }
+            return layer;
+        });
         UrlParams.updateParams({l: LayerUtils.buildWMSLayerUrlParam(newLayers)});
         if (newLayer.role === LayerRole.BACKGROUND && newLayer.visibility) {
             UrlParams.updateParams({bl: newLayer.name});
@@ -178,12 +179,12 @@ export default function layers(state = defaultState, action) {
         return {...state, flat: newLayers, editConfigs: newEditConfigs};
     }
     case ADD_LAYER_SEPARATOR: {
-        const newLayers = LayerUtils.insertSeparator(state.flat, action.title, action.afterLayerId, action.afterSublayerPath);
-        for (const layer of newLayers) {
+        const newLayers = LayerUtils.insertSeparator(state.flat, action.title, action.afterLayerId, action.afterSublayerPath).map(layer => {
             if (layer.type === "wms") {
-                Object.assign(layer, LayerUtils.buildWMSLayerParams(layer, state.filter));
+                return {...layer, ...LayerUtils.buildWMSLayerParams(layer, state.filter)};
             }
-        }
+            return layer;
+        });
         UrlParams.updateParams({l: LayerUtils.buildWMSLayerUrlParam(newLayers)});
         return {...state, flat: newLayers};
     }
@@ -200,7 +201,8 @@ export default function layers(state = defaultState, action) {
             newLayers.splice(position, 1);
             if (
                 position > 0 && position < newLayers.length &&
-                newLayers[position - 1].id === newLayers[position].id
+                newLayers[position - 1].url &&
+                newLayers[position - 1].url === newLayers[position].url
             ) {
                 // Compress layers
                 newLayers = LayerUtils.implodeLayers(LayerUtils.explodeLayers(newLayers));
@@ -210,6 +212,14 @@ export default function layers(state = defaultState, action) {
                 delete newEditConfigs[layer.wms_name];
             }
         } else {
+            const sublayer = LayerUtils.getSublayer(layer, action.sublayerpath);
+            const sublayernames = LayerUtils.getSublayerNames(layer);
+            // Remove edit config if it is last layer which uses it
+            if (newEditConfigs[layer.wms_name] && sublayernames.filter(sl => sl === sublayer.name).length === 1) {
+                newEditConfigs = {...newEditConfigs};
+                newEditConfigs[layer.wms_name] = {...newEditConfigs[layer.wms_name]};
+                delete newEditConfigs[layer.wms_name][sublayer.name];
+            }
             newLayers = LayerUtils.removeLayer(state.flat, layer, action.sublayerpath).map(l => {
                 if (l.type === "wms") {
                     return {...l, ...LayerUtils.buildWMSLayerParams(l, state.filter)};

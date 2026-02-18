@@ -24,6 +24,7 @@ import EditUploadField from './EditUploadField';
 import Icon from './Icon';
 import ButtonBar from './widgets/ButtonBar';
 import DateTimeInput from './widgets/DateTimeInput';
+import ListInput from './widgets/ListInput';
 import NumberInput from './widgets/NumberInput';
 import Spinner from './widgets/Spinner';
 import TextInput from './widgets/TextInput';
@@ -469,6 +470,11 @@ class QtDesignerForm extends React.Component {
                     readOnly={inputConstraints.readOnly} required={inputConstraints.required}
                     style={fontStyle} value={value} />
             );
+        } else if (widget.class === "QListWidget") {
+            return (
+                <ListInput onChange={val => updateField(widget.name, val)} readOnly={inputConstraints.readOnly}
+                    required={inputConstraints.required} type={field.type.slice(0, -2)} value={value} />
+            );
         } else if (widget.class === "QWidget") {
             if (widget.name.startsWith("nrel__")) {
                 return this.renderNRelation(widget);
@@ -505,7 +511,7 @@ class QtDesignerForm extends React.Component {
                         } else {
                             const featurebuttons = [];
                             if (feature.geometry !== null) {
-                                featurebuttons.push({key: 'Pick', icon: 'pick', label: LocaleUtils.tr("editing.pick")});
+                                featurebuttons.push({key: 'Pick', icon: 'pick', label: LocaleUtils.tr("common.pick")});
                             }
                             featurebuttons.push({key: 'Create', icon: 'editdraw', label: LocaleUtils.tr("editing.create")});
                             return (<ButtonBar buttons={featurebuttons} forceLabel onClick={(action) => this.props.editRelationRecord(action, reltable, reldataset, index, displayField)} />);
@@ -523,7 +529,7 @@ class QtDesignerForm extends React.Component {
                             );
                         } else {
                             const featurebuttons = [
-                                {key: 'Pick', icon: 'pick', label: LocaleUtils.tr("editing.pick")},
+                                {key: 'Pick', icon: 'pick', label: LocaleUtils.tr("common.pick")},
                                 {key: 'Create', icon: 'editdraw', label: LocaleUtils.tr("editing.create")}
                             ];
                             return (<ButtonBar buttons={featurebuttons} onClick={(action) => this.props.switchEditContext(action, layer, null, (v) => updateField(attrname, v), attrname)} />);
@@ -636,7 +642,7 @@ class QtDesignerForm extends React.Component {
                 </div>
                 {!this.props.readOnly ? (
                     <div className="qt-designer-widget-relation-buttons">
-                        <button className="button qt-designer-widget-relation-add" disabled={!this.props.feature.relationValues} onClick={(ev) => this.addRelationRecord(ev, relDataset)} type="button">{LocaleUtils.tr("editing.add")}</button>
+                        <button className="button qt-designer-widget-relation-add" disabled={!this.props.feature.relationValues} onClick={(ev) => this.addRelationRecord(ev, relDataset)} type="button">{LocaleUtils.tr("common.add")}</button>
                     </div>
                 ) : null}
                 <div className="qt-designer-widget-relation-resize-handle" onPointerDown={this.startRelationTableResize} />

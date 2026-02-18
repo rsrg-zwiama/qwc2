@@ -6,6 +6,8 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import axios from 'axios';
+import deepmerge from 'deepmerge';
 import isEmpty from 'lodash.isempty';
 import isEqual from 'lodash.isequal';
 import url from 'url';
@@ -14,6 +16,7 @@ import {v4 as uuidv4} from 'uuid';
 import {LayerRole} from '../actions/layers';
 import ConfigUtils from './ConfigUtils';
 import CoordinatesUtils from './CoordinatesUtils';
+import LocaleUtils from './LocaleUtils';
 import MapUtils from './MapUtils';
 import VectorLayerUtils from './VectorLayerUtils';
 
@@ -142,7 +145,6 @@ const LayerUtils = {
                     queryable.push(sublayer.name);
                 }
                 if (visibilities) {
-                    // eslint-disable-next-line
                     visibilities.push(layerVisibility ? (parentVisibility ? 1 : 0.5) : 0);
                 }
             }
@@ -195,8 +197,9 @@ const LayerUtils = {
             };
         }
         if (filter.filterParams) {
-            newParams.FILTER = Object.entries(filter.filterParams).reduce((res, [layername, filters]) => {
-                if (!newParams.LAYERS.split(",").includes(layername)) {
+            newParams.FILTER = Object.entries(filter.filterParams).reduce((res, [layerid, filters]) => {
+                const [wmsName, layername] = layerid.split("#");
+                if (wmsName !== layer.wms_name || !newParams.LAYERS.split(",").includes(layername)) {
                     return res;
                 }
                 return [...res, layername + ":" + filters.map(expr => Array.isArray(expr) ? LayerUtils.formatFilterExpr(expr) : "AND").join(" ")];
@@ -575,6 +578,13 @@ const LayerUtils = {
         explodedAdd = explodedAdd.filter(entry => !existing.includes(entry.sublayer.name));
         return LayerUtils.implodeLayers(explodedAdd.concat(explodedBase))[0];
     },
+    getSublayer(layer, sublayerpath) {
+        let sublayer = layer;
+        for (const index of sublayerpath) {
+            sublayer = sublayer.sublayers[index];
+        }
+        return sublayer;
+    },
     searchSubLayer(layer, attr, value, path = []) {
         if (layer.sublayers) {
             let idx = 0;
@@ -664,7 +674,7 @@ const LayerUtils = {
     computeLayerQueryable(layer) {
         let queryable = 0;
         layer.sublayers.map(sublayer => {
-            const sublayerqueryable = !sublayer.omitFromQueryLayers ?? true;
+            const sublayerqueryable = !sublayer.omitFromQueryLayers;
             if (sublayer.sublayers && sublayerqueryable) {
                 queryable += LayerUtils.computeLayerQueryable(sublayer);
             } else {
@@ -1127,34 +1137,36 @@ const LayerUtils = {
         });
         return reports;
     },
-    computeVisbilityPreset(layer, path = "") {
+    computeVisibilityPreset(layers) {
         const result = {};
-        if (layer.sublayers) {
-            const istoplevel = !!layer.url;
-            layer.sublayers.forEach(sublayer =>
-                Object.assign(result, LayerUtils.computeVisbilityPreset(sublayer, !istoplevel ? path + layer.name + "/" : ""))
-            );
-            if (layer.visibility && !istoplevel) {
-                result[path + layer.name] = "";
+        const collectLayerVisibilities = (layer, path) => {
+            if (layer.sublayers) {
+                const istoplevel = !!layer.url;
+                layer.sublayers.forEach(sublayer =>
+                    collectLayerVisibilities(sublayer, !istoplevel ? path + layer.name + "/" : "")
+                );
+                if (layer.visibility && !istoplevel) {
+                    result[path + layer.name] = "";
+                }
+            } else if (layer.visibility) {
+                result[path + layer.name] = layer.style;
             }
-        } else if (layer.visibility) {
-            result[path + layer.name] = layer.style;
-        }
+        };
+        layers.forEach(layer => {
+            if (layer.role === LayerRole.THEME) {
+                collectLayerVisibilities(layer);
+            }
+        });
         return result;
     },
     getActiveVisibilityPreset(layers, presets) {
         if (isEmpty(presets)) {
             return null;
         }
-        const result = {};
-        layers.forEach(layer => {
-            if (layer.role === LayerRole.THEME) {
-                Object.assign(result, LayerUtils.computeVisbilityPreset(layer));
-            }
-        });
+        const currentPreset = LayerUtils.computeVisibilityPreset(layers);
 
         for (const [name, preset] of Object.entries(presets)) {
-            if (isEqual(preset, result)) {
+            if (isEqual(preset, currentPreset)) {
                 return name;
             }
         }
@@ -1177,6 +1189,43 @@ const LayerUtils = {
             }
         }
         return newLayer;
+    },
+    queryLayerMetadata(layer, callback) {
+        const metadataRequests = [];
+        if (layer.editConfigUrl) {
+            metadataRequests.push(new Promise((resolve) => {
+                axios.get(layer.editConfigUrl).then(response => {
+                    layer.editConfig = response.data;
+                    delete layer.editConfigUrl;
+                    resolve();
+                }).catch(() => {
+                    layer.editConfig = {};
+                    delete layer.editConfigUrl;
+                    resolve();
+                });
+            }));
+        }
+        if (layer.translationsUrl) {
+            metadataRequests.push(new Promise((resolve) => {
+                axios.get(layer.translationsUrl.replace('{lang}', LocaleUtils.lang())).then(response => {
+                    layer.translations = deepmerge(LocaleUtils.commonTranslations(), response.data);
+                    delete layer.translationsUrl;
+                    resolve();
+                }).catch(() => {
+                    layer.translations = LocaleUtils.commonTranslations();
+                    delete layer.translationsUrl;
+                    resolve();
+                });
+            }));
+        } else {
+            layer.translations = deepmerge(LocaleUtils.commonTranslations(), layer.translations || {});
+        }
+        Promise.all(metadataRequests).then(() => {
+            if (layer.translations) {
+                layer = LayerUtils.applyTranslations(layer, layer.translations);
+            }
+            callback(layer);
+        });
     },
     applyTranslations(layer, translations) {
         return {

@@ -62,7 +62,9 @@ class SearchBox extends React.Component {
         removeLayer: PropTypes.func,
         replacePlaceholderLayer: PropTypes.func,
         searchOptions: PropTypes.shape({
+            allowAddLayerAsGroup: PropTypes.bool,
             allowSearchFilters: PropTypes.bool,
+            focusOnStartup: PropTypes.bool,
             hideResultLabels: PropTypes.bool,
             highlightStyle: PropTypes.object,
             minScaleDenom: PropTypes.number,
@@ -156,7 +158,7 @@ class SearchBox extends React.Component {
         }
         const providerSelection = (
             <ComboBox onChange={value => this.setState({selectedProvider: value})} value={this.state.selectedProvider}>
-                <div value="">{LocaleUtils.tr("search.all")}</div>
+                <div value="">{LocaleUtils.tr("common.all")}</div>
                 {Object.entries(this.props.searchProviders).map(([key, prov]) => (
                     <div key={key} value={key}>{prov?.params?.title || (prov.label ?? LocaleUtils.tr(prov.labelmsgid))}</div>
                 ))}
@@ -177,8 +179,8 @@ class SearchBox extends React.Component {
             );
         }
         const filterButtons = [
-            {key: "Polygon", tooltip: LocaleUtils.tr("redlining.polygon"), icon: "polygon", label: LocaleUtils.tr("redlining.polygon")},
-            {key: "Circle", tooltip: LocaleUtils.tr("redlining.circle"), icon: "circle", label: LocaleUtils.tr("redlining.circle")}
+            {key: "Polygon", tooltip: LocaleUtils.tr("common.polygon"), icon: "polygon", label: LocaleUtils.tr("common.polygon")},
+            {key: "Circle", tooltip: LocaleUtils.tr("common.circle"), icon: "circle", label: LocaleUtils.tr("common.circle")}
         ];
         return (
             <div className="searchbox-filter-options">
@@ -194,7 +196,7 @@ class SearchBox extends React.Component {
                                 <div className="searchbox-filter-options-geometry controlgroup">
                                     <ButtonBar active={this.state.filterGeomType} buttons={filterButtons} onClick={this.setFilterGeomType} />
                                     {searchRegionSelection}
-                                    <button className="button" onClick={this.clearFilter} title={LocaleUtils.tr("search.clearfilter")}>
+                                    <button className="button" onClick={this.clearFilter} title={LocaleUtils.tr("common.clear")}>
                                         <Icon icon="clear" />
                                     </button>
                                 </div>
@@ -250,14 +252,14 @@ class SearchBox extends React.Component {
         if (isEmpty(children)) {
             if (isEmpty(this.state.pendingSearches) && this.state.searchResults.query_text) {
                 children = (
-                    <div className="searchbox-noresults" disabled key="noresults">{LocaleUtils.tr("search.noresults")}</div>
+                    <div className="searchbox-noresults" disabled key="noresults">{LocaleUtils.tr("common.noresults")}</div>
                 );
             } else {
                 return null;
             }
         }
         return (
-            <PopupMenu anchor={this.searchBox} className="searchbox-results" onClose={() => this.setState({resultsVisible: false})} setMaxWidth>
+            <PopupMenu anchor={this.searchBox} className="searchbox-results" onClose={() => this.setState({resultsVisible: false})} setMaxWidth spaceKeyActivation={false}>
                 {children}
             </PopupMenu>
         );
@@ -397,7 +399,7 @@ class SearchBox extends React.Component {
                 {result.theme ? (<Icon className="searchbox-result-openicon" icon="open" />) : null}
                 <span className="searchbox-result-label" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(result.text).replace(/<br\s*\/>/ig, ' ')}} title={result.label ?? result.text} />
                 {result.theme && addThemes ? (<Icon icon="plus" onClick={() => this.selectLayerResult(provider, group, result)} title={LocaleUtils.tr("themeswitcher.addtotheme")}/>) : null}
-                {result.sublayers ? (<Icon icon="group" onClick={() => this.selectLayerResult(provider, group, result, true)} title={LocaleUtils.tr("importlayer.asgroup")} />) : null}
+                {this.props.searchOptions.allowAddLayerAsGroup && result.sublayers ? (<Icon icon="group" onClick={() => this.selectLayerResult(provider, group, result, true)} title={LocaleUtils.tr("importlayer.asgroup")} />) : null}
                 {result.info ? <Icon icon="info-sign" onClick={(ev) => this.toggleLayerInfo(ev, provider, group, result, key, parent)} /> : null}
             </div>
         ), this.state.activeLayerInfo === key ? (
@@ -492,7 +494,7 @@ class SearchBox extends React.Component {
                     if (result.theme) {
                         this.addThemeLayers(layer);
                     } else if (group.type === SearchResultType.THEMELAYER) {
-                        this.props.addThemeSublayer({sublayers: [layer]});
+                        this.props.addThemeSublayer({sublayers: [layer], editConfigUrl: layer.editConfigUrl});
                     } else if (group.type === SearchResultType.EXTERNALLAYER) {
                         this.addExternalLayer(layer, asGroup);
                     }
@@ -638,7 +640,7 @@ class SearchBox extends React.Component {
                             onClick={() => this.setState({resultsVisible: true})}
                             onFocus={this.onFocus}
                             onKeyDown={this.onKeyDown}
-                            placeholder={placeholder} ref={el => { this.searchBox = el; }}
+                            placeholder={placeholder} ref={this.setSearchBoxRef}
                             role="input" type="text" value={this.state.searchText} />
                         {this.state.pendingSearches.length > 0 ? (<Spinner role="suffix" />) : (<Icon icon="clear" onClick={this.clear} role="suffix" />)}
                     </InputContainer>
@@ -662,6 +664,12 @@ class SearchBox extends React.Component {
             )
         ];
     }
+    setSearchBoxRef = (el) => {
+        this.searchBox = el;
+        if (el && this.props.searchOptions.focusOnStartup) {
+            el.focus();
+        }
+    };
     toggleFilterOptions = (visible) => {
         this.setState({filterOptionsVisible: visible});
     };
@@ -697,7 +705,7 @@ class SearchBox extends React.Component {
     clear = () => {
         this.props.setCurrentSearchResult(null);
         this.blur();
-        this.setState({searchText: '', searchResults: {}, selectedProvider: '', filterRegionName: "", filterGeometry: null});
+        this.setState({searchText: '', searchResults: {}, selectedProvider: '', filterRegionName: "", filterGeometry: null, resultsVisible: false});
         this.props.removeLayer('searchselection');
         UrlParams.updateParams({hp: undefined, hf: undefined, st: undefined});
     };

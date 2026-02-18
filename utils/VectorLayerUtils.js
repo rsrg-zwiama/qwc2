@@ -6,6 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import cleanCords from '@turf/clean-coords';
 import geojsonBbox from 'geojson-bounding-box';
 import isEmpty from 'lodash.isempty';
 import {getDefaultImageStyle} from 'ol/format/KML';
@@ -20,7 +21,7 @@ import {END_MARKERS, computeFeatureStyle} from '../utils/FeatureStyles';
 
 
 const VectorLayerUtils = {
-    createPrintHighlighParams(layers, printCrs, printScale, dpi = 96, scaleFactor = 1.0) {
+    createPrintHighlighParams(layers, printCrs, mapScale, dpi = 96, scaleFactor = 1.0) {
         const qgisServerVersion = ConfigUtils.getConfigProp("qgisServerVersion", null, 3);
         const params = {
             geoms: [],
@@ -48,8 +49,14 @@ const VectorLayerUtils = {
                 if (feature.geometry?.coordinates) {
                     feature = {...feature, geometry: {...feature.geometry, coordinates: VectorLayerUtils.removeDuplicateNodes(feature.geometry.coordinates)}};
                 }
-                return VectorLayerUtils.simplifyFeature(feature);
-            }).flat();
+                try {
+                    return VectorLayerUtils.simplifyFeature(feature);
+                } catch {
+                    /* eslint-disable-next-line */
+                    console.warn("Skipping invalid geometry");
+                    return null;
+                }
+            }).filter(Boolean).flat();
             for (const feature of features) {
                 if (!VectorLayerUtils.validateGeometry(feature.geometry)) {
                     continue;
@@ -61,10 +68,10 @@ const VectorLayerUtils = {
                 if (feature.geometry.type === "LineString") {
                     // Generate arrow heads
                     if (styleOptions.headmarker) {
-                        VectorLayerUtils.generateMarkerGeometry(params, styleOptions.headmarker, false, feature, layer, dpi, printScale, printCrs, scaleFactor);
+                        VectorLayerUtils.generateMarkerGeometry(params, styleOptions.headmarker, false, feature, layer, mapScale, dpi, scaleFactor);
                     }
                     if (styleOptions.tailmarker) {
-                        VectorLayerUtils.generateMarkerGeometry(params, styleOptions.tailmarker, true, feature, layer, dpi, printScale, printCrs, scaleFactor);
+                        VectorLayerUtils.generateMarkerGeometry(params, styleOptions.tailmarker, true, feature, layer, mapScale, dpi, scaleFactor);
                     }
                 }
                 if (feature.geometry.type === "LineString" && !isEmpty(properties.segment_labels)) {
@@ -119,6 +126,27 @@ const VectorLayerUtils = {
                         params.labelRotations.push("0");
                     }
                 }
+                if (properties.end_label) {
+                    const coo = geometry.coordinates;
+                    let point = null;
+                    if (feature.geometry.type === "LineString") {
+                        point = coo[coo.length - 1];
+                    } else if (feature.geometry.type === "Polygon") {
+                        point = coo[0].reduce((min, p) => p[1] < min[1] ? p : min, [Infinity, Infinity]);
+                    }
+                    if (point) {
+                        // Add extra endpoint with label
+                        params.styles.push(VectorLayerUtils.createSld('Point', 'text', {}, 255, dpi, scaleFactor));
+                        params.labels.push(properties.end_label);
+                        params.geoms.push(VectorLayerUtils.geoJSONGeomToWkt({type: "Point", coordinates: point}));
+                        params.labelFillColors.push(ensureHex(styleOptions.textFill));
+                        params.labelOutlineColors.push(ensureHex(styleOptions.textStroke));
+                        params.labelOutlineSizes.push(scaleFactor);
+                        params.labelSizes.push(Math.round(10 * scaleFactor));
+                        params.labelDist.push("-5");
+                        params.labelRotations.push("0");
+                    }
+                }
             }
         }
         return params;
@@ -145,7 +173,7 @@ const VectorLayerUtils = {
                 });
             }).flat();
         } else if (feature.geometry.type === "Polygon") {
-            return simplepolygon(feature).features.map((feat, idx, features) => {
+            return simplepolygon(cleanCords(feature)).features.map((feat, idx, features) => {
                 if (feat.properties.parent >= 0) {
                     features[feat.properties.parent].geometry.coordinates.push(feat.geometry.coordinates[0]);
                     return null;
@@ -211,6 +239,7 @@ const VectorLayerUtils = {
                      '<se:SvgParameter name="stroke-opacity">' + opacity(opts.strokeColor) + '</se:SvgParameter>' +
                      '<se:SvgParameter name="stroke-width">' + (opts.strokeWidth * dpiScale) + '</se:SvgParameter>' +
                      '<se:SvgParameter name="stroke-linejoin">round</se:SvgParameter>' +
+                     '<se:SvgParameter name="stroke-linecap">butt</se:SvgParameter>' +
                      (!isEmpty(opts.strokeDash) ? '<se:SvgParameter name="stroke-dasharray">' + opts.strokeDash.map(x => x * dpiScale).join(' ') + '</se:SvgParameter>' : '') +
                      '</se:Stroke>';
         const fill = '<se:Fill>' +
@@ -258,7 +287,7 @@ const VectorLayerUtils = {
         }
         return null;
     },
-    generateMarkerGeometry(params, markername, tail, feature, layer, dpi, mapScale, printCrs, scaleFactor) {
+    generateMarkerGeometry(params, markername, tail, feature, layer, mapScale, dpi, scaleFactor) {
         if (!END_MARKERS[markername]) {
             return;
         }
@@ -274,13 +303,14 @@ const VectorLayerUtils = {
             width = parseInt(svgDoc.getElementsByTagName("svg")[0].getAttribute("width"), 10);
             height = parseInt(svgDoc.getElementsByTagName("svg")[0].getAttribute("height"), 10);
             path = svgDoc.getElementsByTagName("path")[0].getAttribute("d");
-        } catch (e) {
+        } catch {
             /* eslint-disable-next-line */
             console.warn("Could not parse path for marker " + markername);
             return;
         }
-        //                        [        Same as in FeatureStyles.js         ] [   pixel to map units  ]
-        const markerScaleFactor = 0.125 * (1 + feature.styleOptions.strokeWidth) / dpi * 0.0254 * mapScale * scaleFactor;
+        const opts = feature.styleOptions;
+        //                        [              Same as in FeatureStyles.js             ]   [   pixel to map units  ]
+        const markerScaleFactor = 0.125 * (1 + opts.strokeWidth) * (opts.markerscale ?? 1) / dpi * 0.0254 * mapScale * scaleFactor;
         const origin = feature.geometry.coordinates[tail ? feature.geometry.coordinates.length - 1 : 0];
         const p2 = feature.geometry.coordinates[tail ? feature.geometry.coordinates.length - 2 : 1];
         const coordinates = [];
@@ -392,7 +422,7 @@ const VectorLayerUtils = {
             const featureObj = new ol.format.GeoJSON().writeFeatureObject(feature);
             featureObj.id = id;
             return featureObj;
-        } catch (e) {
+        } catch {
             /* eslint-disable-next-line */
             console.warn("Failed to parse geometry: " + wkt);
             return null;

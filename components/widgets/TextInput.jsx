@@ -11,6 +11,7 @@ import React from 'react';
 import classNames from 'classnames';
 import DOMPurify from 'dompurify';
 import PropTypes from 'prop-types';
+import {v4 as uuidv4} from 'uuid';
 
 import LocaleUtils from '../../utils/LocaleUtils';
 import MiscUtils from '../../utils/MiscUtils';
@@ -18,15 +19,22 @@ import Icon from '../Icon';
 
 import './style/TextInput.css';
 
+
+export const TextInputInitContext = React.createContext(null);
+
 export default class TextInput extends React.Component {
+    static contextType = TextInputInitContext;
+
     static propTypes = {
         addLinkAnchors: PropTypes.bool,
         className: PropTypes.string,
         clearValue: PropTypes.string,
         disabled: PropTypes.bool,
+        focusOnRef: PropTypes.bool,
         multiline: PropTypes.bool,
         name: PropTypes.string,
         onChange: PropTypes.func,
+        onNoChange: PropTypes.func,
         placeholder: PropTypes.string,
         readOnly: PropTypes.bool,
         required: PropTypes.bool,
@@ -44,19 +52,20 @@ export default class TextInput extends React.Component {
         value: "",
         valueRev: 0,
         curValue: "",
-        changed: false
+        changed: false,
+        committing: false
     };
     constructor(props) {
         super(props);
-        this.skipNextCommitOnBlur = false;
         this.focusEnterClick = false;
         this.initialHeight = null;
         this.input = null;
         this.tooltipEl = null;
         this.tooltipTimeout = null;
+        this.id = uuidv4();
     }
     static getDerivedStateFromProps(nextProps, state) {
-        if (state.value !== nextProps.value) {
+        if (state.value !== nextProps.value && !state.committing) {
             return {
                 value: nextProps.value,
                 valueRev: state.valueRev + 1,
@@ -66,12 +75,15 @@ export default class TextInput extends React.Component {
         }
         return null;
     }
+    componentDidMount() {
+        this.context?.register?.(this.id);
+    }
     componentDidUpdate(prevProps, prevState) {
         this.setDefaultValue(this.state.value, this.state.valueRev, prevState.valueRev);
     }
     setDefaultValue = (value, valueRev, prevValueRef) => {
         if (valueRev > prevValueRef) {
-            this.input.innerHTML = DOMPurify.sanitize(value.replaceAll('\n', this.props.multiline ? '<br />' : ''));
+            this.input.innerHTML = DOMPurify.sanitize((value || "").replaceAll('\n', this.props.multiline ? '<br />' : ''));
         }
     };
     render() {
@@ -95,7 +107,7 @@ export default class TextInput extends React.Component {
             style.marginRight = '1.5em';
         }
         return (
-            <div className={wrapperClassName + " " + (this.props.className || "")} ref={this.storeInitialHeight}>
+            <div className={wrapperClassName + " " + (this.props.className || "")} onClick={MiscUtils.killEvent} ref={this.storeInitialHeight}>
                 {this.props.name ? (
                     <textarea
                         className="text-input-form-el"
@@ -108,7 +120,6 @@ export default class TextInput extends React.Component {
                 <pre
                     className={preClassName}
                     contentEditable={!this.props.disabled && !this.props.readOnly}
-                    dangerouslySetInnerHTML={{__html: this.state.value.replaceAll('\n', this.props.multiline ? '<br />' : '')}}
                     onBlur={this.onBlur}
                     onChange={this.onChange}
                     onCopy={(ev) => this.onCopy(ev, false)}
@@ -119,7 +130,7 @@ export default class TextInput extends React.Component {
                     onMouseDown={this.onMouseDown}
                     onMouseLeave={this.onMouseLeave}
                     onMouseMove={this.onMouseMove}
-                    ref={el => {this.input = el;}}
+                    ref={this.storeRef}
                     style={style}
                 />
                 {!this.state.curValue ? (
@@ -138,6 +149,19 @@ export default class TextInput extends React.Component {
             </div>
         );
     }
+    storeRef = (el) => {
+        if (el) {
+            this.input = el;
+            this.setDefaultValue(this.state.value, this.state.valueRev, -1);
+            this.context?.notifyReady?.(this.id);
+            if (this.props.focusOnRef) {
+                el.focus();
+            }
+        }
+    };
+    setInputContents = () => {
+        this.input.innerHTML = (this.state.value || "").replaceAll('\n', this.props.multiline ? '<br />' : '');
+    };
     onCopy = (ev, cut) => {
         ev.preventDefault();
         const selection = window.getSelection();
@@ -164,9 +188,7 @@ export default class TextInput extends React.Component {
     };
     onBlur = () => {
         this.setState({focus: false});
-        if (!this.skipNextCommitOnBlur) {
-            this.commit();
-        }
+        this.commit();
     };
     onFocus = (ev) => {
         this.setState({focus: true});
@@ -233,19 +255,21 @@ export default class TextInput extends React.Component {
                 valueRev: state.valueRev + 1,
                 curValue: this.props.value || "",
                 changed: false
-            }));
-            this.skipNextCommitOnBlur = true;
-            ev.target.blur();
+            }), () => ev.target.blur());
+            MiscUtils.killEvent(ev);
         }
     };
     commit = () => {
         if (this.state.changed) {
-            if (this.props.addLinkAnchors) {
-                const valueWithLinks = MiscUtils.addLinkAnchors(this.state.curValue);
-                this.props.onChange(valueWithLinks);
-            } else {
-                this.props.onChange(this.state.curValue);
-            }
+            this.setState(state => {
+                const value = this.props.addLinkAnchors ? MiscUtils.addLinkAnchors(state.curValue) : state.curValue;
+                return {value: value, changed: false, committing: true};
+            }, () => {
+                this.setState({committing: false});
+                this.props.onChange(this.state.value);
+            });
+        } else {
+            this.props.onNoChange?.();
         }
     };
     storeInitialHeight = (el) => {

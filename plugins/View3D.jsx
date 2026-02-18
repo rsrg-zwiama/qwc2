@@ -13,7 +13,7 @@ import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
 
 import * as displayExports from '../actions/display';
-import {setView3dMode, View3DMode} from '../actions/display';
+import {setViewMode, ViewMode} from '../actions/display';
 import * as layersExports from '../actions/layers';
 import {LayerRole, addLayerFeatures, removeLayer} from '../actions/layers';
 import {panTo, zoomToPoint} from '../actions/map';
@@ -22,7 +22,6 @@ import * as themeExports from '../actions/theme';
 import PluginsContainer from '../components/PluginsContainer';
 import ResizeableWindow from '../components/ResizeableWindow';
 import StandardApp from '../components/StandardApp';
-import View3DSwitcher from '../components/map3d/View3DSwitcher';
 import Spinner from '../components/widgets/Spinner';
 import ReducerIndex from '../reducers/index';
 import personIcon from '../resources/person.png';
@@ -43,10 +42,10 @@ import './style/View3D.css';
 class View3D extends React.Component {
     static propTypes = {
         addLayerFeatures: PropTypes.func,
-        /** The position slot index of the 3d switch map button, from the bottom (0: bottom slot). */
-        buttonPosition: PropTypes.number,
         /** The position of the navigation controls. Either `top` or `bottom`. */
         controlsPosition: PropTypes.string,
+        /** The default field of view (`20`: min, `100`: max). */
+        defaultFov: PropTypes.number,
         /** The default scene quality factor (`20`: min, `100`: max). */
         defaultSceneQuality: PropTypes.number,
         display: PropTypes.object,
@@ -74,16 +73,16 @@ class View3D extends React.Component {
         plugins3d: PropTypes.object,
         removeLayer: PropTypes.func,
         searchProviders: PropTypes.object,
-        setView3dMode: PropTypes.func,
+        setViewMode: PropTypes.func,
         startupParams: PropTypes.object,
         startupState: PropTypes.object,
         theme: PropTypes.object,
-        view3dMode: PropTypes.number,
+        viewMode: PropTypes.number,
         zoomToPoint: PropTypes.func
     };
     static defaultProps = {
-        buttonPosition: 6,
         controlsPosition: 'top',
+        defaultFov: 30,
         defaultSceneQuality: 100,
         geometry: {
             initialWidth: 600,
@@ -99,18 +98,21 @@ class View3D extends React.Component {
             right: 'rotate'
         }
     };
+    EnabledState = {DISABLED: 0, ENABLED: 1, DISABLING: 2};
     state = {
         componentLoaded: false,
         windowDetached: false,
         viewsLocked: false,
-        storedState: null
+        storedState: null,
+        enabledState: this.EnabledState.DISABLED
     };
     constructor(props) {
         super(props);
         this.map3dComponent = null;
         this.map3dComponentRef = null;
         this.focusedMap = null;
-        this.firstPersonMarker = true;
+        this.firstPersonMarker = false;
+        this.pendingViewState = null;
         // Subset of 2d reducers
         const {
             processNotifications,
@@ -159,9 +161,9 @@ class View3D extends React.Component {
     }
     componentDidMount() {
         if (this.props.startupParams.v === "3d") {
-            this.props.setView3dMode(View3DMode.FULLSCREEN);
+            this.props.setViewMode(ViewMode._3DFullscreen);
         } else if (this.props.startupParams.v === "3d2d") {
-            this.props.setView3dMode(View3DMode.SPLITSCREEN);
+            this.props.setViewMode(ViewMode._3DSplitscreen);
         }
         window.addEventListener('focus', this.trackFocus, true);
         this.syncParentStore({});
@@ -170,25 +172,46 @@ class View3D extends React.Component {
         window.removeEventListener('focus', this.trackFocus);
     }
     componentDidUpdate(prevProps, prevState) {
-        if (this.props.view3dMode !== View3DMode.DISABLED && prevProps.view3dMode === View3DMode.DISABLED) {
+        const is3DViewMode = (viewMode) => [ViewMode._3DFullscreen, ViewMode._3DSplitscreen].includes(viewMode);
+
+        // Honour theme startupView on theme change unless first loaded theme and startupParams.v is set
+        if (this.props.theme.current !== prevProps.theme.current && this.props.theme.current?.startupView && (prevProps.theme.current !== null || !this.props.startupParams.v)) {
+            if (this.props.theme.current.startupView === "3d2d") {
+                this.props.setViewMode(ViewMode._3DSplitscreen);
+            } else if (this.props.theme.current.startupView === "3d") {
+                this.props.setViewMode(ViewMode._3DFullscreen);
+            }
+        }
+
+        if (this.state.enabledState === this.EnabledState.DISABLING && this.props.viewMode !== prevProps.viewMode) {
+            this.pendingViewState = [ViewMode._3DFullscreen, ViewMode._3DSplitscreen].includes(this.props.viewMode) ? this.EnabledState.ENABLED : this.EnabledState.DISABLED;
+        } else if (is3DViewMode(this.props.viewMode) && !is3DViewMode(prevProps.viewMode)) {
+            this.setState({enabledState: this.EnabledState.ENABLED});
+        } else if (!is3DViewMode(this.props.viewMode) && is3DViewMode(prevProps.viewMode)) {
+            this.setState({enabledState: this.EnabledState.DISABLING});
+        }
+
+        if (this.state.enabledState !== this.EnabledState.DISABLED && prevState.enabledState === this.EnabledState.DISABLED) {
             import('../components/map3d/Map3D').then(component => {
                 this.map3dComponent = component.default;
                 this.map3dComponentRef = null;
                 this.setState({componentLoaded: true});
             });
             this.syncParentStore(this.props, true);
-        } else if (this.props.view3dMode === View3DMode.DISABLING && prevProps.view3dMode !== View3DMode.DISABLING) {
+        } else if (this.state.enabledState === this.EnabledState.DISABLING && prevState.enabledState !== this.EnabledState.DISABLING) {
             if (this.map3dComponentRef) {
                 this.map3dComponentRef.store3dState().then(storedState => {
-                    this.setState({storedState});
-                    UrlParams.updateParams({v3d: undefined, bl3d: undefined});
-                    this.props.setView3dMode(View3DMode.DISABLED);
+                    this.setState({storedState, enabledState: this.EnabledState.DISABLED}, () => {
+                        if (this.pendingViewState !== null) {
+                            this.setState({enabledState: this.pendingViewState});
+                        }
+                    });
                 });
             } else {
-                UrlParams.updateParams({v3d: undefined, bl3d: undefined});
-                this.props.setView3dMode(View3DMode.DISABLED);
+                this.setState({enabledState: this.EnabledState.DISABLED});
             }
-        } else if (this.props.view3dMode === View3DMode.DISABLED && prevProps.view3dMode !== View3DMode.DISABLED) {
+        } else if (this.state.enabledState === this.EnabledState.DISABLED && prevState.enabledState !== this.EnabledState.DISABLED) {
+            UrlParams.updateParams({v3d: undefined, bl3d: undefined});
             this.map3dComponent = null;
             this.map3dComponentRef = null;
             this.setState({componentLoaded: false});
@@ -199,24 +222,18 @@ class View3D extends React.Component {
         }
         // Sync parts of parent store
         this.syncParentStore(prevProps);
-        // Handle view mode change
-        if (this.props.view3dMode !== prevProps.view3dMode) {
-            if (this.props.view3dMode === View3DMode.FULLSCREEN) {
-                UrlParams.updateParams({v: "3d"});
-                this.setState({viewsLocked: false});
-            } else if (this.props.view3dMode === View3DMode.SPLITSCREEN) {
-                UrlParams.updateParams({v: "3d2d"});
-            } else {
-                UrlParams.updateParams({v: "2d"});
-            }
+
+        // Unlock views when switching to fullscreen 3D mode
+        if (this.props.viewMode !== prevProps.viewMode && this.props.viewMode === ViewMode._3DFullscreen) {
+            this.setState({viewsLocked: false});
         }
         // Switch to 2D mode if new theme has no 3D configuration
         if (
             this.props.theme.current !== prevProps.theme.current &&
             !this.props.theme.current?.map3d &&
-            this.props.view3dMode !== View3DMode.DISABLED
+            this.props.viewMode !== ViewMode._2D
         ) {
-            this.props.setView3dMode(View3D.DISABLED);
+            this.props.setViewMode(ViewMode._2D);
         }
         // Lock views
         if (this.state.viewsLocked && this.props.map.bbox !== prevProps.map.bbox && this.focusedMap === "map") {
@@ -228,7 +245,7 @@ class View3D extends React.Component {
         }
     }
     syncParentStore(prevProps, force = false) {
-        if (this.props.view3dMode === View3DMode.DISABLED) {
+        if (this.state.enabledState !== this.EnabledState.ENABLED) {
             return;
         }
         if (this.props.display !== prevProps.display || force) {
@@ -247,34 +264,34 @@ class View3D extends React.Component {
             this.store.dispatch({type: "SYNC_MAP_FROM_PARENT_STORE", map: this.props.map});
         }
     }
-    render3DWindow = () => {
-        if (this.props.view3dMode > View3DMode.DISABLED) {
+    render() {
+        if (this.state.enabledState > this.EnabledState.DISABLED) {
             const extraControls = [{
                 icon: "sync",
                 callback: this.sync2DExtent,
-                title: LocaleUtils.tr("map3d.syncview")
+                title: LocaleUtils.tr("common.sync2dview")
             }, {
                 icon: "lock",
                 callback: this.setLockViews,
-                title: LocaleUtils.tr("map3d.lockview"),
+                title: LocaleUtils.tr("common.lock2dview"),
                 active: this.state.viewsLocked
             }];
             if (!this.state.windowDetached) {
                 extraControls.push({
                     icon: "maximize",
-                    callback: () => this.props.setView3dMode(View3DMode.FULLSCREEN),
+                    callback: () => this.props.setViewMode(ViewMode._3DFullscreen),
                     title: LocaleUtils.tr("window.maximize")
                 });
             }
             const Map3D = this.map3dComponent;
             const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
-            const pluginsConfig = this.props.view3dMode === View3DMode.FULLSCREEN ? this.props.localConfig.plugins[device].filter(entry => {
+            const pluginsConfig = this.props.viewMode === ViewMode._3DFullscreen ? this.props.localConfig.plugins[device].filter(entry => {
                 return entry.availableIn3D;
             }) : [];
             return (
                 <ResizeableWindow
                     extraControls={extraControls}
-                    fullscreen={this.props.view3dMode === View3DMode.FULLSCREEN}
+                    fullscreen={this.props.viewMode === ViewMode._3DFullscreen}
                     icon="map3d"
                     initialHeight={this.props.geometry.initialHeight}
                     initialWidth={this.props.geometry.initialWidth}
@@ -296,6 +313,7 @@ class View3D extends React.Component {
                             <PluginsContainer pluginsConfig={pluginsConfig}>
                                 <Map3D
                                     controlsPosition={this.props.controlsPosition}
+                                    defaultFov={this.props.defaultFov}
                                     defaultSceneQuality={this.props.defaultSceneQuality}
                                     innerRef={this.setRef}
                                     mouseButtons={this.props.mouseButtons}
@@ -306,7 +324,7 @@ class View3D extends React.Component {
                                     searchProviders={this.props.searchProviders}
                                     theme={this.props.theme} />
                                 {
-                                    this.props.view3dMode === View3DMode.DISABLING ? (
+                                    this.state.enabledState === this.EnabledState.DISABLING ? (
                                         <div className="view3d-busy-overlay">
                                             <Spinner /><span>{LocaleUtils.tr("view3d.storingstate")}</span>
                                         </div>
@@ -319,19 +337,13 @@ class View3D extends React.Component {
             );
         }
         return null;
-    };
-    render() {
-        const button = this.props.theme.current?.map3d ? (
-            <View3DSwitcher key="View3DButton" position={this.props.buttonPosition} />
-        ) : null;
-        return [button, this.render3DWindow()];
     }
     onClose = () => {
-        this.props.setView3dMode(View3DMode.DISABLING);
+        this.props.setViewMode(ViewMode._2D);
     };
     onGeometryChanged = (geometry) => {
-        if (geometry.maximized && this.props.view3dMode !== View3DMode.FULLSCREEN) {
-            this.props.setView3dMode(View3DMode.FULLSCREEN);
+        if (geometry.maximized && this.props.viewMode !== ViewMode._3DFullscreen) {
+            this.props.setViewMode(ViewMode._3DFullscreen);
         }
         this.setState({windowDetached: geometry.detached});
     };
@@ -434,7 +446,7 @@ export default (plugins3d) => connect(
         layers: state.layers,
         theme: state.theme,
         localConfig: state.localConfig,
-        view3dMode: state.display.view3dMode,
+        viewMode: state.display.viewMode,
         startupParams: state.localConfig.startupParams,
         startupState: state.localConfig.startupState
     }), {
@@ -442,6 +454,6 @@ export default (plugins3d) => connect(
         removeLayer: removeLayer,
         panTo: panTo,
         zoomToPoint: zoomToPoint,
-        setView3dMode: setView3dMode
+        setViewMode: setViewMode
     }
 )(View3D);

@@ -76,8 +76,8 @@ const MiscUtils = {
             ev.preventDefault();
         }
     },
-    checkKeyActivate(ev, onEsc = null) {
-        if (ev.code === "Space" || ev.code === "Enter") {
+    checkKeyActivate(ev, onEsc = null, spaceActivate = true) {
+        if ((spaceActivate && ev.code === "Space") || ev.code === "Enter") {
             MiscUtils.killEvent(ev);
             ev.currentTarget.click();
         } else if (ev.code === "Escape" && onEsc) {
@@ -151,6 +151,11 @@ const MiscUtils = {
             return el;
         }
         return [el];
+    },
+    objectOmit(obj, excludeKeys) {
+        return Object.fromEntries(
+            Object.entries(obj).filter(([key]) => !excludeKeys.includes(key))
+        );
     },
     capitalizeFirst(text) {
         return text.slice(0, 1).toUpperCase() + text.slice(1);
@@ -275,7 +280,7 @@ export class ToggleSet {
         }
     };
     filtered = (test) => {
-        const newset = new Set(...[...this._set].filter(test));
+        const newset = new Set([...this._set].filter(test));
         return new ToggleSet(newset);
     };
     add = (key) => {
@@ -286,6 +291,9 @@ export class ToggleSet {
         } else {
             return this;
         }
+    };
+    isEmpty = () => {
+        return this._set.size === 0;
     };
     size = () => {
         return this._set.size;

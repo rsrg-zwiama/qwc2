@@ -130,7 +130,7 @@ class NominatimSearch {
                 let title = entry.type;
                 try {
                     title = translations[entry.class][entry.type] || entry.type;
-                } catch (e) {
+                } catch {
                     /* pass */
                 }
                 groups[entry.class] = {
@@ -209,7 +209,7 @@ class NominatimSearch {
         const doc = yaml.load(data, {json: true});
         try {
             return doc[locale].geocoder.search_osm_nominatim.prefix;
-        } catch (e) {
+        } catch {
             return {};
         }
     }
@@ -353,7 +353,7 @@ export class FulltextSearch {
                 titlemsgid: LocaleUtils.trmsg("search.places"),
                 resultCount: placeResultCount,
                 type: SearchResultType.PLACE,
-                items: data.results.filter(entry => entry.feature).map(entry => ({
+                items: data.results.filter(entry => entry.feature && entry.feature.bbox).map(entry => ({
                     id: entry.feature.feature_id,
                     text: entry.feature.display,
                     x: 0.5 * (entry.feature.bbox[0] + entry.feature.bbox[2]),

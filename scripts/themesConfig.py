@@ -496,8 +496,6 @@ def getTheme(config, configItem, result, resultItem):
         if printTemplates:
             resultItem["print"] = printTemplates
         resultItem["drawingOrder"] = drawingOrder
-        if "extraDxfParameters" in configItem:
-            resultItem["extraDxfParameters"] = configItem["extraDxfParameters"]
         if "extraPrintParameters" in configItem:
             resultItem["extraPrintParameters"] = configItem["extraPrintParameters"]
         extraLegenParams = configItem["extraLegendParameters"] if "extraLegendParameters" in configItem else ""
@@ -540,6 +538,8 @@ def getTheme(config, configItem, result, resultItem):
 
         if "map3d" in configItem:
             resultItem["map3d"] = configItem["map3d"]
+        if "obliqueDatasets" in configItem:
+            resultItem["obliqueDatasets"] = configItem["obliqueDatasets"]
         if "viewMode" in configItem:
             resultItem["viewMode"] = configItem["viewMode"]
 

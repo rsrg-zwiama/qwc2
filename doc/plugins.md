@@ -31,6 +31,7 @@ Plugin reference
 * [Measure](#measure)
 * [NewsPopup](#newspopup)
 * [ObjectList](#objectlist)
+* [ObliqueView](#obliqueview)
 * [OverviewMap](#overviewmap)
 * [Panoramax](#panoramax)
 * [Portal](#portal)
@@ -51,7 +52,7 @@ Plugin reference
 * [View3D](#view3d)
 * [ZoomButton](#zoombutton)
 
-Map support plugins
+[Map support plugins](#mapSupportPlugins)
 
 * [EditingSupport](#editingsupport)
 * [LocateSupport](#locatesupport)
@@ -59,7 +60,7 @@ Map support plugins
 * [RedliningSupport](#redliningsupport)
 * [SnappingSupport](#snappingsupport)
 
-3D Plugins
+[3D Plugins](#plugins3d)
 
 * [BackgroundSwitcher3D](#backgroundswitcher3d)
 * [BottomBar3D](#bottombar3d)
@@ -76,17 +77,63 @@ Map support plugins
 * [Settings3D](#settings3d)
 * [TopBar3D](#topbar3d)
 
+[Extra Plugins](#extraPlugins)
+
+* [PlotInfoTool](#plotinfotool)
+
 ---
-API<a name="api"></a>
-----------------------------------------------------------------
-Exposes an API for interacting with QWC2 via `window.qwc2`.
+## API<a name="api"></a>
+
+Exposes an API for interacting with QWC.
 
 You can interact with the API as soon as the `QWC2ApiReady` event is dispatched.
+
+### `postMessage` interface
+
+You can interact with a QWC instance from a parent application either via the `window.qwc2`
+interface (see below), if the embedded QWC runs under the same origin as the parent application,
+or via [`postMessage`](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage)
+if the origins differ. When using `postMessage`, you must register the allowed parent origins
+via the `allowedMessageOrigins` config prop. For a QWC embedded in an iframe, a sample call could
+then be
+
+```
+qwcframe = document.getElementById("qwciframe");
+qwcframe.contentWindow.postMessage({
+  "method": "zoomToPoint",
+  "params": [[2684764, 1247841], 18, "EPSG:2056"]
+}, "http://<qwc_hostname>:<port>")
+```
+If you call a method which returns a value, pass a `requestId` and listen to response messages:
+
+```
+window.addEventListener("message", (ev) => {
+  console.log(ev.data.requestId);
+  console.log(ev.data.result);
+});
+qwcframe.contentWindow.postMessage(
+  {"method": "getState", "requestId": "<arbitrary_id_string>"},
+  "http://<qwc_hostname>:<port>"
+)
+```
+
+A list of supported methods will be printed to the console if you run
+
+```
+qwcframe.contentWindow.postMessage("help", "http://<qwc_hostname>:<port>")
+```
+
+To check the full signature of a method (including default param values), check
+the respective action function definitions as referenced in the *`window.qwc2` API*
+section below. Note that you can only pass values which can be serialized via
+structured clone in the message params.
+
+### Custom plugins
 
 Here is an example of a custom plugin:
 
 ```
-window.addEventListener("QWC2ApiReady", () => {
+function registerPlugin() {
     const {React, PropTypes, connect} = window.qwc2.libs;
     const {TaskBar} = window.qwc2.components;
 
@@ -109,7 +156,12 @@ window.addEventListener("QWC2ApiReady", () => {
     }))(CurrentTheme);
 
     window.qwc2.addPlugin("CurrentThemePlugin", CurrentThemePlugin);
-});
+}
+if (window.qwc2) {
+    registerPlugin();
+} else {
+    window.addEventListener("QWC2ApiReady", registerPlugin);
+}
 ```
 
 *Note*: You can also write the plugin in JSX syntax, and transpile to plain JS using babel.
@@ -125,6 +177,8 @@ To load custom plugins in QWC:
         {
             "name": "CurrentTheme"
         }
+
+### `window.qwc2` API
 
 The following action functions are exposed in the API:
 
@@ -244,8 +298,8 @@ Draw geometries, and return these as GeoJSON to the calling application.
 
 Return the current application state.
 
-AttributeTable<a name="attributetable"></a>
-----------------------------------------------------------------
+## AttributeTable<a name="attributetable"></a>
+
 Display the attribute table of layers in a dialog.
 
 To make a layer available in the attribute table, create a a data resource and matching permissions for it in the `qwc-admin-gui`.
@@ -258,14 +312,16 @@ This plugin queries the dataset via the editing service specified by
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | allowAddForGeometryLayers | `bool` | Whether to allow adding records for datasets which have a geometry column. | `undefined` |
+| geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 800,`<br />`    initialHeight: 480,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true,`<br />`    side: 'bottom'`<br />`}` |
+| hideIdColumn | `bool` | Whether to hide the id (primary key) column. | `undefined` |
 | limitToExtent | `bool` | Whether to limit to the extent by default. | `false` |
 | showEditFormButton | `bool` | Whether to show a button to open the edit form for selected layer. Requires the Editing plugin to be enabled. | `true` |
 | showHiddenFields | `bool` | Whether to show hidden fields. | `true` |
 | showLimitToExtent | `bool` | Whether to show the "Limit to extent" checkbox | `true` |
 | zoomLevel | `number` | The zoom level for zooming to point features. | `1000` |
 
-Authentication<a name="authentication"></a>
-----------------------------------------------------------------
+## Authentication<a name="authentication"></a>
+
 Handles authentication
 
 Invokes the the authentication service specified by `authServiceUrl` in `config.json`.
@@ -278,16 +334,16 @@ Invokes the the authentication service specified by `authServiceUrl` in `config.
 | requireLogin | `bool` | Whether authentication is required, i.e. the viewer automatically redirects to the login page if no user is authenticated. | `undefined` |
 | showLoginUser | `bool` | Whether to display the currently logged in user below the application menu button. | `undefined` |
 
-BackgroundSwitcher<a name="backgroundswitcher"></a>
-----------------------------------------------------------------
+## BackgroundSwitcher<a name="backgroundswitcher"></a>
+
 Map button for switching the background layer.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | position | `number` | The position slot index of the map button, from the bottom (0: bottom slot). | `0` |
 
-Bookmark<a name="bookmark"></a>
-----------------------------------------------------------------
+## Bookmark<a name="bookmark"></a>
+
 Allows managing user bookmarks.
 
 Bookmarks are only allowed for authenticated users.
@@ -296,10 +352,11 @@ Requires `permalinkServiceUrl` to point to a `qwc-permalink-service`.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
+| openOnClick | `bool` | Whether to directly open the bookmark on click / middle click, instead of showing dedicated open buttons. | `undefined` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-BottomBar<a name="bottombar"></a>
-----------------------------------------------------------------
+## BottomBar<a name="bottombar"></a>
+
 Bottom bar, displaying mouse coordinate, scale, etc.
 
 | Property | Type | Description | Default value |
@@ -317,12 +374,12 @@ Bottom bar, displaying mouse coordinate, scale, etc.
 | viewertitleUrlIcon | `string` | Icon of the viewer title inline window. Relevant only when `viewertitleUrl` is `iframe`. | `undefined` |
 | viewertitleUrlTarget | `string` | The target where to open the viewer title URL. If `iframe`, it will be displayed in an inline window, otherwise in a new tab. You can also use the `:iframedialog:<dialogname>:<options>` syntax to set up the inline window. | `undefined` |
 
-CookiePopup<a name="cookiepopup"></a>
-----------------------------------------------------------------
+## CookiePopup<a name="cookiepopup"></a>
+
 A simple popup to notify that cookies are used.
 
-Cyclomedia<a name="cyclomedia"></a>
-----------------------------------------------------------------
+## Cyclomedia<a name="cyclomedia"></a>
+
 Cyclomedia integration for QWC2.
 
 | Property | Type | Description | Default value |
@@ -338,8 +395,8 @@ Cyclomedia integration for QWC2.
 | maxMapScale | `number` | The maximum map scale above which the recordings WFS won't be displayed. | `5000` |
 | projection | `string` | The projection to use for Cyclomedia. | `'EPSG:3857'` |
 
-Editing<a name="editing"></a>
-----------------------------------------------------------------
+## Editing<a name="editing"></a>
+
 Allows editing geometries and attributes of datasets.
 
 The attribute form is generated from the QGIS attribute form configuration.
@@ -350,14 +407,15 @@ This plugin queries the dataset via the editing service specified by
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | allowCloneGeometry | `bool` | Whether to enable the "Clone existing geometry" functionality. | `true` |
+| omitReadOnlyDatasets | `bool` | Whether to omit read only datasets from the dataset selection menu. | `undefined` |
 | showAttributeTableButton | `bool` | Whether to show a button to open the AttributeTable (if the plugin is available). | `true` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 | snapping | `bool` | Whether snapping is available when editing. | `true` |
 | snappingActive | `{bool, string}` | Whether snapping is enabled by default when editing.<br /> Either `false`, `edge`, `vertex` or `true` (i.e. both vertex and edge). | `true` |
 | width | `string` | The default width of the editing sidebar, as a CSS width string. | `"30em"` |
 
-FeatureForm<a name="featureform"></a>
-----------------------------------------------------------------
+## FeatureForm<a name="featureform"></a>
+
 Displays queried feature attributes in a form.
 
 The attribute form is generated from the QGIS attribute form configuration.
@@ -376,8 +434,8 @@ Can be used as default identify tool by setting `"identifyTool": "FeatureForm"` 
 | exitTaskOnResultsClose | `bool` | Whether to clear the task when the results window is closed. | `undefined` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 320,`<br />`    initialHeight: 480,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
 
-FeatureSearch<a name="featuresearch"></a>
-----------------------------------------------------------------
+## FeatureSearch<a name="featuresearch"></a>
+
 Displays a dialog with a search form for configured QGIS feature searches with one or more input fields.
 
 See [Configuring the QGIS feature search](../../topics/Search/#configuring-the-qgis-feature-search).
@@ -387,8 +445,8 @@ See [Configuring the QGIS feature search](../../topics/Search/#configuring-the-q
 | enableExport | `{bool, array}` | Whether to enable the export functionality. Either `true|false` or a list of single allowed formats (builtin formats: `json`, `geojson`, `csv`, `csvzip`, `shapefile`, `xlsx`). If a list is provided, the export formats will be sorted according to that list, and the default format will be the first format of the list. | `true` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-GeometryDigitizer<a name="geometrydigitizer"></a>
-----------------------------------------------------------------
+## GeometryDigitizer<a name="geometrydigitizer"></a>
+
 Allows digitizing geometries to send to configured applications.
 
 Configure the available target applications in `themesConfig.json`:
@@ -405,29 +463,34 @@ Configure the available target applications in `themesConfig.json`:
   "pluginData": {
     "geometryLinks": [
       {
-        "name": "<geomLinkName>",                // Link name referenced in theme item
-        "title": "<geomLinkTitle>",              // Link title, displayed in the selection combo
-        "geomType": ["<geomType>", "<geomType>"] // Supported geometry types (Point, LineString, Polygon)
-        "url": "<targetApplicationUrl>",         // Application target URL, receiving the POST submit
-        "params": {"<key>": "<value>", ...}      // Optional: additional form parameters to post to URL
-        "target": "<target>" | {                 // Optional: form POST target which to display the result
-          "iframedialog": true,                  // Use an iframe dialog
-          "w": <dialogWidth>,                    // Dialog width
-          "h": <dialogHeight>                    // Dialog height
+        "name": "<geomLinkName>",                 // Link name referenced in theme item
+        "title": "<geomLinkTitle>",               // Link title, displayed in the selection combo
+        "geomType": ["<geomType>", "<geomType>"], // Supported geometry types (Point, LineString, Polygon)
+        "format": "wkt|geojson",                  // Format of data to send to application
+        "url": "<targetApplicationUrl>",          // Application target URL, receiving the POST submit. Can contain the $username$ placeholder parameter.
+        "params": {"<key>": "<value>", ...}       // Optional: additional form parameters to post to URL
+        "target": "<target>" | {                  // Optional: form POST target which to display the result
+          "iframedialog": true,                   // Use an iframe dialog
+          "w": <dialogWidth>,                     // Dialog width
+          "h": <dialogHeight>                     // Dialog height
         }
       }
     ]
   }
 }
 ```
+If you are using `qwc-services`, you will need to explicitly permit the geometry links in the `qwc-admin-gui` as follows:
+
+* Create and permit a `Plugin` resource with name `geometryLinks`
+* Create and permit `Plugin data` resources with name equal to `<geomLinkName>`
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | styleActive | `{`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`}` | The style of active geometries (i.e. supported by the selected application) | `{`<br />`    strokeColor: [0, 160, 0, 1],`<br />`    fillColor: [0, 160, 0, 0.33]`<br />`}` |
 | styleInactive | `{`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`}` | The style of inactive (i.e. not supported by the selected application) | `{`<br />`    strokeColor: [127, 127, 127, 1],`<br />`    fillColor: [127, 127, 127, 0.33]`<br />`}` |
 
-HeightProfile<a name="heightprofile"></a>
-----------------------------------------------------------------
+## HeightProfile<a name="heightprofile"></a>
+
 Displays a height profile along a measured line.
 
 Triggered automatically when a line is measured via the `Measure` plugin.
@@ -446,8 +509,8 @@ with containing a container element with `id=heightprofilecontainer`.
 | samples | `number` | The number of elevation samples to query. | `500` |
 | templatePath | `string` | Template location for the height profile print functionality | `":/templates/heightprofileprint.html"` |
 
-Help<a name="help"></a>
-----------------------------------------------------------------
+## Help<a name="help"></a>
+
 Displays a custom help dialog in a sidebar.
 
 Define the help contents by specifying the `bodyContentsFragmentUrl` prop.
@@ -457,8 +520,8 @@ Define the help contents by specifying the `bodyContentsFragmentUrl` prop.
 | bodyContentsFragmentUrl | `string` | URL to a document containing a HTML fragment to display in the Help sidebar. | `undefined` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-HomeButton<a name="homebutton"></a>
-----------------------------------------------------------------
+## HomeButton<a name="homebutton"></a>
+
 Map button for reverting to the home extent of the theme.
 
 | Property | Type | Description | Default value |
@@ -467,8 +530,8 @@ Map button for reverting to the home extent of the theme.
 | themeFlagBlacklist | `[string]` | Omit the button in themes matching one of these flags. | `undefined` |
 | themeFlagWhitelist | `[string]` | Only show the button in themes matching one of these flags. | `undefined` |
 
-Identify<a name="identify"></a>
-----------------------------------------------------------------
+## Identify<a name="identify"></a>
+
 Displays queried feature attributes.
 
 Uses WMS GetFeatureInfo to query features and displays the result in
@@ -485,20 +548,23 @@ for customized queries and templates for the result presentation.
 | clearResultsOnClose | `bool` | Whether to clear the identify results when exiting the identify tool. | `true` |
 | customExporters | `array` | Optional list of custom exporters to offer along with the built-in exporters. See js/IdentifyExtensions.js for details. This prop can be specified in the appConfig.js cfg section. | `[]` |
 | enableAggregatedReports | `bool` | Whether to enable the aggregated report download button. | `true` |
+| enableCompare | `bool` | Whether to enable the possibility select results for comparison. | `true` |
 | enableExport | `{bool, array}` | Whether to enable the export functionality. Either `true|false` or a list of single allowed formats (builtin formats: `json`, `geojson`, `csv`, `csvzip`, `shapefile`, `xlsx`). If a list is provided, the export formats will be sorted according to that list, and the default format will be the first format of the list. | `true` |
 | exitTaskOnResultsClose | `bool` | Whether to clear the task when the results window is closed. | `undefined` |
 | exportGeometry | `bool` | Whether to include the geometry in exported features. Default: `true`. | `true` |
-| featureInfoReturnsLayerName | `bool` | Whether to assume that XML GetFeatureInfo responses specify the technical layer name in the `name` attribute, rather than the layer title. | `true` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 240,`<br />`    initialHeight: 320,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
 | highlightAllResults | `bool` | Whether to highlight all results if no result is hovered | `true` |
 | initialRadiusUnits | `string` | The initial radius units of the identify dialog in radius mode. One of 'm', 'ft', 'km', 'mi'. | `'m'` |
 | params | `object` | Extra params to append to the GetFeatureInfo request (i.e. `FI_POINT_TOLERANCE`, `FI_LINE_TOLERANCE`, `feature_count`, ...). Additionally, `region_feature_count` and `radius_feature_count` are supported. | `undefined` |
 | replaceImageUrls | `bool` | Whether to replace an attribute value containing an URL to an image with an inline image. | `true` |
 | resultDisplayMode | `string` | Result display mode, one of `tree`, `flat`, `paginated`. | `'flat'` |
+| resultGridSize | `number` | Target cell size of the result grid in comparison mode. | `200` |
+| resultMultiDisplay | `bool` | Whether multi-display mode should be enabled by default, only relevant if `resultDisplayMode` is `paginated`. | `false` |
 | showLayerSelector | `bool` | Whether to show a layer selector to filter the identify results by layer. | `true` |
+| showLayerTitles | `bool` | Whether to prefix the identify result titles with the respecitve layer name. | `true` |
 
-LayerCatalog<a name="layercatalog"></a>
-----------------------------------------------------------------
+## LayerCatalog<a name="layercatalog"></a>
+
 Displays a pre-configured catalog of external layers in a window.
 
 Configured through a catalog JSON containing a tree of external layer identifiers.
@@ -543,8 +609,8 @@ Example:
 | levelBasedIndentSize | `bool` | Whether to increase the indent size dynamically according to the current level (`true`) or keep the indent size constant (`false`). | `true` |
 | registerCatalogSearchProvider | `bool` | Whether to register a search provider which allows searching catalog layers through the global search field. | `true` |
 
-LayerTree<a name="layertree"></a>
-----------------------------------------------------------------
+## LayerTree<a name="layertree"></a>
+
 Displays the map layer tree in a sidebar.
 
 The print legend functionality requires a template located by default at assets/templates/legendprint.html
@@ -576,13 +642,14 @@ with containing a container element with id=legendcontainer.
 | showLegendIcons | `bool` | Whether to display legend icons. | `true` |
 | showQueryableIcon | `bool` | Whether to display the queryable icon to indicate that a layer is identifyable. | `true` |
 | showRootEntry | `bool` | Whether to display the root entry of the layertree. | `true` |
+| showStyleSelector | `bool` | Whether to show the style selection menu for layers with multiple styles. | `true` |
 | showToggleAllLayersCheckbox | `bool` | Whether to display a checkbox to toggle all layers. | `true` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 | templatePath | `string` | Template location for the legend print functionality | `":/templates/legendprint.html"` |
 | width | `string` | The initial width of the layertree, as a CSS width string. | `"25em"` |
 
-LocateButton<a name="locatebutton"></a>
-----------------------------------------------------------------
+## LocateButton<a name="locatebutton"></a>
+
 Map button for controling the locate (GPS) state.
 
 | Property | Type | Description | Default value |
@@ -591,8 +658,8 @@ Map button for controling the locate (GPS) state.
 | themeFlagBlacklist | `[string]` | Omit the button in themes matching one of these flags. | `undefined` |
 | themeFlagWhitelist | `[string]` | Only show the button in themes matching one of these flags. | `undefined` |
 
-Map<a name="map"></a>
-----------------------------------------------------------------
+## Map<a name="map"></a>
+
 The main map component.
 
 | Property | Type | Description | Default value |
@@ -602,15 +669,16 @@ The main map component.
 | swipeGeometryTypeBlacklist | `[string]` | A list of layer geometry types to ignore when determining the top-most layer to compare. | `[]` |
 | swipeLayerNameBlacklist | `[string]` | A list of layer names to ignore when determining the top-most layer to compare. You can use `*` as a wildcard character. | `[]` |
 | toolsOptions | `object` | Options to pass to the map support plugins, in the form `{"<Name>": {<options>}}`.<br />Refer to the documentation of the <a href="#mapSupportPlugins">Map support plugins</a> for settable options. | `{}` |
+| viewSwitcherPosition | `number` | Position of the view switcher button. | `6` |
 
-MapCompare<a name="mapcompare"></a>
-----------------------------------------------------------------
+## MapCompare<a name="mapcompare"></a>
+
 Allows comparing the top layer with the rest of the map.
 
 Activated through a checkbox in the LayerTree.
 
-MapCopyright<a name="mapcopyright"></a>
-----------------------------------------------------------------
+## MapCopyright<a name="mapcopyright"></a>
+
 Displays layer attributions in the bottom right corner of the map.
 
 | Property | Type | Description | Default value |
@@ -618,8 +686,8 @@ Displays layer attributions in the bottom right corner of the map.
 | prefixCopyrightsWithLayerNames | `bool` | Whether to prepend the layer name to the attribution string. | `undefined` |
 | showThemeCopyrightOnly | `bool` | Whether to only display the attribution of the theme, omitting external layers. | `undefined` |
 
-MapExport<a name="mapexport"></a>
-----------------------------------------------------------------
+## MapExport<a name="mapexport"></a>
+
 Allows exporting a selected portion of the map to a variety of formats.
 
 | Property | Type | Description | Default value |
@@ -636,8 +704,8 @@ Allows exporting a selected portion of the map to a variety of formats.
 | pageSizes | `[{`<br />`  name: string,`<br />`  width: number,`<br />`  height: number,`<br />`}]` | List of image sizes to offer, in addition to the free-hand selection. The width and height are in millimeters. | `[]` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-MapFilter<a name="mapfilter"></a>
-----------------------------------------------------------------
+## MapFilter<a name="mapfilter"></a>
+
 Allows filtering the map content via QGIS Server WMS FILTER.
 
 See [Map filtering](../../topics/MapFilter).
@@ -651,8 +719,8 @@ See [Map filtering](../../topics/MapFilter).
 | position | `number` | The position slot index of the map button, from the bottom (0: bottom slot). Set to -1 to hide the button. | `5` |
 | side | `string` | The side of the application on which to display the sidebar. | `undefined` |
 
-MapInfoTooltip<a name="mapinfotooltip"></a>
-----------------------------------------------------------------
+## MapInfoTooltip<a name="mapinfotooltip"></a>
+
 Provides map context information when right-clicking on the map.
 
 Displays the coordinates at the picked position by default.
@@ -685,8 +753,8 @@ class MapInfoTooltipPlugin extends React.Component {
 | elevationPrecision | `number` | The number of decimal places to display for elevation values. | `0` |
 | plugins | `array` | Additional plugin components for the map info tooltip. | `[]` |
 
-MapLegend<a name="maplegend"></a>
-----------------------------------------------------------------
+## MapLegend<a name="maplegend"></a>
+
 Displays the map legend in a floating dialog.
 
 The user can toggle whether to display only layers which are enabled, visible in the current extent and/or visible at the current scale.
@@ -705,8 +773,8 @@ See https://docs.qgis.org/3.28/en/docs/server_manual/services/wms.html#wms-getle
 | onlyVisibleLegend | `bool` | Whether to only include enabled layers in the legend by default. | `false` |
 | scaleDependentLegend | `bool` | Whether to display a scale-dependent legend by default. | `false` |
 
-MapTip<a name="maptip"></a>
-----------------------------------------------------------------
+## MapTip<a name="maptip"></a>
+
 Displays maptips by hovering over features on the map.
 
 Queries the map tips configured in the QGIS layer properites over GetFeatureInfo.
@@ -720,22 +788,26 @@ The map tip needs to be configured in QGIS Layer Properties &rarr; Display.
 | maxWidth | `string` | The maximum height of the maptip popop bubble, as a CSS string. | `"20em"` |
 | showFeatureSelection | `bool` | Whether to show the maptip feature selection on the map or not | `true` |
 
-Measure<a name="measure"></a>
-----------------------------------------------------------------
+## Measure<a name="measure"></a>
+
 Allows measuring points/lines/areas on the map.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | bearingHeadMarker | `string` | Head marker of bearing line measurement geometry. Can be one of `OUTARROW`, `INARROW`, `LINE`. | `undefined` |
 | bearingTailMarker | `string` | Tail marker of bearing line measurement geometry. Can be one of `OUTARROW`, `INARROW`, `LINE`. | `undefined` |
+| clearMeasurementsOnExit | `bool` | Whether to clear measurements when exiting measurement tool. | `true` |
+| clearMeasurementsOnModeChange | `bool` | Whether to clear measurements when changing measurement mode. | `true` |
 | lineHeadMarker | `string` | Head marker of distance line measurement geometry. Can be one of `OUTARROW`, `INARROW`, `LINE`. | `undefined` |
 | lineTailMarker | `string` | Tail marker of distance line measurement geometry. Can be one of `OUTARROW`, `INARROW`, `LINE`. | `undefined` |
+| markerScale | `number` | Scale factor for all heade/tail markers. | `1` |
 | showMeasureModeSwitcher | `bool` | Whether to show the widget to switch between measure modes. | `true` |
+| showPerimeterLength | `bool` | Whether to show the perimeter length of area measurements. | `undefined` |
 | snapping | `bool` | Whether snapping is available when editing. | `true` |
 | snappingActive | `{bool, string}` | Whether snapping is enabled by default when editing.<br /> Either `false`, `edge`, `vertex` or `true` (i.e. both vertex and edge). | `true` |
 
-NewsPopup<a name="newspopup"></a>
-----------------------------------------------------------------
+## NewsPopup<a name="newspopup"></a>
+
 Displays a newsletter in a popup dialog.
 
 The popup won't be dispayed anymore, if the user chooses so, until a newer
@@ -749,8 +821,8 @@ revision is published (specified via newsRev prop).
 | side | `string` | The side of the application on which to display the sidebar. | `undefined` |
 | sidebarWidth | `string` | The default width of the sidebar, as a CSS width string. | `undefined` |
 
-ObjectList<a name="objectlist"></a>
-----------------------------------------------------------------
+## ObjectList<a name="objectlist"></a>
+
 Display layer object lists in a dialog.
 
 The object list is similar to the attribute table, but displays only the display field for each object and contains no edit functionality.
@@ -766,16 +838,28 @@ This plugin queries the dataset via the editing service specified by
 | showLimitToExtent | `bool` | Whether to show the "Limit to extent" checkbox | `true` |
 | zoomLevel | `number` | The zoom level for zooming to point features. | `1000` |
 
-OverviewMap<a name="overviewmap"></a>
-----------------------------------------------------------------
+## ObliqueView<a name="obliqueview"></a>
+
+Display oblique satellite imagery.
+
+See [Oblique View](../../topics/ObliqueView).
+
+| Property | Type | Description | Default value |
+|----------|------|-------------|---------------|
+| geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 480,`<br />`    initialHeight: 640,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true,`<br />`    side: 'left'`<br />`}` |
+| initialScale | `number` | The initial map scale. | `1000` |
+| scales | `[number]` | A list of allowed map scales, in decreasing order. | `[20000, 10000, 5000, 2500, 1000, 500, 250]` |
+
+## OverviewMap<a name="overviewmap"></a>
+
 Overview map support for the map component.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | options | `object` | See [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_control_OverviewMap-OverviewMap.html) for general options.<br /> Additionally, you can specify:<br /> - `layer`: Custom overview layer, in the same form as background layer definitions (`{type: "<wms|wmts>", "url": ...}`).<br /> - `viewOptions`: Options for the OverviewMap View, see [OpenLayers API doc](https://openlayers.org/en/latest/apidoc/module-ol_View.html). | `{}` |
 
-Panoramax<a name="panoramax"></a>
-----------------------------------------------------------------
+## Panoramax<a name="panoramax"></a>
+
 Panoramax Integration for QWC2.
 
 | Property | Type | Description | Default value |
@@ -785,8 +869,8 @@ Panoramax Integration for QWC2.
 | tileMode | `string` | Mode for the image sequences layer: either WMS (Require a custom URL) or MVT(EPSG:3857 only). | `'mvt'` |
 | wmsUrl | `string` | URL of the WMS image sequences layer. | `undefined` |
 
-Portal<a name="portal"></a>
-----------------------------------------------------------------
+## Portal<a name="portal"></a>
+
 Displays a landing lage, consisting of a full-screen theme switcher and a configurable menu.
 
 | Property | Type | Description | Default value |
@@ -799,8 +883,8 @@ Displays a landing lage, consisting of a full-screen theme switcher and a config
 | showMenuOnStartup | `bool` | Whether the menu should be visible on startup. | `undefined` |
 | topBarText | `string` | Portal title text to show in the top bar. | `undefined` |
 
-Print<a name="print"></a>
-----------------------------------------------------------------
+## Print<a name="print"></a>
+
 Invokes QGIS Server WMS GetPrint to print the map to PDF.
 
 Uses the print layouts defined in the QGIS project.
@@ -822,12 +906,12 @@ Uses the print layouts defined in the QGIS project.
 | movePrintSeries | `bool` | Whether to allow moving the extent while selecting the print series. | `false` |
 | printExternalLayers | `bool` | Whether to print external layers. Requires QGIS Server 3.x! | `true` |
 | printMapHighlights | `bool` | Whether to print highlights on the map, e.g. selected features or redlining. | `true` |
-| restrictToPrintScales | `bool` | Restrict print scale to list of predefine print scales, if any. | `undefined` |
+| restrictToPrintScales | `bool` | Restrict print scale to list of predefined print scales, if any. | `undefined` |
 | scaleFactor | `number` | Scale factor to apply to line widths, font sizes, ... of redlining drawings passed to GetPrint. | `1.9` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-Redlining<a name="redlining"></a>
-----------------------------------------------------------------
+## Redlining<a name="redlining"></a>
+
 Allows drawing figures and text labels on the map.
 
 | Property | Type | Description | Default value |
@@ -846,8 +930,8 @@ Allows drawing figures and text labels on the map.
 | snapping | `bool` | Whether snapping is available when editing. | `true` |
 | snappingActive | `{bool, string}` | Whether snapping is enabled by default when editing.<br /> Either `false`, `edge`, `vertex` or `true` (i.e. both vertex and edge). | `true` |
 
-Reports<a name="reports"></a>
-----------------------------------------------------------------
+## Reports<a name="reports"></a>
+
 Allow generating reports for selected features.
 
 This plugin displays all available reports for the current theme,
@@ -860,8 +944,8 @@ Requires `documentServiceUrl` in `config.json` to point to a `qwc-document-servi
 |----------|------|-------------|---------------|
 | side | `string` | The side of the application on which to display the sidebar. | `undefined` |
 
-Routing<a name="routing"></a>
-----------------------------------------------------------------
+## Routing<a name="routing"></a>
+
 Compute routes and isochrones.
 
 Requires `routingServiceUrl` in `config.json` pointing to a Valhalla routing service.
@@ -875,16 +959,16 @@ Requires `routingServiceUrl` in `config.json` pointing to a Valhalla routing ser
 | units | `object` | Set of units for isochrone time/distance intervals to use. | `{`<br />`    time: {`<br />`        min: 1,`<br />`        s: 60`<br />`    },`<br />`    distance: {`<br />`        km: 1,`<br />`        m: 1000`<br />`    }`<br />`}` |
 | zoomAuto | `bool` | Automatically zoom to the extent of the route | `true` |
 
-ScratchDrawing<a name="scratchdrawing"></a>
-----------------------------------------------------------------
+## ScratchDrawing<a name="scratchdrawing"></a>
+
 Task which which can be invoked by other tools to draw a geometry and pass it to a callback.
 
 Only useful for third-party code, i.e. over the JavaScript API.
 
 Invoke as `setCurrentTask("ScratchDrawing", null, null, {callback: <function(features, crs)>});`
 
-Settings<a name="settings"></a>
-----------------------------------------------------------------
+## Settings<a name="settings"></a>
+
 Settings panel.
 
 Allows configuring language and color scheme.
@@ -892,12 +976,12 @@ Allows configuring language and color scheme.
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | colorSchemes | `[{`<br />`  title: string,`<br />`  titleMsgId: string,`<br />`  value: string,`<br />`}]` | List of available color schemes. Value is the css class name, title/titleMsgId the display name. | `[]` |
-| languages | `[{`<br />`  title: string,`<br />`  titleMsgId: string,`<br />`  value: string,`<br />`}]` | List of available languages. Value is the lang code, title/titleMsgId the display name. | `[]` |
+| languages | `[{`<br />`  title: string,`<br />`  titleMsgId: string,`<br />`  value: string,`<br />`}]` | List of available languages. Value is the lang code, title/titleMsgId the display name. Falls back to the toplevel `availableLocales` `config.json` setting if not set. | `null` |
 | showDefaultThemeSelector | `bool` | Whether to show a selector to set the default theme/bookmark (of a logged in user). | `true` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-Share<a name="share"></a>
-----------------------------------------------------------------
+## Share<a name="share"></a>
+
 Share the current map as a URL/permalink.
 
 Compact permalinks will be generated if `permalinkServiceUrl` in `config.json` points to a `qwc-permalink-service`.
@@ -910,8 +994,8 @@ Compact permalinks will be generated if `permalinkServiceUrl` in `config.json` p
 | showSocials | `{bool, [string]}` | Show the social buttons. Either `true` or `false`to enable/disable all, or an array of specific buttons to display (possible choices: `email`, `facebook`, `twitter`, `linkedin`, `whatsapp`). | `true` |
 | side | `string` | The side of the application on which to display the sidebar. | `'right'` |
 
-StartupMarker<a name="startupmarker"></a>
-----------------------------------------------------------------
+## StartupMarker<a name="startupmarker"></a>
+
 Displays a marker when starting up the viewer.
 
 The marked is displayed in the center of the map if `c=<x>,<y>&hc=1` is set in the URL.
@@ -920,8 +1004,8 @@ The marked is displayed in the center of the map if `c=<x>,<y>&hc=1` is set in t
 |----------|------|-------------|---------------|
 | removeMode | `string` | When to remove the marker. Possible choices: onpan, onzoom, onclickonmarker. | `'onpan'` |
 
-TaskButton<a name="taskbutton"></a>
-----------------------------------------------------------------
+## TaskButton<a name="taskbutton"></a>
+
 Generic map button to launch a task.
 
 | Property | Type | Description | Default value |
@@ -933,8 +1017,8 @@ Generic map button to launch a task.
 | themeFlagBlacklist | `[string]` | Omit the button in themes matching one of these flags. | `undefined` |
 | themeFlagWhitelist | `[string]` | Only show the button in themes matching one of these flags. | `undefined` |
 
-ThemeSwitcher<a name="themeswitcher"></a>
-----------------------------------------------------------------
+## ThemeSwitcher<a name="themeswitcher"></a>
+
 Theme switcher panel.
 
 | Property | Type | Description | Default value |
@@ -951,8 +1035,8 @@ Theme switcher panel.
 | themeLayersListWindowSize | `{`<br />`  width: number,`<br />`  height: number,`<br />`}` | The default window size for the theme layers dialog. | `{width: 400, height: 300}` |
 | width | `string` | Default width as a CSS string. | `"50%"` |
 
-TimeManager<a name="timemanager"></a>
-----------------------------------------------------------------
+## TimeManager<a name="timemanager"></a>
+
 Allows controling the time dimension of temporal WMS layers.
 
 | Property | Type | Description | Default value |
@@ -970,8 +1054,8 @@ Allows controling the time dimension of temporal WMS layers.
 | markerConfiguration | `{`<br />`  markersAvailable: bool,`<br />`  gradient: [string],`<br />`  markerOffset: array,`<br />`  markerPins: bool,`<br />`}` | The feature marker configuration. | `{`<br />`    markersAvailable: true,`<br />`    gradient: ["#f7af7d", "#eacc6e", "#fef89a", "#c5e09b", "#a3d29c", "#7cc096", "#79c8c5", "#34afce"],`<br />`    markerOffset: [0, 0],`<br />`    markerPins: true`<br />`}` |
 | stepUnits | `[string]` | The available temporal animation step units. | `["s", "m", "h", "d", "M", "y"]` |
 
-TopBar<a name="topbar"></a>
-----------------------------------------------------------------
+## TopBar<a name="topbar"></a>
+
 Top bar, containing the logo, searchbar, task buttons and app menu.
 
 | Property | Type | Description | Default value |
@@ -987,20 +1071,20 @@ Top bar, containing the logo, searchbar, task buttons and app menu.
 | logoUrl | `string` | The hyperlink to open when the logo is clicked. | `undefined` |
 | menuItems | `array` | The menu items. Refer to the corresponding chapter of the viewer documentation and the sample config.json. | `[]` |
 | registerTaskSearchProvider | `bool` | Whether to register a search provider which allows searching menu tasks through the global search field. | `undefined` |
-| searchOptions | `{`<br />`  allowSearchFilters: bool,`<br />`  hideResultLabels: bool,`<br />`  highlightStyle: {`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`},`<br />`  minScaleDenom: number,`<br />`  resultLimit: number,`<br />`  sectionsDefaultCollapsed: bool,`<br />`  showHighlightMarker: bool,`<br />`  showLayerAfterChangeTheme: bool,`<br />`  showLayerResultsBeforePlaces: bool,`<br />`  showResultInSearchText: bool,`<br />`  zoomToLayers: bool,`<br />`}` | Options passed down to the search component. | `{`<br />`    showHighlightMarker: true,`<br />`    showResultInSearchText: true,`<br />`    minScaleDenom: 1000`<br />`}` |
+| searchOptions | `{`<br />`  allowAddLayerAsGroup: bool,`<br />`  allowSearchFilters: bool,`<br />`  focusOnStartup: bool,`<br />`  hideResultLabels: bool,`<br />`  highlightStyle: {`<br />`  strokeColor: array,`<br />`  strokeWidth: number,`<br />`  strokeDash: array,`<br />`  fillColor: array,`<br />`},`<br />`  minScaleDenom: number,`<br />`  resultLimit: number,`<br />`  sectionsDefaultCollapsed: bool,`<br />`  showHighlightMarker: bool,`<br />`  showLayerAfterChangeTheme: bool,`<br />`  showLayerResultsBeforePlaces: bool,`<br />`  showResultInSearchText: bool,`<br />`  zoomToLayers: bool,`<br />`}` | Options passed down to the search component. | `{`<br />`    allowAddLayerAsGroup: true,`<br />`    showHighlightMarker: true,`<br />`    showResultInSearchText: true,`<br />`    minScaleDenom: 1000`<br />`}` |
 | toolbarItems | `array` | The toolbar. Refer to the corresponding chapter of the viewer documentation and the sample config.json. | `[]` |
 | toolbarItemsShortcutPrefix | `string` | The keyboard shortcut prefix for triggering toolbar tasks. I.e. alt+shift. The task are then triggered by <prefix>+{1,2,3,...} for the 1st, 2nd, 3rd... toolbar icon. | `undefined` |
 
-TourGuide<a name="tourguide"></a>
-----------------------------------------------------------------
+## TourGuide<a name="tourguide"></a>
+
 Launches a tour guide of the application, as configured by a configuration file.
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | tourGuideUrl | `string` | Url of the Tourguide JSON configuration. | `undefined` |
 
-ValueTool<a name="valuetool"></a>
-----------------------------------------------------------------
+## ValueTool<a name="valuetool"></a>
+
 Displays raster band values of active raster layers at the hovered mouse position,
 queried via GetFeatureInfo.
 
@@ -1009,23 +1093,23 @@ queried via GetFeatureInfo.
 | enabled | `bool` | The number of decimal places to display for elevation values. | `undefined` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 240,`<br />`    initialHeight: 320,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
 
-View3D<a name="view3d"></a>
-----------------------------------------------------------------
+## View3D<a name="view3d"></a>
+
 Displays a 3D map view.
 
 See [3D View](../../topics/View3D).
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
-| buttonPosition | `number` | The position slot index of the 3d switch map button, from the bottom (0: bottom slot). | `6` |
 | controlsPosition | `string` | The position of the navigation controls. Either `top` or `bottom`. | `'top'` |
+| defaultFov | `number` | The default field of view (`20`: min, `100`: max). | `30` |
 | defaultSceneQuality | `number` | The default scene quality factor (`20`: min, `100`: max). | `100` |
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`}` | Default window geometry. | `{`<br />`    initialWidth: 600,`<br />`    initialHeight: 800,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: true`<br />`}` |
 | mouseButtons | `{`<br />`  left: string,`<br />`  middle: string,`<br />`  right: string,`<br />`}` | Mouse buttons assignment. You can assign `pan`, `rotate`, `zoom` to each button. | `{`<br />`    left: 'pan',`<br />`    middle: 'zoom',`<br />`    right: 'rotate'`<br />`}` |
 | pluginOptions | `object` | Options to pass to the 3D plugins, in the form `{"<PluginName>": {<options>}}`.<br />Refer to the documentation of the <a href="#plugins3d">3D plugins</a> for settable options. | `{}` |
 
-ZoomButton<a name="zoombutton"></a>
-----------------------------------------------------------------
+## ZoomButton<a name="zoombutton"></a>
+
 Map button for zooming the map.
 
 Two specific plugins exist: ZoomInPlugin and ZoomOutPlugin, which are instances of ZoomButton for the respective zoom directions.
@@ -1041,12 +1125,13 @@ Two specific plugins exist: ZoomInPlugin and ZoomOutPlugin, which are instances 
 # Map support plugins<a name="mapSupportPlugins"></a>
 
 These plugins must be listed as children of the [Map](#map) plugin.
-EditingSupport<a name="editingsupport"></a>
-----------------------------------------------------------------
+
+## EditingSupport<a name="editingsupport"></a>
+
 Editing support for the map component.
 
-LocateSupport<a name="locatesupport"></a>
-----------------------------------------------------------------
+## LocateSupport<a name="locatesupport"></a>
+
 GPS locate support for the map component.
 
 | Property | Type | Description | Default value |
@@ -1058,48 +1143,49 @@ GPS locate support for the map component.
 | stopFollowingOnDrag | `bool` | Whether to stop following when the map is dragged. | `false` |
 | trackingOptions | `object` | Tracking options, as documented in the [HTML5 Geolocation spec](https://www.w3.org/TR/geolocation-API/#position_options_interface) | `{`<br />`    maximumAge: 2000,`<br />`    enableHighAccuracy: true,`<br />`    timeout: 10000`<br />`}` |
 
-MeasurementSupport<a name="measurementsupport"></a>
-----------------------------------------------------------------
+## MeasurementSupport<a name="measurementsupport"></a>
+
 Measurement support for the map component.
 
-RedliningSupport<a name="redliningsupport"></a>
-----------------------------------------------------------------
+## RedliningSupport<a name="redliningsupport"></a>
+
 Redlining support for the map component.
 
-SnappingSupport<a name="snappingsupport"></a>
-----------------------------------------------------------------
+## SnappingSupport<a name="snappingsupport"></a>
+
 Snapping support for the map component.
 
 ---
 # 3D Plugins<a name="plugins3d"></a>
 
 These plugins must be listed as children of the [View3D](#view3d) plugin.
-BackgroundSwitcher3D<a name="backgroundswitcher3d"></a>
-----------------------------------------------------------------
+
+## BackgroundSwitcher3D<a name="backgroundswitcher3d"></a>
+
 Map button for switching the background layer of the 3D map.
 
-BottomBar3D<a name="bottombar3d"></a>
-----------------------------------------------------------------
+## BottomBar3D<a name="bottombar3d"></a>
+
 Bottom bar of the 3D map, displaying coordinates, projection, etc.
 
-Compare3D<a name="compare3d"></a>
-----------------------------------------------------------------
+## Compare3D<a name="compare3d"></a>
+
 Split-screen and compare objects in the 3D map.
 
-Draw3D<a name="draw3d"></a>
-----------------------------------------------------------------
+## Draw3D<a name="draw3d"></a>
+
 Draw objects in the 3D map.
 
-ExportObjects3D<a name="exportobjects3d"></a>
-----------------------------------------------------------------
+## ExportObjects3D<a name="exportobjects3d"></a>
+
 Export objects from the 3D map.
 
-HideObjects3D<a name="hideobjects3d"></a>
-----------------------------------------------------------------
+## HideObjects3D<a name="hideobjects3d"></a>
+
 Hide objects in the 3D map.
 
-Identify3D<a name="identify3d"></a>
-----------------------------------------------------------------
+## Identify3D<a name="identify3d"></a>
+
 Query attributes of objects in the 3D map.
 
 | Property | Type | Description | Default value |
@@ -1107,16 +1193,16 @@ Query attributes of objects in the 3D map.
 | geometry | `{`<br />`  initialWidth: number,`<br />`  initialHeight: number,`<br />`  initialX: number,`<br />`  initialY: number,`<br />`  initiallyDocked: bool,`<br />`  side: string,`<br />`}` | Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). | `{`<br />`    initialWidth: 240,`<br />`    initialHeight: 320,`<br />`    initialX: 0,`<br />`    initialY: 0,`<br />`    initiallyDocked: false,`<br />`    side: 'left'`<br />`}` |
 | tileInfoServiceUrl | `string` | URL to service for querying additional tile information.<br />Can contain the `{tileset}` and `{objectid}` placeholders.<br />Expected to return a JSON dict with attributes. | `undefined` |
 
-LayerTree3D<a name="layertree3d"></a>
-----------------------------------------------------------------
+## LayerTree3D<a name="layertree3d"></a>
+
 Layer and object tree for the 3D map
 
 | Property | Type | Description | Default value |
 |----------|------|-------------|---------------|
 | importedTilesBaseUrl | `string` | Base URL of imported tile sets. | `':/'` |
 
-MapCopyright3D<a name="mapcopyright3d"></a>
-----------------------------------------------------------------
+## MapCopyright3D<a name="mapcopyright3d"></a>
+
 Displays layer attributions in the bottom right corner of the 3D map.
 
 | Property | Type | Description | Default value |
@@ -1124,24 +1210,24 @@ Displays layer attributions in the bottom right corner of the 3D map.
 | prefixCopyrightsWithLayerNames | `bool` | Whether to prepend the layer name to the attribution string. | `undefined` |
 | showThemeCopyrightOnly | `bool` | Whether to only display the attribution of the theme, omitting external layers. | `undefined` |
 
-MapExport3D<a name="mapexport3d"></a>
-----------------------------------------------------------------
+## MapExport3D<a name="mapexport3d"></a>
+
 Export the 3D map image to raster formats.
 
-Measure3D<a name="measure3d"></a>
-----------------------------------------------------------------
+## Measure3D<a name="measure3d"></a>
+
 Measure in the 3D map.
 
-OverviewMap3D<a name="overviewmap3d"></a>
-----------------------------------------------------------------
+## OverviewMap3D<a name="overviewmap3d"></a>
+
 Overview map for the 3D map.
 
-Settings3D<a name="settings3d"></a>
-----------------------------------------------------------------
+## Settings3D<a name="settings3d"></a>
+
 Settings panel for the 3D map.
 
-TopBar3D<a name="topbar3d"></a>
-----------------------------------------------------------------
+## TopBar3D<a name="topbar3d"></a>
+
 Bottom bar of the 3D map, including the search bar, tool bar and menu.
 
 | Property | Type | Description | Default value |
@@ -1149,4 +1235,87 @@ Bottom bar of the 3D map, including the search bar, tool bar and menu.
 | menuItems | `array` | The menu items, in the same format as the 2D `TopBar` menu items.<br />You can include entries for the View3D plugins.<br />You can also include entries for 2D plugins which are compatible with the 3D view (i.e. `ThemeSwitcher`, `Share`, etc.),<br />these will be displayed only in fullsceen 3D mode. | `undefined` |
 | searchOptions | `{`<br />`  minScaleDenom: number,`<br />`}` | Options passed down to the search component. | `{`<br />`    minScaleDenom: 1000`<br />`}` |
 | toolbarItems | `array` | The toolbar, in the same format as the 2D `TopBar` toolbar items.<br />You can include entries for the View3D plugins.<br />You can also include entries for 2D plugins which are compatible with the 3D view (i.e. `ThemeSwitcher`, `Share`, etc.),<br />these will be displayed only in fullsceen 3D mode. | `undefined` |
+
+---
+# Extra plugins<a name="extraPlugins"></a>
+
+These plugins are not enabled in the stock viewer, and must be enabled in a custom viewer build.
+
+## PlotInfoTool<a name="plotinfotool"></a>
+
+Plugin for requesting plot information, including Swiss Public-law Restrictions on landownership (PLR) cadastre.
+
+**`config.json` sample configuration:**
+
+```
+{
+  "name": "PlotInfoTool",
+  "cfg": {
+    "toolLayers": ["<layer_name>", ...],
+    "infoQueries": [
+      {
+        "key": "plotdescr",
+        "titleMsgId": "plotdescr.title",
+        "query": "/plot/$egrid$",
+        "pdfQuery": null,
+        "urlKey": "cadastre_egrid"
+      },
+      {
+        "key": "oereb",
+        "titleMsgId": "oereb.title",
+        "query": "/oereb/json/$egrid$",
+        "pdfQuery": "/oereb/pdf/$egrid$",
+        "pdfTooltip": "oereb.requestPdf",
+        "urlKey": "oereb_egrid",
+        "cfg": {
+          "subthemes": {
+            "LandUsePlans": ["Grundnutzung", "Überlagerungen", "Linienbezogene Festlegungen", "Objektbezogene Festlegungen"]
+          }
+        }
+      }
+    ]
+  }
+}
+```
+Where:
+
+* `toolLayers`: List of layers to load when activating tool.
+* `infoQueries`: List of additional info queries to offer in the dialog (PLR cadastre query is built-in). By default, these render some HTML data in an iframe. If a custom component is needed for rendering the result, see configuration in `appConfig.js` below.
+  - `key`: A unique key name.
+  - `title`: The human visible title.
+  - `titleMsgId`: Instead of `title`, a message id for the title which will be looked up in the translations.
+  - `query`: The query to perform to retreive the info. Must return HTML, which is then rendered in an iframe. `$egrid$` is replaced with the EGRID of the current plot. If the specified URL is relative, it is resolved with respect to `plotInfoService` as defined in `config.json`.
+  - `pdfQuery`: Optional query to retreive a PDF report, which is then presented as a download the the user. Again, `$egrid$` is replaced with the EGRID of the current plot.
+  - `pdfTooltip`: Message id for the pdf button tooltip.
+  - `urlKey`: Optional query parameter key name. If QWC2 is started with `<urlKey>=<egrid>` in the URL, the plot info tool is automatically enabled and the respective query performed.
+  - `cfg`: Arbitrary custom config to pass to a custom component, see `appConfig.js` configuration below.
+
+**`appConfig.js` configuration:**
+
+Sample `PlotInfoToolPlugin` configuration, as can be defined in the `cfg` section of `pluginsDef` in `appConfig.js`:
+
+```
+PlotInfoToolPlugin: {
+  themeLayerRestorer: require('./themeLayerRestorer'),
+  customInfoComponents: {
+    oereb: require('qwc2-extra/components/OerebDocument')
+  }
+}
+```
+Where:
+
+* `themeLayerRestorer`: Function which restores theme layers, used for loading the `toolLayers` specified in the configuration in `config.json`. See `themeLayerRestorer` in the [sample `appConfig.js`](https://github.com/qgis/qwc2-demo-app/blob/master/js/appConfig.js).
+* `customInfoComponents`: Customized components for rendering plot info query results. The `key` specifies a the info query for which this component should be used, as specified in `infoQueries` in config.json (see above). An example of a minimal custom component:
+
+      class CustomPlotInfoComponent extends React.Component {
+        static propTypes = {
+          data: PropTypes.object, // PropType according to format of data returned by the specified query URL
+          config: PropTypes.object // Custom configuration
+        }
+        render() {
+          return (<div>{this.props.data.field}</div>);
+        }
+      };
+
+      module.exports = CustomPlotInfoComponent;
 

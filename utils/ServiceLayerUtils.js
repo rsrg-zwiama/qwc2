@@ -15,11 +15,9 @@ import randomColor from 'randomcolor';
 import url from 'url';
 
 import {LayerRole} from '../actions/layers';
-import StandardApp from '../components/StandardApp';
 import ConfigUtils from './ConfigUtils';
 import CoordinatesUtils from './CoordinatesUtils';
 import LayerUtils from './LayerUtils';
-import LocaleUtils from './LocaleUtils';
 import MiscUtils from './MiscUtils';
 
 function strcmp(a, b) {
@@ -91,7 +89,7 @@ const ServiceLayerUtils = {
                 if (axisOrder  === 'ne') {
                     origin = [topMatrix.TopLeftCorner[1], topMatrix.TopLeftCorner[0]];
                 }
-            } catch (e) {
+            } catch {
                 // eslint-disable-next-line
                 console.warn("Could not determine axis order for projection " + tileMatrices[tileMatrixSet].crs);
                 return null;
@@ -173,19 +171,19 @@ const ServiceLayerUtils = {
         let featureInfoUrl = getMapUrl;
         try {
             featureInfoUrl = this.mergeCalledServiceUrlQuery(ServiceLayerUtils.getDCPTypes(capabilities.Capability.Request.GetFeatureInfo.DCPType).HTTP.Get.OnlineResource.href, calledUrlParts);
-        } catch (e) {
+        } catch {
             // pass
         }
         let mapFormats = null;
         try {
             mapFormats = MiscUtils.ensureArray(capabilities.Capability.Request.GetMap.Format);
-        } catch (e) {
+        } catch {
             mapFormats = ['image/png'];
         }
         let infoFormats = null;
         try {
             infoFormats = MiscUtils.ensureArray(capabilities.Capability.Request.GetFeatureInfo.Format);
-        } catch (e) {
+        } catch {
             infoFormats = ['text/plain'];
         }
         const externalLayerFeatureInfoFormats = ConfigUtils.getConfigProp("externalLayerFeatureInfoFormats") || {};
@@ -255,7 +253,7 @@ const ServiceLayerUtils = {
         let legendUrl = getMapUrl;
         try {
             legendUrl = this.mergeCalledServiceUrlQuery(MiscUtils.ensureArray(MiscUtils.ensureArray(layer.Style)[0].LegendURL)[0].OnlineResource.href, calledUrlParts);
-        } catch (e) {
+        } catch {
             /* pass */
         }
         let editConfigUrl = null;
@@ -263,13 +261,13 @@ const ServiceLayerUtils = {
         try {
             editConfigUrl = layer.EditConfig.OnlineResource.href;
             wmsName = layer.EditConfig.wms_name;
-        } catch (e) {
+        } catch {
             /* pass */
         }
         let translationsUrl = null;
         try {
             translationsUrl = layer.Traslations.OnlineResource.href;
-        } catch (e) {
+        } catch {
             /* pass */
         }
 
@@ -318,7 +316,7 @@ const ServiceLayerUtils = {
             dimensions: dimensions,
             styles: styles,
             style: style,
-            serverType: translationsUrl ? 'qgis' : null // If there is a translationsUrl, assume it is the qwc-ogc-service
+            serverType: translationsUrl ? 'qgis' : undefined // If there is a translationsUrl, assume it is the qwc-ogc-service
         };
     },
     getWFSLayers(capabilities, calledServiceUrl, mapCrs) {
@@ -349,7 +347,7 @@ const ServiceLayerUtils = {
                 // convert to list if single entry
                 formats = [formats];
             }
-        } catch (e) {
+        } catch {
             return [];
         }
 
@@ -364,7 +362,7 @@ const ServiceLayerUtils = {
                     crs: featureType.SRS,
                     bounds: [llbbox.minx, llbbox.miny, llbbox.maxx, llbbox.maxy]
                 };
-            } catch (e) {
+            } catch {
                 continue; // Name and bbox are required
             }
             const title = featureType.Title || name;
@@ -396,7 +394,7 @@ const ServiceLayerUtils = {
             serviceUrl = this.mergeCalledServiceUrlQuery(serviceUrl, calledUrlParts);
             const outputFormat = MiscUtils.ensureArray(getFeatureOp.Parameter).find(el => el.name === "outputFormat");
             formats = MiscUtils.ensureArray(outputFormat.AllowedValues ? outputFormat.AllowedValues.Value : outputFormat.Value);
-        } catch (e) {
+        } catch {
             return [];
         }
 
@@ -412,7 +410,7 @@ const ServiceLayerUtils = {
                     crs: "EPSG:4326",
                     bounds: [lc[0], lc[1], uc[0], uc[1]]
                 };
-            } catch (e) {
+            } catch {
                 continue; // Name and bbox are required
             }
             const title = featureType.Title || name;
@@ -527,43 +525,7 @@ const ServiceLayerUtils = {
                     if (layer.type === "wms") {
                         layer.params = {LAYERS: layerConfig.name};
                     }
-                    const metadataRequests = [
-                        new Promise((resolve, reject) => {
-                            if (layer.editConfigUrl) {
-                                axios.get(layer.editConfigUrl).then(response => {
-                                    layer.editConfig = response.data;
-                                    delete layer.editConfigUrl;
-                                    resolve();
-                                }).catch(e => {
-                                    delete layer.editConfigUrl;
-                                    resolve();
-                                });
-                            } else {
-                                resolve();
-                            }
-                        }),
-                        new Promise((resolve, reject) => {
-                            if (layer.translationsUrl) {
-                                axios.get(layer.translationsUrl.replace('{lang}', LocaleUtils.lang())).then(response => {
-                                    layer.translations = response.data;
-                                    delete layer.translationsUrl;
-                                    resolve();
-                                }).catch(e => {
-                                    delete layer.translationsUrl;
-                                    resolve();
-                                });
-                            } else {
-                                resolve();
-                            }
-                        })
-                    ];
-                    Promise.all(metadataRequests).then(() => {
-                        if (layer.translations) {
-                            const commonTranslations = StandardApp.store.getState().locale.messagesTree.maptranslations || {};
-                            layer = LayerUtils.applyTranslations(layer, deepmerge(commonTranslations, layer.translations));
-                        }
-                        callback(layerConfig.id, layer);
-                    });
+                    callback(layerConfig.id, layer);
                 } else {
                     // eslint-disable-next-line
                     console.warn("Could not find layer " + layerConfig.name);
@@ -596,7 +558,7 @@ const ServiceLayerUtils = {
             urlParts.query = {...calledServiceUrlParts.query, ...urlParts.query};
             delete urlParts.search;
             return url.format(urlParts);
-        } catch (e) {
+        } catch {
             return url.format(capabilityUrl);
         }
     }

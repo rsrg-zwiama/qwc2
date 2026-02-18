@@ -10,8 +10,8 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 import {Color, Group, Vector3} from 'three';
-import {TransformControls} from 'three/addons/controls/TransformControls';
 import {CSG} from 'three-csg-ts';
+import {TransformControls} from 'three/addons/controls/TransformControls';
 
 import LocaleUtils from '../../../utils/LocaleUtils';
 import Icon from '../../Icon';
@@ -194,7 +194,7 @@ export default class EditTool3D extends React.Component {
             {key: "rotate", label: LocaleUtils.tr("draw3d.rotate")}
         ];
         const extraButtons = [
-            {key: "clone", tooltip: LocaleUtils.tr("draw3d.clone"), icon: "clone"},
+            {key: "clone", tooltip: LocaleUtils.tr("common.clone"), icon: "clone"},
             {key: "NumericInput", tooltip: LocaleUtils.tr("draw3d.numericinput"), icon: "numericinput"}
         ];
         const csgButtons = [

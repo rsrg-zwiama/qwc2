@@ -6,7 +6,7 @@
  * This source code is licensed under the BSD-style license found in the
  * LICENSE file in the root directory of this source tree.
  */
-import React from 'react';
+import React, {Suspense} from 'react';
 import {connect} from 'react-redux';
 
 import PropTypes from 'prop-types';
@@ -42,7 +42,7 @@ class PluginsContainer extends React.Component {
     renderPlugins = () => {
         const device = ConfigUtils.isMobile() ? 'mobile' : 'desktop';
         const plugins = PluginStore.getPlugins();
-        return [...this.props.pluginsConfig].sort((a, b) => (a.order ?? 0 - b.order ?? 0)).map(pluginConf => {
+        return [...this.props.pluginsConfig].sort((a, b) => ((a.order ?? 0) - (b.order ?? 0))).map(pluginConf => {
             const Plugin = plugins[pluginConf.name + "Plugin"];
             if (!Plugin) {
                 return null;
@@ -51,7 +51,9 @@ class PluginsContainer extends React.Component {
             const themePluginConfig = this.props.theme?.config?.plugins?.[pluginConf.name] || {};
             const cfg = {...(pluginConf.cfg || {}), ...themePluginConfig, ...themeDevicePluginConfig};
             return (
-                <Plugin key={pluginConf.key ?? pluginConf.name} {...cfg} />
+                <Suspense key={pluginConf.key ?? pluginConf.name}>
+                    <Plugin {...cfg} />
+                </Suspense>
             );
         });
     };
@@ -85,7 +87,9 @@ class PluginsContainer extends React.Component {
                     <ProcessNotifications />
                 </div>
                 <div className="app-infos-container" ref={this.setAppInfosContainerRef} style={mapContainerStyle} />
-                <div className="map-bottom-tool-container" ref={this.setBottomToolContanerRef} style={mapContainerStyle} />
+                <div className="map-bottom-tool-container" style={mapContainerStyle}>
+                    <div ref={this.setBottomToolContanerRef} />
+                </div>
             </div>
         );
     }

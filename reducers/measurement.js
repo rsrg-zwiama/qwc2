@@ -10,7 +10,8 @@
 import {CHANGE_MEASUREMENT_STATE} from '../actions/measurement';
 
 const defaultState = {
-    geomType: null,
+    mode: null,
+    drawing: false,
     coordinates: null,
     length: null,
     area: 0,
@@ -20,16 +21,25 @@ const defaultState = {
     bearingHeadMarker: null,
     bearingTailMarker: null,
     lineHeadMarker: null,
-    lineTailMarker: null
+    lineTailMarker: null,
+    showPerimeterLength: false,
+    markerScale: 1
 };
 
 export default function measurement(state = defaultState, action) {
     switch (action.type) {
     case CHANGE_MEASUREMENT_STATE: {
+        const prevState = state.mode === (action.data.mode ?? state.mode) ? state : {};
         return {
-            lenUnit: state.lenUnit, areaUnit: state.areaUnit,
-            bearingHeadMarker: state.bearingHeadMarker, bearingTailMarker: state.bearingTailMarker,
-            lineHeadMarker: state.lineHeadMarker, lineTailMarker: state.lineTailMarker,
+            ...prevState,
+            lenUnit: state.lenUnit,
+            areaUnit: state.areaUnit,
+            bearingHeadMarker: state.bearingHeadMarker,
+            bearingTailMarker: state.bearingTailMarker,
+            lineHeadMarker: state.lineHeadMarker,
+            lineTailMarker: state.lineTailMarker,
+            showPerimeterLength: state.showPerimeterLength,
+            markerScale: state.markerScale,
             ...action.data
         };
     }

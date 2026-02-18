@@ -56,6 +56,8 @@ class Identify extends React.Component {
         customExporters: PropTypes.array,
         /** Whether to enable the aggregated report download button. */
         enableAggregatedReports: PropTypes.bool,
+        /** Whether to enable the possibility select results for comparison. */
+        enableCompare: PropTypes.bool,
         /** Whether to enable the export functionality. Either `true|false` or a list of single allowed formats (builtin formats: `json`, `geojson`, `csv`, `csvzip`, `shapefile`, `xlsx`). If a list is provided, the export formats will be sorted according to that list, and the default format will be the first format of the list. */
         enableExport: PropTypes.oneOfType([PropTypes.bool, PropTypes.array]),
         enabled: PropTypes.bool,
@@ -63,8 +65,6 @@ class Identify extends React.Component {
         exitTaskOnResultsClose: PropTypes.bool,
         /** Whether to include the geometry in exported features. Default: `true`. */
         exportGeometry: PropTypes.bool,
-        /** Whether to assume that XML GetFeatureInfo responses specify the technical layer name in the `name` attribute, rather than the layer title. */
-        featureInfoReturnsLayerName: PropTypes.bool,
         /** Default window geometry with size, position and docking status. Positive position values (including '0') are related to top (InitialY) and left (InitialX), negative values (including '-0') to bottom (InitialY) and right (InitialX). */
         geometry: PropTypes.shape({
             initialWidth: PropTypes.number,
@@ -90,23 +90,31 @@ class Identify extends React.Component {
         replaceImageUrls: PropTypes.bool,
         /** Result display mode, one of `tree`, `flat`, `paginated`. */
         resultDisplayMode: PropTypes.string,
+        /** Target cell size of the result grid in comparison mode. */
+        resultGridSize: PropTypes.number,
+        /** Whether multi-display mode should be enabled by default, only relevant if `resultDisplayMode` is `paginated`. */
+        resultMultiDisplay: PropTypes.bool,
         selection: PropTypes.object,
         setCurrentTask: PropTypes.func,
         /** Whether to show a layer selector to filter the identify results by layer. */
         showLayerSelector: PropTypes.bool,
+        /** Whether to prefix the identify result titles with the respecitve layer name. */
+        showLayerTitles: PropTypes.bool,
         startupParams: PropTypes.object,
         theme: PropTypes.object
     };
     static defaultProps = {
         enableAggregatedReports: true,
+        enableCompare: true,
         enableExport: true,
         exportGeometry: true,
         clearResultsOnClose: true,
         customExporters: [],
         longAttributesDisplay: 'ellipsis',
         resultDisplayMode: 'flat',
+        resultGridSize: 200,
+        resultMultiDisplay: false,
         replaceImageUrls: true,
-        featureInfoReturnsLayerName: true,
         geometry: {
             initialWidth: 240,
             initialHeight: 320,
@@ -117,7 +125,8 @@ class Identify extends React.Component {
         },
         initialRadiusUnits: 'm',
         highlightAllResults: true,
-        showLayerSelector: true
+        showLayerSelector: true,
+        showLayerTitles: true
     };
     state = {
         mode: 'Point',
@@ -285,7 +294,7 @@ class Identify extends React.Component {
         this.setState({ radiusUnits: ev.target.value });
     };
     parseResult = (response, layer, format, clickPoint, ctrlPick = false) => {
-        const newResults = IdentifyUtils.parseResponse(response, layer, format, clickPoint, this.props.map.projection, this.props.featureInfoReturnsLayerName);
+        const newResults = IdentifyUtils.parseResponse(response, layer, format, clickPoint, this.props.map.projection);
         // Merge with previous
         this.setState((state) => {
             const identifyResults = {...state.identifyResults};
@@ -386,7 +395,7 @@ class Identify extends React.Component {
                         attributeTransform={this.props.attributeTransform}
                         customExporters={this.props.customExporters}
                         enableAggregatedReports={this.props.enableAggregatedReports}
-                        enableCompare
+                        enableCompare={this.props.enableCompare}
                         enableExport={this.props.enableExport}
                         exportGeometry={this.props.exportGeometry}
                         highlightAllResults={this.props.highlightAllResults}
@@ -395,7 +404,10 @@ class Identify extends React.Component {
                         longAttributesDisplay={this.props.longAttributesDisplay}
                         replaceImageUrls={this.props.replaceImageUrls}
                         resultDisplayMode={this.props.resultDisplayMode}
+                        resultGridSize={this.props.resultGridSize}
+                        resultMultiDisplay={this.props.resultMultiDisplay}
                         showLayerSelector={this.props.showLayerSelector}
+                        showLayerTitles={this.props.showLayerTitles}
                     />
                 );
             }

@@ -23,6 +23,7 @@ import {setCurrentTask, setCurrentTaskBlocked} from '../actions/task';
 import AttributeForm from '../components/AttributeForm';
 import Icon from '../components/Icon';
 import PickFeature from '../components/PickFeature';
+import {BottomToolPortalContext} from '../components/PluginsContainer';
 import SideBar from '../components/SideBar';
 import ButtonBar from '../components/widgets/ButtonBar';
 import ConfigUtils from '../utils/ConfigUtils';
@@ -44,6 +45,7 @@ import './style/Editing.css';
  * `editServiceUrl` in `config.json` (by default the `qwc-data-service`).
  */
 class Editing extends React.Component {
+    static contextType = BottomToolPortalContext;
     static propTypes = {
         addLayerFeatures: PropTypes.func,
         /** Whether to enable the "Clone existing geometry" functionality. */
@@ -58,6 +60,8 @@ class Editing extends React.Component {
         iface: PropTypes.object,
         layers: PropTypes.array,
         map: PropTypes.object,
+        /** Whether to omit read only datasets from the dataset selection menu. */
+        omitReadOnlyDatasets: PropTypes.bool,
         removeLayer: PropTypes.func,
         setCurrentTask: PropTypes.func,
         setCurrentTaskBlocked: PropTypes.func,
@@ -201,7 +205,7 @@ class Editing extends React.Component {
         const editPermissions = editConfig?.permissions ?? {};
 
         const actionButtons = [];
-        actionButtons.push({key: 'Pick', icon: 'pick', label: LocaleUtils.tr("editing.pick"), data: {action: 'Pick', feature: null}});
+        actionButtons.push({key: 'Pick', icon: 'pick', label: LocaleUtils.tr("common.pick"), data: {action: 'Pick', feature: null}});
         if ( editPermissions.creatable !== false && !this.props.editContext.geomReadOnly) {
             actionButtons.push({key: 'Draw', icon: 'editdraw', label: LocaleUtils.tr("editing.draw"), data: {action: 'Draw'}});
         }
@@ -242,9 +246,12 @@ class Editing extends React.Component {
             <div className="editing-body">
                 <div className="editing-layer-selection">
                     <select className="combo editing-layer-select" disabled={this.props.editContext.changed === true || this.props.editContext.id !== this.props.currentEditContext} onChange={ev => this.changeSelectedLayer(ev.target.value)} value={this.state.selectedLayer || ""}>
-                        <option disabled value="">{LocaleUtils.tr("editing.selectlayer")}</option>
+                        <option disabled value="">{LocaleUtils.tr("common.selectlayer")}</option>
                         {Object.entries(this.props.editConfigs).map(([mapName, serviceConfigs]) => (
                             Object.entries(serviceConfigs).map(([layerName, edConfig]) => {
+                                if (this.props.omitReadOnlyDatasets && Object.values(edConfig.permissions).every(permission => permission === false)) {
+                                    return null;
+                                }
                                 const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', mapName, 'name', layerName);
                                 if (!match) {
                                     return null;
@@ -267,7 +274,7 @@ class Editing extends React.Component {
         );
     };
     render() {
-        const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("editing.maximize") : LocaleUtils.tr("editing.minimize");
+        const minMaxTooltip = this.state.minimized ? LocaleUtils.tr("window.maximize") : LocaleUtils.tr("window.minimize");
         const extraTitlebarContent = (<Icon className="editing-minimize-maximize" icon={this.state.minimized ? 'chevron-down' : 'chevron-up'} onClick={() => this.setState((state) => ({minimized: !state.minimized}))} title={minMaxTooltip}/>);
         const attribFormVisible = !!(this.props.editContext.feature && (this.props.editContext.action === "Pick" || this.props.editContext.feature.geometry));
         return [(
@@ -283,6 +290,9 @@ class Editing extends React.Component {
             <PickFeature featureFilter={this.pickFilter} featurePicked={this.geomPicked} key="FeaturePicker" />
         ) : null];
     }
+    changeMeasurementState = (diff) => {
+        this.props.setEditContext('Editing', {measurements: {...this.props.editContext.measurements, ...diff}});
+    };
     actionClicked = (action, data) => {
         this.setState({drawPick: false, pickedFeatures: null});
         if (action === "AttribTable") {

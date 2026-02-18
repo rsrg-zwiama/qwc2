@@ -18,7 +18,12 @@ const LocaleUtils = {
     loadLocale(lang, fallbackLangData) {
         return new Promise(resolve => {
             let loadLang = null;
-            const availableLanguages = process.env.AvailableLanguages;
+            let availableLanguages = ConfigUtils.getConfigProp("availableLocales");
+            if (availableLanguages) {
+                availableLanguages = Object.keys(availableLanguages);
+            } else {
+                availableLanguages = process.env.AvailableLanguages;
+            }
             if (availableLanguages.indexOf(lang) !== -1) {
                 // Exact match: lang-REGION
                 loadLang = lang;
@@ -101,6 +106,9 @@ const LocaleUtils = {
         } else {
             return number.toFixed(decimals);
         }
+    },
+    commonTranslations() {
+        return StandardApp.store.getState().locale.messagesTree.maptranslations || {};
     }
 };
 

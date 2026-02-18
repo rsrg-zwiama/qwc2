@@ -6,17 +6,16 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import deepmerge from 'deepmerge';
 import {remove as removeDiacritics} from 'diacritics';
 import isEmpty from 'lodash.isempty';
 import url from 'url';
 import {v4 as uuidv4} from 'uuid';
 
 import {LayerRole} from '../actions/layers';
-import StandardApp from '../components/StandardApp';
 import {SearchResultType} from '../utils/SearchProviders';
 import ConfigUtils from './ConfigUtils';
 import LayerUtils from './LayerUtils';
+import LocaleUtils from './LocaleUtils';
 
 const ThemeUtils = {
     getThemeById(themes, id) {
@@ -105,7 +104,6 @@ const ThemeUtils = {
             urlParts.host = locationParts.host;
         }
         const sublayerNames = LayerUtils.getSublayerNames({sublayers: subLayers ?? theme.sublayers});
-        const commonTranslations = StandardApp.store.getState().locale.messagesTree.maptranslations || {};
         const baseParams = urlParts.query;
         let layer = {
             type: "wms",
@@ -143,10 +141,15 @@ const ThemeUtils = {
                     return res;
                 }, {})
             },
-            translations: deepmerge(commonTranslations, theme.translations),
+            translations: theme.translations,
+            translationsUrl: theme.translationsUrl,
             editConfig: theme.editConfig,
+            editConfigUrl: theme.editConfigUrl,
             wms_name: theme.wms_name
         };
+        if (layer.editConfigUrl) {
+            layer.editConfigUrl += encodeURIComponent(sublayerNames);
+        }
         layer = LayerUtils.recomputeLayerBBox(layer);
         // Drawing order only makes sense if layer reordering is disabled
         if (ConfigUtils.getConfigProp("allowReorderingLayers", theme) !== true) {
@@ -279,14 +282,19 @@ const ThemeUtils = {
             }
         }).filter(Boolean);
     },
-    applyTranslations(group) {
-        const commonTranslations = StandardApp.store.getState().locale.messagesTree.maptranslations || {};
+    applyCommonTranslations(group) {
+        const commonTranslations = LocaleUtils.commonTranslations();
         return {
             ...group,
-            subdirs: group.subdirs ? group.subdirs.map(ThemeUtils.applyTranslations) : null,
+            subdirs: group.subdirs ? group.subdirs.map(ThemeUtils.applyCommonTranslations) : null,
             items: group.items ? group.items.map(item => ({
-                ...LayerUtils.applyTranslations(item, deepmerge(commonTranslations, item.translations)),
-                title: item.translations?.theme?.title ?? item.title
+                ...LayerUtils.applyTranslations(item, commonTranslations),
+                print: (item.print || []).map(layout => {
+                    return {
+                        ...layout,
+                        title: commonTranslations.layouts?.[layout.name] ?? layout.title
+                    };
+                })
             })) : null
         };
     }

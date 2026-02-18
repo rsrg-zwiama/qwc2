@@ -11,10 +11,10 @@ import ol from 'openlayers';
 import minus from '../icons/minus.svg';
 import plus from '../icons/plus.svg';
 import ConfigUtils from './ConfigUtils';
-import ResourceRegistry from './ResourceRegistry';
 import arrowhead from './img/arrowhead.svg';
 import markerIcon from './img/marker-icon.png';
 import measurehead from './img/measurehead.svg';
+import ResourceRegistry from './ResourceRegistry';
 
 ResourceRegistry.addResource('arrowhead', arrowhead);
 ResourceRegistry.addResource('measurehead', measurehead);
@@ -82,6 +82,20 @@ export function computeFeatureStyle(layer, feature) {
     return {...DEFAULT_FEATURE_STYLE, ...ConfigUtils.getConfigProp("defaultFeatureStyle"), ...layer.styleOptions, ...feature.styleOptions};
 }
 
+export function computeMeasureFeatureStyle(markerOpts) {
+    const opts = {...DEFAULT_INTERACTION_STYLE, ...ConfigUtils.getConfigProp("defaultInteractionStyle"), ...markerOpts};
+    return {
+        circleRadius: opts.measurePointRadius,
+        strokeColor: opts.measureStrokeColor,
+        strokeWidth: opts.measureStrokeWidth,
+        fillColor: opts.measureFillColor,
+        headmarker: opts.headmarker,
+        tailmarker: opts.tailmarker,
+        markerscale: opts.markerscale,
+        strokeDash: []
+    };
+}
+
 const defaultStyle = (feature, options) => {
     const opts = {...DEFAULT_FEATURE_STYLE, ...ConfigUtils.getConfigProp("defaultFeatureStyle"), ...options};
     const styles = [];
@@ -93,7 +107,8 @@ const defaultStyle = (feature, options) => {
             stroke: new ol.style.Stroke({
                 color: opts.strokeColor,
                 width: opts.strokeWidth,
-                lineDash: opts.strokeDash
+                lineDash: opts.strokeDash,
+                lineCap: 'butt'
             }),
             image: opts.circleRadius > 0 ? new ol.style.Circle({
                 radius: opts.circleRadius,
@@ -152,6 +167,27 @@ const defaultStyle = (feature, options) => {
             }));
         }
     }
+    if (feature.getProperties().end_label) {
+        const coo = feature.getGeometry().getCoordinates();
+        let point = null;
+        if (feature.getGeometry().getType() === "LineString") {
+            point = coo[coo.length - 1];
+        } else if (feature.getGeometry().getType() === "Polygon") {
+            point = coo[0].reduce((min, p) => p[1] < min[1] ? p : min, [Infinity, Infinity]);
+        }
+        if (point) {
+            styles.push(new ol.style.Style({
+                geometry: new ol.geom.Point(point),
+                text: new ol.style.Text({
+                    font: opts.textFont || '11pt sans-serif',
+                    text: feature.getProperties().end_label,
+                    fill: new ol.style.Fill({color: opts.textFill}),
+                    stroke: new ol.style.Stroke({color: opts.textStroke, width: 3}),
+                    offsetY: 20
+                })
+            }));
+        }
+    }
     if (feature.getGeometry().getType() === "LineString" && opts.headmarker in END_MARKERS) {
         const p1 = feature.getGeometry().getCoordinates()[0];
         const p2 = feature.getGeometry().getCoordinates()[1];
@@ -164,7 +200,7 @@ const defaultStyle = (feature, options) => {
                 anchorYUnits: 'fraction',
                 color: opts.strokeColor,
                 rotation: END_MARKERS[opts.headmarker].baserotation / 180 * Math.PI + rotation,
-                scale: 0.125 * (1 + opts.strokeWidth) // Also update in VectorLayerUtils.generateMarkerGeometry
+                scale: 0.125 * (1 + opts.strokeWidth) * (opts.markerscale ?? 1) // Also update in VectorLayerUtils.generateMarkerGeometry
             })
         }));
     }
@@ -181,7 +217,7 @@ const defaultStyle = (feature, options) => {
                 anchorYUnits: 'fraction',
                 color: opts.strokeColor,
                 rotation: END_MARKERS[opts.tailmarker].baserotation / 180 * Math.PI + rotation,
-                scale: 0.125 * (1 + opts.strokeWidth) // Also update in VectorLayerUtils.generateMarkerGeometry
+                scale: 0.125 * (1 + opts.strokeWidth) * (opts.markerscale ?? 1) // Also update in VectorLayerUtils.generateMarkerGeometry
             })
         }));
     }
@@ -214,20 +250,20 @@ export default {
             })
         ];
     },
-    interaction: (options, isSnap) => {
+    interaction: (feature, options, isSnap) => {
         const opts = {...DEFAULT_INTERACTION_STYLE, ...ConfigUtils.getConfigProp("defaultInteractionStyle"), ...options};
-        let fillColor = opts.fillColor;
-        let strokeColor = opts.strokeColor;
-        let strokeWidth = opts.strokeWidth;
-        if (isSnap) {
-            fillColor = opts.snapFillColor;
-            strokeColor = opts.snapStrokeColor;
-            strokeWidth = opts.snapStrokeWidth;
-        }
-        return new ol.style.Style({
-            fill: new ol.style.Fill({ color: fillColor }),
-            stroke: new ol.style.Stroke({ color: strokeColor, width: strokeWidth})
-        });
+        const styleOptions = isSnap ? {
+            strokeColor: opts.snapStrokeColor,
+            strokeWidth: opts.snapStrokeWidth,
+            fillColor: opts.snapFillColor
+        } : {
+            strokeColor: opts.strokeColor,
+            strokeWidth: opts.strokeWidth,
+            fillColor: opts.fillColor
+        };
+        styleOptions.strokeDash = [];
+        styleOptions.circleRadius = 0;
+        return defaultStyle(feature, styleOptions);
     },
     interactionVertex: (options, isSnap) => {
         const opts = {...DEFAULT_INTERACTION_STYLE, ...ConfigUtils.getConfigProp("defaultInteractionStyle"), ...options};
@@ -255,18 +291,6 @@ export default {
             }),
             geometry: opts.geometryFunction
         });
-    },
-    measureInteraction: (feature, options) => {
-        const opts = {...DEFAULT_INTERACTION_STYLE, ...ConfigUtils.getConfigProp("defaultInteractionStyle"), ...options};
-        const styleOptions = {
-            strokeColor: opts.measureStrokeColor,
-            strokeWidth: opts.measureStrokeWidth,
-            fillColor: opts.measureFillColor,
-            headmarker: opts.headmarker,
-            tailmarker: opts.tailmarker,
-            strokeDash: []
-        };
-        return defaultStyle(feature, styleOptions);
     },
     measureInteractionVertex: (options) => {
         const opts = {...DEFAULT_INTERACTION_STYLE, ...ConfigUtils.getConfigProp("defaultInteractionStyle"), ...options};

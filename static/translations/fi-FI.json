@@ -25,6 +25,7 @@
         "MapFilter": "",
         "MapLight3D": "",
         "ObjectList": "",
+        "PlotInfoTool": "",
         "Print": "Tulosta",
         "Reports": "",
         "Settings": "",
@@ -50,6 +51,7 @@
         "MeasureLineString": "Mittaa viiva",
         "MeasurePolygon": "Mittaa monikulmion",
         "NewsPopup": "",
+        "ObliqueView": "",
         "Panoramax": "",
         "Portal": "",
         "PrintScreen3D": "",
@@ -64,23 +66,22 @@
     },
     "attribtable": {
       "addfeature": "",
+      "calculatedfield": "",
       "commit": "",
       "csvexport": "",
-      "delete": "",
       "deletefailed": "",
       "deletefeatures": "",
       "deleting": "",
       "discard": "",
       "formeditmode": "",
+      "fulldatasetload": "",
       "geomnoadd": "",
       "limittoextent": "",
       "loadfailed": "",
-      "loading": "",
       "nodelete": "",
       "nogeomnoform": "",
       "pleasereload": "",
       "reload": "",
-      "selectlayer": "",
       "title": "",
       "zoomtoselection": ""
     },
@@ -90,14 +91,13 @@
     "bookmark": {
       "add": "Lisää kirjanmerkki nykyiselle kartalle",
       "addfailed": "",
-      "description": "Kuvaus",
       "lastUpdate": "",
       "manage": "Kirjanmerkkien hallinta",
+      "newbookmark": "",
       "nobookmarks": "",
       "notloggedin": "",
       "open": "",
       "openTab": "",
-      "remove": "Poista kirjanmerkki",
       "removefailed": "",
       "savefailed": "",
       "update": "Päivitä kirjanmerkki",
@@ -108,6 +108,39 @@
       "scale_label": "Mittakaava",
       "terms_label": "Käyttöehdot",
       "viewertitle_label": ""
+    },
+    "common": {
+      "add": "",
+      "all": "",
+      "cancel": "",
+      "circle": "Ympyrä",
+      "clear": "Clear",
+      "clone": "",
+      "close": "",
+      "delete": "",
+      "download": "",
+      "ellipse": "",
+      "export": "",
+      "format": "Formaatti:",
+      "line": "Viiva",
+      "loading": "",
+      "lock2dview": "",
+      "noresults": "",
+      "pick": "",
+      "point": "Piste",
+      "polygon": "Alue",
+      "rectangle": "",
+      "rename": "",
+      "resolution": "Resoluutio:",
+      "save": "",
+      "select": "",
+      "selectlayer": "",
+      "square": "",
+      "sync2dview": "",
+      "text": "Teksti",
+      "wait": "",
+      "zoomin": "Zoomaa sisään",
+      "zoomout": "Zoomaa ulos"
     },
     "compare3d": {
       "clipplane": "",
@@ -135,17 +168,14 @@
       "title": ""
     },
     "draw3d": {
-      "clone": "",
       "cone": "",
       "cuboid": "",
       "cylinder": "",
-      "delete": "",
       "drawings": "",
       "intersect": "",
       "label": "",
       "newgroupprompt": "",
       "numericinput": "",
-      "pick": "",
       "position": "",
       "pyramid": "",
       "rotate": "",
@@ -165,10 +195,8 @@
       "zoomto": ""
     },
     "editing": {
-      "add": "",
       "attrtable": "",
       "canceldelete": "Don't delete",
-      "clearpicture": "Clear",
       "clone_all": "",
       "clone_copy": "",
       "clone_defaulted": "",
@@ -181,23 +209,17 @@
       "commitfailed": "",
       "contraintviolation": "",
       "create": "",
-      "delete": "Delete",
       "discard": "Discard",
       "draw": "Draw",
       "feature": "Feature",
       "geomnonzeroz": "",
       "geomreadonly": "",
       "invalidform": "",
-      "maximize": "Maximize",
-      "minimize": "Minimize",
       "noeditablelayers": "No editable layers.",
       "paint": "",
-      "pick": "Pick",
       "pickdrawfeature": "",
       "reallydelete": "Delete",
       "relationcommitfailed": "Some relation values could not be committed, check the icon tooltips for details",
-      "select": "Select",
-      "selectlayer": "",
       "takepicture": "Take picture",
       "unsavedchanged": ""
     },
@@ -209,14 +231,11 @@
     },
     "featureform": {
       "feature": "",
-      "noresults": "",
       "querying": "",
       "title": ""
     },
     "featuresearch": {
-      "noresults": "",
       "query": "",
-      "select": "",
       "title": ""
     },
     "fileselector": {
@@ -234,8 +253,7 @@
       "line_buffer": "",
       "point_buffer": "",
       "selfinter": "",
-      "send": "",
-      "wait": ""
+      "send": ""
     },
     "heightprofile": {
       "asl": "a.s.l.",
@@ -261,17 +279,17 @@
       "clipboard": "",
       "compare": "",
       "comparing": "",
-      "download": "",
-      "export": "Vienti",
       "featureReport": "Ominaisuustietoraportti",
       "featurecount": "",
       "layerall": "",
       "link": "Linkki",
+      "multiview": "",
       "noattributes": "Attribuutteja ei löytynyt",
       "noresults": "Valitulla pisteellä ei ole informaatiota",
       "querying": "Kysely käynnissä...",
       "reportfail": "",
       "results": "",
+      "selectforcompare": "",
       "selectreport": "",
       "title": "Ominaisuustiedot"
     },
@@ -289,7 +307,6 @@
       "asgroup": "",
       "connect": "Yhdistä",
       "filter": "Suodatus...",
-      "loading": "Lataa...",
       "localfile": "Paikallinen tiedosto",
       "nofeatures": "Ominaisuustietoja ei voitu tuoda.",
       "noresults": "Tuloksia ei ole tai virheellinen URL-osoite",
@@ -330,6 +347,7 @@
       "printlegend": "Tulosta selite",
       "separator": "Erotin",
       "separatortooltip": "Lisää erotin",
+      "togglegroup": "",
       "transparency": "Läpinäkyvyys",
       "visiblefilter": "Suodata näkymättömät tasot",
       "zoomtolayer": "Zoomaa tasolle"
@@ -344,8 +362,6 @@
       "zoomtoobject": ""
     },
     "linkfeatureform": {
-      "cancel": "",
-      "close": "",
       "drawhint": "",
       "pickhint": ""
     },
@@ -370,32 +386,23 @@
       "resetrotation": ""
     },
     "map3d": {
-      "lockview": "",
-      "syncview": "",
+      "noterrain": "",
       "terrain": "",
       "title": ""
     },
     "mapexport": {
       "configuration": "",
-      "format": "Formaatti:",
       "projection": "",
-      "resolution": "Resoluutio:",
       "scale": "",
       "size": "",
-      "submit": "",
-      "usersize": "",
-      "wait": ""
+      "usersize": ""
     },
     "mapfilter": {
       "addcustomfilter": "",
       "brokenrendering": "",
-      "cancel": "",
       "geomfilter": "",
       "hidefiltergeom": "",
       "invalidfilter": "",
-      "save": "",
-      "select": "",
-      "selectlayer": "",
       "timefilter": "",
       "timefrom": "",
       "timeto": ""
@@ -439,16 +446,18 @@
       "imperial": "",
       "lengthLabel": "Pituus",
       "metric": "",
-      "pointLabel": "Sijainti"
+      "pointLabel": "Sijainti",
+      "showmeasurements": ""
     },
     "misc": {
       "ctrlclickhint": ""
     },
     "navbar": {
-      "perpage": ""
+      "next": "",
+      "perpage": "",
+      "prev": ""
     },
     "newspopup": {
-      "dialogclose": "",
       "dontshowagain": "",
       "title": ""
     },
@@ -461,6 +470,32 @@
       "width": "",
       "windowtitle": ""
     },
+    "obliqueview": {
+      "nodataset": "",
+      "title": ""
+    },
+    "oereb": {
+      "concernedThemes": "",
+      "fundationdatastate": "",
+      "fundations": "",
+      "generalInformation": "",
+      "generalinfo": "",
+      "hidefulllegend": "",
+      "hints": "",
+      "legalbasis": "",
+      "notConcernedThemes": "",
+      "nrpoints": "",
+      "perc": "",
+      "regulations": "",
+      "responsibleauthority": "",
+      "responsibleoffice": "",
+      "share": "",
+      "showfulllegend": "",
+      "themeWithoutData": "",
+      "type": "",
+      "title": "",
+      "failed": ""
+    },
     "panoramax": {
       "notfound": "",
       "title": ""
@@ -468,34 +503,31 @@
     "pickfeature": {
       "querying": ""
     },
+    "plotinfotool": {
+      "failed": "",
+      "loading": ""
+    },
     "portal": {
       "filter": "",
       "menulabel": ""
     },
     "print": {
       "atlasfeature": "",
-      "download": "",
       "download_as_onepdf": "",
       "download_as_onezip": "",
       "download_as_single": "",
-      "format": "Formaatti",
       "grid": "Ristikko",
       "layout": "Layout",
       "legend": "Selite",
-      "maximize": "Maksimoi",
-      "minimize": "Minimoi",
       "nolayouts": "Valittu teema ei tue tulostamista",
       "notheme": "Teemaa ei ole valittu",
       "output": "Tulosta tuotos",
       "overlap": "",
       "pickatlasfeature": "",
-      "resolution": "Resoluutio",
       "rotation": "Rotaatio",
-      "save": "",
       "scale": "Mittakaava",
       "series": "",
-      "submit": "Tulosta",
-      "wait": "Odota..."
+      "submit": "Tulosta"
     },
     "qtdesignerform": {
       "loading": ""
@@ -508,35 +540,19 @@
       "bufferlayer": "Destination",
       "bufferlayername": "Bufferi",
       "bufferselectfeature": "Valitse bufferin ominaisuus...",
-      "circle": "Ympyrä",
-      "clone": "",
       "ctrlhint": "",
-      "delete": "Poista",
       "draw": "Piirrä",
       "edit": "Editoi",
-      "ellipse": "",
-      "export": "",
       "freehand": "Vapaa piirto",
       "label": "Selite",
       "layer": "Taso",
       "layertitle": "",
-      "line": "Viiva",
       "markers": "",
-      "measurements": "",
       "numericinput": "",
-      "pick": "Poimi",
-      "point": "Piste",
-      "polygon": "Alue",
-      "rectangle": "",
       "size": "Koko",
-      "square": "",
-      "text": "Teksti",
       "transform": ""
     },
     "reports": {
-      "all": "",
-      "download": "",
-      "pick": "",
       "region": "",
       "selectlayer": ""
     },
@@ -545,11 +561,9 @@
       "addlayer": "",
       "addviapoint": "",
       "arriveat": "",
-      "clear": "",
       "computefailed": "",
       "computing": "",
       "excludepolygons": "",
-      "export": "",
       "fastest": "",
       "fromhere": "",
       "importerror": "",
@@ -585,9 +599,7 @@
       "finish": "Lopeta"
     },
     "search": {
-      "all": "Kaikki",
       "circleradius": "",
-      "clearfilter": "",
       "coordinates": "",
       "existinglayer": "Taso on jo lisätty karttaan",
       "filter": "Tarkenna hakua",
@@ -596,7 +608,6 @@
       "more": "{0} lisää tuloksia",
       "nodescription": "Kuvausta ei löytynyt",
       "none": "",
-      "noresults": "",
       "placeholder": "Etsi kohde tai lisää kartta...",
       "places": "",
       "providerselection": "",
@@ -630,6 +641,7 @@
       "themes": ""
     },
     "settings3d": {
+      "fov": "",
       "quality": ""
     },
     "share": {
@@ -684,7 +696,6 @@
       "group": "",
       "groupnone": "",
       "home": "",
-      "loading": "",
       "loop": "",
       "markers": "",
       "notemporaldata": "",
@@ -715,17 +726,13 @@
         "months": "",
         "seconds": "",
         "years": ""
-      },
-      "zoomin": "",
-      "zoomout": ""
+      }
     },
     "tooltip": {
       "background": "Vaihda tausta",
       "fullscreendisable": "",
       "fullscreenenable": "",
-      "home": "Näytä koko kartta",
-      "zoomin": "Zoomaa sisään",
-      "zoomout": "Zoomaa ulos"
+      "home": "Näytä koko kartta"
     },
     "tourguide": {
       "done": "",
@@ -733,7 +740,6 @@
       "previous": ""
     },
     "valuetool": {
-      "all": "",
       "allbands": "",
       "alllayers": "",
       "bands": "",
@@ -760,7 +766,6 @@
       "storingstate": ""
     },
     "window": {
-      "close": "Sulje",
       "detach": "",
       "dock": "Kiinnitä",
       "embed": "",
@@ -774,6 +779,10 @@
       "default": "",
       "dark": "",
       "highcontrast": ""
+    },
+    "plotdescr": {
+      "title": "",
+      "requestPdf": ""
     }
   }
 }

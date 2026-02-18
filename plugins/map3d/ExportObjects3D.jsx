@@ -20,8 +20,8 @@ import {Box3, BufferGeometry, Float32BufferAttribute, Group, Matrix4, Mesh, Mesh
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 
 import {setCurrentTask} from '../../actions/task';
-import SideBar from '../../components/SideBar';
 import {TileMeshHelper} from '../../components/map3d/utils/MiscUtils3D';
+import SideBar from '../../components/SideBar';
 import Spinner from '../../components/widgets/Spinner';
 import LocaleUtils from '../../utils/LocaleUtils';
 import VectorLayerUtils from '../../utils/VectorLayerUtils';
@@ -84,7 +84,7 @@ class ExportObjects3D extends React.Component {
                     <table className="options-table">
                         <tbody>
                             <tr>
-                                <td>{LocaleUtils.tr("mapexport.format")}</td>
+                                <td>{LocaleUtils.tr("common.format")}</td>
                                 <td>
                                     <select name="FORMAT" onChange={this.formatChanged} value={this.state.selectedFormat}>
                                         {Object.entries(formatMap).map(([format, label]) => (
@@ -98,8 +98,8 @@ class ExportObjects3D extends React.Component {
                     <div className="button-bar">
                         <button className="button" disabled={exportDisabled} type="submit">
                             {this.state.exporting ? (
-                                <span className="mapexport-wait"><Spinner /> {LocaleUtils.tr("mapexport.wait")}</span>
-                            ) : LocaleUtils.tr("mapexport.submit")}
+                                <span className="mapexport-wait"><Spinner /> {LocaleUtils.tr("common.wait")}</span>
+                            ) : LocaleUtils.tr("common.export")}
                         </button>
                     </div>
                 </form>

@@ -9,7 +9,7 @@ div.attribtable-overlay {
     position: absolute;
     left: 0;
     right: 0;
-    top: 2.25em;
+    top: 0;
     bottom: 0;
     display: flex;
     align-items: center;
@@ -39,6 +39,7 @@ div.attribtable-contents {
     background-color: var(--list-bg-color);
     overflow: auto;
     border: 1px solid var(--border-color);
+    position: relative;
 }
 
 table.attribtable-table {
@@ -76,16 +77,15 @@ table.attribtable-table th > span > span.icon {
     position: absolute;
     right: 1px;
     background-color: var(--button-bg-color);
+    flex: 0 0 auto;
+    margin-left: 0.5em;
 }
 
 span.attribtable-table-headername {
     flex: 1 1 auto;
     text-align: left;
-}
-
-table.attribtable-table th > span > span.icon {
-    flex: 0 0 auto;
-    margin-left: 0.5em;
+    display: flex;
+    align-items: center;
 }
 
 table.attribtable-table tr:nth-child(even) {
@@ -193,6 +193,7 @@ div.attribtable-footbar {
     display: flex;
     align-items: center;
     margin: 0 -0.25em;
+    flex-wrap: wrap;
 }
 
 div.attribtable-footbar > div {
@@ -203,8 +204,10 @@ div.attribtable-filter {
     flex: 1 1 auto;
 }
 
-div.attribtable-filter div.TextInput {
+div.attribtable-filter .attribtable-filter-value {
     flex: 1 1 auto;
+    min-width: 5em;
+    max-width: 15em;
 }
 
 body.ewresizing, body.ewresizing * {
@@ -215,4 +218,23 @@ body.ewresizing, body.ewresizing * {
 body.nsresizing, body.nsresizing * {
     cursor: ns-resize!important;
     user-select: none;
+}
+
+div.attribtable-resize-line-vert,
+div.attribtable-resize-line-horiz {
+    position: absolute;
+    z-index: 2;
+    background-color: var(--border-color);
+}
+
+div.attribtable-resize-line-vert {
+    width: 4px;
+    top: 0;
+    bottom: 0;
+}
+
+div.attribtable-resize-line-horiz {
+    height: 4px;
+    left: 0;
+    right: 0;
 }

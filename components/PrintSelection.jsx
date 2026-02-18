@@ -89,17 +89,18 @@ export default class PrintSelection extends React.Component {
         this.drawInteraction = null;
 
         this.isInteracting = false;
+        this.overHandle = false;
     }
     componentDidUpdate(prevProps) {
         if (
-            !isEqual(prevProps.fixedFrame, this.props.fixedFrame) ||
-            !isEqual(prevProps.center, this.props.center) ||
-            prevProps.rotation !== this.props.rotation ||
-            prevProps.scale !== this.props.scale
+            !this.isInteracting && (
+                !isEqual(prevProps.fixedFrame, this.props.fixedFrame) ||
+                !isEqual(prevProps.center, this.props.center) ||
+                prevProps.rotation !== this.props.rotation ||
+                prevProps.scale !== this.props.scale
+            )
         ) {
-            if (!this.isInteracting) {
-                this.recomputeFeature();
-            }
+            this.recomputeFeature(!isEqual(prevProps.center, this.props.center));
         }
         if (
             prevProps.printSeriesEnabled !== this.props.printSeriesEnabled ||
@@ -109,9 +110,16 @@ export default class PrintSelection extends React.Component {
             this.geometryChanged();
         }
     }
-    recomputeFeature() {
+    recomputeFeature(recenter = false) {
+        if (this.props.fixedFrame === null) {
+            return;
+        }
+        let center = this.props.center;
         // delete the old feature
         if (this.feature !== null) {
+            if (!recenter) {
+                center = ol.extent.getCenter(this.feature.getGeometry().getExtent());
+            }
             // remove old feature
             this.source.removeFeature(this.feature);
             this.feature = null;
@@ -120,45 +128,43 @@ export default class PrintSelection extends React.Component {
             this.seriesGeometries = [];
         }
         // render the current feature if given a fixed frame
-        if (this.props.fixedFrame !== null) {
-            // calculate actual width and height
-            const {width, height} = MapUtils.transformExtent(
-                this.map.getView().getProjection(),
-                this.props.center,
-                this.props.fixedFrame.width,
-                this.props.fixedFrame.height
-            );
-            // add rectangle
-            const x1 = this.props.center[0] + 0.5 * width;
-            const x2 = this.props.center[0] - 0.5 * width;
-            const y1 = this.props.center[1] + 0.5 * height;
-            const y2 = this.props.center[1] - 0.5 * height;
-            const geometry = new ol.geom.Polygon([
-                [
-                    [x1, y1],
-                    [x1, y2],
-                    [x2, y2],
-                    [x2, y1],
-                    [x1, y1]
-                ]
-            ]);
-            // rotate and scale rectangle
-            if (this.props.rotation) {
-                geometry.rotate(this.props.rotation * Math.PI / 180, this.props.center);
-            }
-            if (this.props.scale) {
-                geometry.scale(this.props.scale / 1000, undefined, this.props.center);
-            }
-            // add feature to layer
-            this.feature = new ol.Feature(geometry);
-            this.feature.on('change', this.geometryChanged);
-            this.source.addFeature(this.feature);
-            // store initial width and height for future updates
-            this.initialWidth = width;
-            this.initialHeight = height;
-            // update geometry to new extent
-            this.geometryChanged();
+        // calculate actual width and height
+        const {width, height} = MapUtils.transformExtent(
+            this.map.getView().getProjection(),
+            center,
+            this.props.fixedFrame.width,
+            this.props.fixedFrame.height
+        );
+        // add rectangle
+        const x1 = center[0] + 0.5 * width;
+        const x2 = center[0] - 0.5 * width;
+        const y1 = center[1] + 0.5 * height;
+        const y2 = center[1] - 0.5 * height;
+        const geometry = new ol.geom.Polygon([
+            [
+                [x1, y1],
+                [x1, y2],
+                [x2, y2],
+                [x2, y1],
+                [x1, y1]
+            ]
+        ]);
+        // rotate and scale rectangle
+        if (this.props.rotation) {
+            geometry.rotate(this.props.rotation * Math.PI / 180, center);
         }
+        if (this.props.scale) {
+            geometry.scale(this.props.scale / 1000, undefined, center);
+        }
+        // add feature to layer
+        this.feature = new ol.Feature(geometry);
+        this.feature.on('change', this.geometryChanged);
+        this.source.addFeature(this.feature);
+        // store initial width and height for future updates
+        this.initialWidth = width;
+        this.initialHeight = height;
+        // update geometry to new extent
+        this.geometryChanged();
     }
     componentDidMount() {
         this.map.on('pointermove', this.setViewportCursor);
@@ -187,17 +193,29 @@ export default class PrintSelection extends React.Component {
         const bottomright = getPixelFromCoordinate(this.feature.getGeometry().getCoordinates()[0][1], false);
         const bottomleft = getPixelFromCoordinate(this.feature.getGeometry().getCoordinates()[0][2], false);
         const topleft = getPixelFromCoordinate(this.feature.getGeometry().getCoordinates()[0][3], false);
+        this.overHandle = true;
         if (sqdist(ev.pixel, topright) < 400) {
-            this.map.getViewport().style.cursor = 'nesw-resize';
+            if (this.props.allowScaling) {
+                this.map.getViewport().style.cursor = 'nesw-resize'; return;
+            }
         } else if (sqdist(ev.pixel, bottomright) < 400) {
-            this.map.getViewport().style.cursor = `url(${rotateCursor}) 12 12, auto`;
+            if (this.props.allowRotation) {
+                this.map.getViewport().style.cursor = `url(${rotateCursor}) 12 12, auto`; return;
+            } else if (this.props.allowScaling) {
+                this.map.getViewport().style.cursor = 'nwse-resize'; return;
+            }
         } else if (sqdist(ev.pixel, bottomleft) < 400) {
-            this.map.getViewport().style.cursor = 'nesw-resize';
+            if (this.props.allowScaling) {
+                this.map.getViewport().style.cursor = 'nesw-resize'; return;
+            }
         } else if (sqdist(ev.pixel, topleft) < 400) {
-            this.map.getViewport().style.cursor = 'nwse-resize';
-        } else {
-            this.map.getViewport().style.cursor = '';
+            if (this.props.allowScaling) {
+                this.map.getViewport().style.cursor = 'nwse-resize'; return;
+            }
         }
+        // If this code is reached, the mouse was in fact not over any handle
+        this.overHandle = false;
+        this.map.getViewport().style.cursor = '';
     };
     addInteractions() {
         // move the selection
@@ -222,7 +240,7 @@ export default class PrintSelection extends React.Component {
         // scale and rotate the selection
         const modifyCondition = (ev) => {
             return ol.events.condition.primaryAction(ev)
-                && this.props.fixedFrame
+                && this.overHandle
                 && (this.props.allowScaling || this.props.allowRotation);
         };
         this.scaleRotateInteraction = new ol.interaction.Modify({
@@ -239,7 +257,7 @@ export default class PrintSelection extends React.Component {
                 feature.set(
                     'modifyGeometry',
                     {geometry: feature.getGeometry().clone()},
-                    true,
+                    true
                 );
             });
         });
@@ -282,7 +300,7 @@ export default class PrintSelection extends React.Component {
         // select a new area when no frame is given (only added when no fixed frame is given)
         const drawCondition = (ev) => {
             return ol.events.condition.primaryAction(ev)
-                && !this.props.fixedFrame;
+                && !this.props.fixedFrame && !this.overHandle;
         };
         this.drawInteraction = new ol.interaction.Draw({
             source: this.source,
@@ -534,7 +552,7 @@ export default class PrintSelection extends React.Component {
                 })
             ];
             const coordinates = this.getGeometry().getCoordinates()[0];
-            if (coordinates && this.props.fixedFrame) {
+            if (coordinates) {
                 if (this.props.allowScaling) {
                     // vertices to scale the selection
                     styles.push(FeatureStyles.printInteractionVertex({
