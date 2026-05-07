@@ -24,6 +24,7 @@
         "MapExport3D": "",
         "MapFilter": "",
         "MapLight3D": "",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "Skriv ut",
@@ -31,6 +32,7 @@
         "Settings": "",
         "Settings3D": "",
         "Share": "Dela länk",
+        "SunExposure3D": "",
         "ThemeSwitcher": "Tema",
         "AttributeTable": "",
         "AuthenticationLogin": "Logga in",
@@ -41,6 +43,7 @@
         "FeatureSearch": "",
         "GeometryDigitizer": "",
         "IdentifyPoint": "",
+        "IdentifyRadius": "",
         "IdentifyRegion": "Identifiera med område",
         "LayerCatalog": "",
         "Login": "Logga in",
@@ -48,6 +51,7 @@
         "MapLegend": "",
         "Measure": "Mät",
         "Measure3D": "",
+        "MeasureObject3D": "",
         "MeasureLineString": "Mäta en linje",
         "MeasurePolygon": "Mäta en polygon",
         "NewsPopup": "",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "",
         "Redlining": "Rita",
         "Routing": "",
+        "SensorThingsTool": "",
         "Tools": "Kartverktyg",
         "TourGuide": "",
         "TimeManager": "",
@@ -117,10 +122,13 @@
       "clear": "",
       "clone": "",
       "close": "",
+      "compute": "",
+      "date": "",
       "delete": "",
       "download": "",
       "ellipse": "",
       "export": "",
+      "false": "",
       "format": "Format:",
       "line": "Linje",
       "loading": "",
@@ -138,6 +146,7 @@
       "square": "",
       "sync2dview": "",
       "text": "Text",
+      "true": "",
       "wait": "",
       "zoomin": "Zooma in",
       "zoomout": "Zooma ut"
@@ -181,6 +190,9 @@
       "rotate": "",
       "rotation": "",
       "scale": "",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "",
       "subtract": "",
       "thescale": "",
@@ -325,6 +337,7 @@
       "radius": ""
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": ""
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "Jämför översta lagret",
       "deletealllayers": "Ta bort alla lager",
-      "hidealllayers": "",
       "importlayer": "Importera lager",
       "maptip": "Visa karttips för lager",
       "printlegend": "Skriv ut teckenförklaring",
       "separator": "",
       "separatortooltip": "",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "",
       "visiblefilter": "",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "",
+      "currentdatetime": "",
       "date": "",
       "dayspersec": "",
       "helpersVisible": "",
@@ -449,6 +463,12 @@
       "pointLabel": "Position",
       "showmeasurements": ""
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": ""
     },
@@ -471,6 +491,10 @@
       "windowtitle": ""
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "",
       "unknownmore": ""
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "",
       "contactEmail": "",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "",
       "snappingenabled": "",
       "vertex": ""
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "",
+      "default_rounded": "",
       "dark": "",
-      "highcontrast": ""
+      "dark_rounded": "",
+      "highcontrast": "",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",

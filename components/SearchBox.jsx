@@ -64,6 +64,7 @@ class SearchBox extends React.Component {
         searchOptions: PropTypes.shape({
             allowAddLayerAsGroup: PropTypes.bool,
             allowSearchFilters: PropTypes.bool,
+            extraCoordinateSearchCrs: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
             focusOnStartup: PropTypes.bool,
             hideResultLabels: PropTypes.bool,
             highlightStyle: PropTypes.object,
@@ -398,9 +399,10 @@ class SearchBox extends React.Component {
                 {icon}
                 {result.theme ? (<Icon className="searchbox-result-openicon" icon="open" />) : null}
                 <span className="searchbox-result-label" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(result.text).replace(/<br\s*\/>/ig, ' ')}} title={result.label ?? result.text} />
-                {result.theme && addThemes ? (<Icon icon="plus" onClick={() => this.selectLayerResult(provider, group, result)} title={LocaleUtils.tr("themeswitcher.addtotheme")}/>) : null}
-                {this.props.searchOptions.allowAddLayerAsGroup && result.sublayers ? (<Icon icon="group" onClick={() => this.selectLayerResult(provider, group, result, true)} title={LocaleUtils.tr("importlayer.asgroup")} />) : null}
+                {result.theme && addThemes ? (<Icon icon="plus" onClick={(ev) => {MiscUtils.killEvent(ev); this.selectLayerResult(provider, group, result); }} title={LocaleUtils.tr("themeswitcher.addtotheme")}/>) : null}
+                {this.props.searchOptions.allowAddLayerAsGroup && result.sublayers ? (<Icon icon="group" onClick={(ev) => {MiscUtils.killEvent(ev); this.selectLayerResult(provider, group, result, true); }} title={LocaleUtils.tr("importlayer.asgroup")} />) : null}
                 {result.info ? <Icon icon="info-sign" onClick={(ev) => this.toggleLayerInfo(ev, provider, group, result, key, parent)} /> : null}
+                {result.layer.link ? <Icon className="searchbox-entry-link" icon="info-sign" onClick={ev => this.openUrl(ev, result.layer.link, result.target, result.label ?? result.text)} title={LocaleUtils.tr("layercatalog.openlink")} /> : null}
             </div>
         ), this.state.activeLayerInfo === key ? (
             <div className="searchbox-result-abstract"
@@ -449,7 +451,7 @@ class SearchBox extends React.Component {
         if (result.geometry) {
             this.showResultGeometry(result, {feature: {type: "Feature", geometry: result.geometry}, crs: result.crs});
         } else if (this.props.searchProviders[provider].getResultGeometry) {
-            this.props.searchProviders[provider].getResultGeometry(result, (response) => { this.showResultGeometry(result, response); }, axios);
+            this.props.searchProviders[provider].getResultGeometry(result, response => this.showResultGeometry(result, response), axios);
         } else {
             // Display marker
             this.showResultGeometry(result, {feature: {type: "Feature", geometry: {type: "Point", coordinates: [result.x, result.y]}}, crs: result.crs});
@@ -513,7 +515,7 @@ class SearchBox extends React.Component {
                 type: "placeholder",
                 name: params.name,
                 title: entry.title ?? params.name,
-                role: params.USERLAYER,
+                role: LayerRole.USERLAYER,
                 loading: true
             });
             ServiceLayerUtils.findLayers(params.type, params.url, [params], this.props.map.projection, (id, layer) => {
@@ -732,6 +734,7 @@ class SearchBox extends React.Component {
         const searchParams = {
             mapcrs: this.props.map.projection,
             displaycrs: this.props.map.displayCrs,
+            extracrs: (this.props.searchOptions.extraCoordinateSearchCrs === "mousecrs" ? this.props.theme.additionalMouseCrs : this.props.searchOptions.extraCoordinateSearchCrs) ?? [],
             lang: LocaleUtils.lang(),
             limit: this.props.searchOptions.resultLimit,
             filterPoly: this.state.filterGeometry?.coordinates?.[0],
@@ -832,7 +835,10 @@ class SearchBox extends React.Component {
             const text = LocaleUtils.tr("search.existinglayer") + ": " + existingLayerName;
             this.props.showNotification("existinglayer", text);
         } else {
-            this.props.addLayer({...layer, role: LayerRole.USERLAYER});
+            const existingLayer = this.props.layers.find(l => {
+                return l.type === layer.type && l.url === layer.url;
+            });
+            this.props.addLayer({...layer, srcid: existingLayer?.srcid, role: existingLayer?.role ?? LayerRole.USERLAYER});
         }
         if (this.props.searchOptions.zoomToLayers && layer.bbox) {
             this.props.zoomToExtent(layer.bbox.bounds, layer.bbox.crs);
@@ -841,55 +847,76 @@ class SearchBox extends React.Component {
         this.props.setCurrentTask('LayerTree');
     };
     showResultGeometry = (item, response, scale = undefined) => {
+        // Collect highlight features
+        let features = [];
+        if (response?.geometry) {
+            const feature = response.geometry.coordinates ? {
+                type: "Feature", geometry: response.geometry
+            } : VectorLayerUtils.wktToGeoJSON(response.geometry, response.crs, response.crs);
+            if (feature) {
+                features.push(feature);
+            }
+        } else if (response?.feature) {
+            features = response.feature.features ?? [response.feature];
+        }
+        // Add highlight features and markers
         const mapCrs = this.props.map.projection;
-        const feature = response?.geometry ? {type: "Feature", geometry: response.geometry} : response?.feature;
+        const showMarkers = !response.hidemarker && this.props.searchOptions.showHighlightMarker;
+        const label = (item.label ?? item.text ?? '').replace(/<\/?\w+\s*\/?>/g, '');
         const layer = {
             id: "searchselection",
             role: LayerRole.SELECTION
         };
-        if (feature) {
-            const features = feature.features ?? [feature];
-            features.forEach(feat => {
-                feat.geometry = VectorLayerUtils.reprojectGeometry(feat.geometry, response.crs ?? mapCrs, mapCrs);
-                feat.styleName = feat.geometry?.type === 'Point' && this.props.searchOptions.showHighlightMarker ? 'marker' : 'default';
-                feat.styleOptions = this.props.searchOptions.highlightStyle || {};
-                if (feat.crs?.properties?.name) {
-                    feat.crs = CoordinatesUtils.fromOgcUrnCrs(feat.crs.properties.name);
-                }
-            });
-            // If first feature is not a point(=marker), add a marker
-            if (features[0].styleName !== "marker" && !response.hidemarker && this.props.searchOptions.showHighlightMarker) {
-                const center = response.center ? CoordinatesUtils.reproject(
-                    response.center, response.crs ?? mapCrs, mapCrs
-                ) : CoordinatesUtils.reproject(
-                    [item.x, item.y], item.crs ?? mapCrs, mapCrs
-                );
-                features.unshift({
-                    geometry: {type: 'Point', coordinates: center},
-                    styleName: 'marker'
+        const highlightFeatures = [];
+        features.forEach(feature => {
+            feature.geometry = VectorLayerUtils.reprojectGeometry(feature.geometry, response.crs ?? mapCrs, mapCrs);
+            if (!showMarkers || !feature.geometry.type.endsWith("Point")) {
+                highlightFeatures.push({
+                    ...feature,
+                    properties: {...(!showMarkers && !this.props.searchOptions.hideResultLabels && {label: label})},
+                    styleName: 'default',
+                    styleOptions: this.props.searchOptions.highlightStyle || {}
                 });
             }
-            // Label first feature
-            if (!this.props.searchOptions.hideResultLabels) {
-                const label = (item.label ?? item.text ?? '').replace(/<\/?\w+\s*\/?>/g, '');
-                features[0].properties = {...features[0].properties, label: label};
+            if (showMarkers) {
+                if (feature.geometry.type.endsWith("Point")) {
+                    const parts = feature.geometry.type.startsWith("Multi") ? feature.geometry.coordinates : [feature.geometry.coordinates];
+                    parts.forEach(part => {
+                        highlightFeatures.push({
+                            type: "Feature",
+                            geometry: {type: 'Point', coordinates: part},
+                            properties: {...(!this.props.searchOptions.hideResultLabels && {label: label})},
+                            styleName: 'marker'
+                        });
+                    });
+                } else {
+                    const center = response.center ? CoordinatesUtils.reproject(
+                        response.center, response.crs ?? mapCrs, mapCrs
+                    ) : VectorLayerUtils.getFeatureCenter(feature);
+                    highlightFeatures.push({
+                        type: "Feature",
+                        geometry: {type: 'Point', coordinates: center},
+                        properties: {...(!this.props.searchOptions.hideResultLabels && {label: label})},
+                        styleName: 'marker'
+                    });
+                }
             }
-            // Mark first feature as searchmarker
-            features[0].id = 'searchmarker';
-            this.props.addLayerFeatures(layer, features, true);
-        } else {
+        });
+        if (isEmpty(highlightFeatures)) {
             const center = CoordinatesUtils.reproject([item.x, item.y], item.crs ?? mapCrs, mapCrs);
             const marker = {
                 type: "Feature",
                 geometry: {type: "Point", coordinates: center},
+                properties: {...(!this.props.searchOptions.hideResultLabels && {label: label})},
                 styleName: 'marker'
             };
-            if (!this.props.searchOptions.hideResultLabels) {
-                const label = (item.label ?? item.text ?? '').replace(/<\/?\w+\s*\/?>/g, '');
-                marker.properties = {label: label};
-            }
-            this.props.addLayerFeatures(layer, [marker], true);
+            highlightFeatures.push(marker);
         }
+        // Mark first feature as searchmarker
+        highlightFeatures[0].id = 'searchmarker';
+        this.props.addLayerFeatures(layer, highlightFeatures, true);
+
+        // Zoom to result bbox
         const bbox = response?.bbox ? CoordinatesUtils.reprojectBbox(
             response.bbox, response.crs ?? mapCrs, mapCrs
         ) : CoordinatesUtils.reprojectBbox(

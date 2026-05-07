@@ -24,6 +24,7 @@
         "MapExport3D": "",
         "MapFilter": "Филтър на картата",
         "MapLight3D": "Дата и час",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "Отпечатване",
@@ -31,6 +32,7 @@
         "Settings": "Настройки",
         "Settings3D": "",
         "Share": "Споделяне на връзка",
+        "SunExposure3D": "",
         "ThemeSwitcher": "Тема",
         "AttributeTable": "Таблица на атрибутите",
         "AuthenticationLogin": "Вход",
@@ -41,6 +43,7 @@
         "FeatureSearch": "Търсене на функции",
         "GeometryDigitizer": "Дигитайзер на геометрия",
         "IdentifyPoint": "Идентифициране на точка",
+        "IdentifyRadius": "",
         "IdentifyRegion": "Определяне на региона",
         "LayerCatalog": "Каталог на слоевете",
         "Login": "Вход",
@@ -48,6 +51,7 @@
         "MapLegend": "Легенда",
         "Measure": "Мярка",
         "Measure3D": "Мярка",
+        "MeasureObject3D": "",
         "MeasureLineString": "Измерване на линия",
         "MeasurePolygon": "Измерване на полигон",
         "NewsPopup": "",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "Експорт на мрежата",
         "Redlining": "Redlining",
         "Routing": "Маршрутизиране",
+        "SensorThingsTool": "",
         "Tools": "Инструменти за карта",
         "TourGuide": "",
         "TimeManager": "Мениджър на времето",
@@ -117,10 +122,13 @@
       "clear": "Clear",
       "clone": "",
       "close": "Затвори",
+      "compute": "",
+      "date": "",
       "delete": "Изтриване на",
       "download": "Изтегляне",
       "ellipse": "Елипса",
       "export": "Експорт",
+      "false": "",
       "format": "Формат",
       "line": "Линия",
       "loading": "Зареждане...",
@@ -138,6 +146,7 @@
       "square": "Квадрат",
       "sync2dview": "Синхронизиране на изгледа",
       "text": "Текст",
+      "true": "",
       "wait": "Моля, изчакайте...",
       "zoomin": "Увеличаване на мащаба",
       "zoomout": "Увеличаване на мащаба"
@@ -181,6 +190,9 @@
       "rotate": "Завъртете",
       "rotation": "Завъртане",
       "scale": "Стълбища",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "Сфера",
       "subtract": "",
       "thescale": "Стълбища",
@@ -325,6 +337,7 @@
       "radius": "Радиус"
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": "Каталог на слоевете"
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "Сравнете горния слой",
       "deletealllayers": "Премахване на всички слоеве",
-      "hidealllayers": "",
       "importlayer": "Импортиране на слой",
       "maptip": "Показване на съвети за картата на слоевете",
       "printlegend": "Легенда за печат",
       "separator": "Сепаратор",
       "separatortooltip": "Добавяне на разделител",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "Trasparency",
       "visiblefilter": "Филтриране на невидими слоеве",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "",
+      "currentdatetime": "",
       "date": "",
       "dayspersec": "",
       "helpersVisible": "",
@@ -449,6 +463,12 @@
       "pointLabel": "Позиция",
       "showmeasurements": "Показване на измерванията"
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": "Отваряне с Ctrl+Click"
     },
@@ -471,6 +491,10 @@
       "windowtitle": "Цифрово въвеждане"
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "Теми",
       "unknownmore": ""
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "Резюме",
       "contactEmail": "Имейл",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "Зареждане на геометрии за прихващане...",
       "snappingenabled": "Снапинг",
       "vertex": "Прилепване към върховете"
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "",
+      "default_rounded": "",
       "dark": "",
-      "highcontrast": ""
+      "dark_rounded": "",
+      "highcontrast": "",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",

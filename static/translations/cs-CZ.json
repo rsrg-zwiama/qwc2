@@ -24,6 +24,7 @@
         "MapExport3D": "",
         "MapFilter": "",
         "MapLight3D": "",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "Tisk",
@@ -31,6 +32,7 @@
         "Settings": "Nastavení",
         "Settings3D": "",
         "Share": "Sdílet odkaz",
+        "SunExposure3D": "",
         "ThemeSwitcher": "Téma",
         "AttributeTable": "Atributy",
         "AuthenticationLogin": "Přihlášení",
@@ -41,6 +43,7 @@
         "FeatureSearch": "",
         "GeometryDigitizer": "",
         "IdentifyPoint": "Informace o bodu",
+        "IdentifyRadius": "",
         "IdentifyRegion": "Informace o oblasti",
         "LayerCatalog": "Katalog vrstev",
         "Login": "Přihlášení",
@@ -48,6 +51,7 @@
         "MapLegend": "Legenda",
         "Measure": "Měření",
         "Measure3D": "",
+        "MeasureObject3D": "",
         "MeasureLineString": "Změřit úsek",
         "MeasurePolygon": "Měřit mnohoúhelník",
         "NewsPopup": "",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "",
         "Redlining": "Připomínkování",
         "Routing": "Trasy",
+        "SensorThingsTool": "",
         "Tools": "Nástroje mapy",
         "TourGuide": "",
         "TimeManager": "",
@@ -117,10 +122,13 @@
       "clear": "",
       "clone": "",
       "close": "Zavřít",
+      "compute": "",
+      "date": "",
       "delete": "",
       "download": "",
       "ellipse": "",
       "export": "Export",
+      "false": "",
       "format": "Formát:",
       "line": "Linie",
       "loading": "Načítání...",
@@ -138,6 +146,7 @@
       "square": "",
       "sync2dview": "",
       "text": "Text",
+      "true": "",
       "wait": "Čekejte...",
       "zoomin": "Přiblížit",
       "zoomout": "Oddálit"
@@ -181,6 +190,9 @@
       "rotate": "",
       "rotation": "",
       "scale": "",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "",
       "subtract": "",
       "thescale": "",
@@ -325,6 +337,7 @@
       "radius": "Velikost okruhu"
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": "Katalog vrstev"
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "Porovnat vrchní vrstvy",
       "deletealllayers": "Odstranit všechny vrstvy",
-      "hidealllayers": "",
       "importlayer": "Importovat vrstvu",
       "maptip": "Zobrazovat bubliny nad mapou",
       "printlegend": "Tisk legendy",
       "separator": "",
       "separatortooltip": "",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "Průhlednost",
       "visiblefilter": "Skrýt nezobrazující se vrstvy",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "",
+      "currentdatetime": "",
       "date": "",
       "dayspersec": "",
       "helpersVisible": "",
@@ -449,6 +463,12 @@
       "pointLabel": "Poloha",
       "showmeasurements": ""
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": ""
     },
@@ -471,6 +491,10 @@
       "windowtitle": ""
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "Témata",
       "unknownmore": ""
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "Abstrakt",
       "contactEmail": "Kontaktní e-mail",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "Načítání...",
       "snappingenabled": "",
       "vertex": ""
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "",
+      "default_rounded": "",
       "dark": "",
-      "highcontrast": ""
+      "dark_rounded": "",
+      "highcontrast": "",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",

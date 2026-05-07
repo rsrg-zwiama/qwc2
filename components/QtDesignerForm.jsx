@@ -16,7 +16,7 @@ import PropTypes from 'prop-types';
 import {v4 as uuidv4} from 'uuid';
 
 import ConfigUtils from '../utils/ConfigUtils';
-import {parseExpression, FeatureCache, KeyValCache} from '../utils/EditingUtils';
+import {parseExpression} from '../utils/EditingUtils';
 import LocaleUtils from '../utils/LocaleUtils';
 import MiscUtils from '../utils/MiscUtils';
 import EditComboField from './EditComboField';
@@ -118,10 +118,6 @@ class QtDesignerForm extends React.Component {
             relationWidget.scrollTo(0, relationWidget.scrollHeight);
             this.setState({relationAddPressed: null});
         }
-    }
-    componentWillUnmount() {
-        KeyValCache.clear();
-        FeatureCache.clear();
     }
     render() {
         if (this.state.loading) {
@@ -276,6 +272,10 @@ class QtDesignerForm extends React.Component {
             fontSize: Math.round((fontProps.pointsize || 9) / 9 * 100) + "%",
             textAlign: 'left'
         };
+        const frameStyle = {};
+        if (prop.flat) {
+            frameStyle.border = '0';
+        }
         if (prop.alignment) {
             if (prop.alignment.includes("Qt::AlignRight")) {
                 fontStyle.textAlign = 'right';
@@ -315,7 +315,7 @@ class QtDesignerForm extends React.Component {
             }
             return (
                 <div className="qt-designer-form-container">
-                    <div className="qt-designer-form-frame">
+                    <div className="qt-designer-form-frame" style={frameStyle}>
                         {widget.name.startsWith("nrel__") ? this.renderNRelation(widget) : this.renderLayout(widget.layout, feature, editConfig, updateField, nametransform)}
                     </div>
                 </div>
@@ -332,13 +332,16 @@ class QtDesignerForm extends React.Component {
                     <div className="qt-designer-form-frame-title" style={fontStyle}>
                         {this.translateFormString(prop.title, editConfig.layerName)}
                     </div>
-                    <div className="qt-designer-form-frame">
+                    <div className="qt-designer-form-frame" style={frameStyle}>
                         {widget.name.startsWith("nrel__") ? this.renderNRelation(widget) : this.renderLayout(widget.layout, feature, editConfig, updateField, nametransform)}
                     </div>
                 </div>
             );
         } else if (widget.class === "QTabWidget") {
             const tabwidgets = (widget.widget || []).filter(child => {
+                if (!child.property.visibilityExpression) {
+                    return true;
+                }
                 const exprResult = parseExpression(child.property.visibilityExpression, feature, editConfig, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}));
                 return exprResult !== false && exprResult !== 0;
             });
@@ -354,7 +357,7 @@ class QtDesignerForm extends React.Component {
                 <div className="qt-designer-form-container">
                     <ButtonBar active={activetab} buttons={tabs} className="qt-designer-form-tabbar"
                         onClick={(key) => this.setState((state) => ({activetabs: {...state.activetabs, [widget.name]: key}}))} />
-                    <div className="qt-designer-form-frame">
+                    <div className="qt-designer-form-frame qt-designer-form-tab" style={frameStyle}>
                         {tabwidgets.filter(child => child.layout).map(child => (
                             this.renderLayout(child.layout, feature, editConfig, updateField, nametransform, child.name === activetab)
                         ))}
@@ -413,7 +416,7 @@ class QtDesignerForm extends React.Component {
                 const count = parts.length;
                 const fieldId = parts.slice(1, count - 3).join("__");
                 value = (feature.properties || [])[fieldId] ?? "";
-                const keyvalrel = this.props.mapPrefix + "." + parts[count - 3] + ":" + parts[count - 2] + ":" + parts[count - 1];
+                const keyvalrel = parts[count - 3] + ":" + parts[count - 2] + ":" + parts[count - 1];
                 let filterExpr = null;
                 if (field?.filterExpression) {
                     filterExpr = parseExpression(field.filterExpression, feature, editConfig, this.props.iface, this.props.mapPrefix, this.props.mapCrs, () => this.setState({reevaluate: +new Date}), true);
@@ -421,11 +424,14 @@ class QtDesignerForm extends React.Component {
                 return (
                     <EditComboField
                         editIface={this.props.iface} fieldId={fieldId} filterExpr={filterExpr} key={fieldId}
-                        keyvalrel={keyvalrel} multiSelect={widget.property.allowMulti === true || widget.allowMulti === "true"}
+                        keyvalrel={keyvalrel} mapPrefix={this.props.mapPrefix}
+                        multiSelect={widget.property.allowMulti === true || widget.allowMulti === "true"}
                         name={nametransform(fieldId)} placeholder={inputConstraints.placeholder}
                         readOnly={inputConstraints.readOnly || fieldConstraints.readOnly}
                         required={inputConstraints.required || fieldConstraints.required}
-                        style={fontStyle} updateField={updateField} value={value} />
+                        showAdd={fieldConstraints.showAdd} showEdit={fieldConstraints.showEdit}
+                        style={fontStyle} switchEditContext={this.props.switchEditContext}
+                        updateField={updateField} value={value} />
                 );
             } else {
                 const values = MiscUtils.ensureArray(widget.item || []).map((item) => ({
@@ -456,7 +462,7 @@ class QtDesignerForm extends React.Component {
             const min = prop.minimumDate ? this.dateConstraint(prop.minimumDate) : "1600-01-01";
             const max = prop.maximumDate ? this.dateConstraint(prop.maximumDate) : "9999-12-31";
             return (
-                <input max={max} min={min} name={elname} onChange={(ev) => updateField(widget.name, ev.target.value)} {...inputConstraints} style={fontStyle} type="date" value={value} />
+                <input max={max} min={min} name={elname} onChange={(ev) => updateField(widget.name, ev.target.value)} {...inputConstraints} style={fontStyle} type="date" value={value.split("T")[0]} />
             );
         } else if (widget.class === "QTimeEdit") {
             return (
@@ -497,7 +503,6 @@ class QtDesignerForm extends React.Component {
                     value = feature.properties?.[attrname];
                     if (layer === reltable) {
                         const index = parseInt(nametransform("").split("__")[1], 10); // Ugh..
-                        const reldataset = this.props.mapPrefix + "." + reltable;
                         const displayField = attrname.split("__")[1];
                         if (feature.__status__ !== "empty") {
                             const featurebuttons = [
@@ -505,7 +510,7 @@ class QtDesignerForm extends React.Component {
                             ];
                             return (
                                 <div className="qt-designer-form-featurelink-buttons">
-                                    <ButtonBar buttons={featurebuttons} forceLabel onClick={() => this.props.editRelationRecord('Edit', reltable, reldataset, index, displayField)} />
+                                    <ButtonBar buttons={featurebuttons} forceLabel onClick={() => this.props.editRelationRecord('Edit', reltable, index, displayField)} />
                                 </div>
                             );
                         } else {
@@ -514,7 +519,7 @@ class QtDesignerForm extends React.Component {
                                 featurebuttons.push({key: 'Pick', icon: 'pick', label: LocaleUtils.tr("common.pick")});
                             }
                             featurebuttons.push({key: 'Create', icon: 'editdraw', label: LocaleUtils.tr("editing.create")});
-                            return (<ButtonBar buttons={featurebuttons} forceLabel onClick={(action) => this.props.editRelationRecord(action, reltable, reldataset, index, displayField)} />);
+                            return (<ButtonBar buttons={featurebuttons} forceLabel onClick={(action) => this.props.editRelationRecord(action, reltable, index, displayField)} />);
                         }
                     } else {
                         if (value !== null) {
@@ -523,7 +528,7 @@ class QtDesignerForm extends React.Component {
                             ];
                             return (
                                 <div className="qt-designer-form-featurelink-buttons">
-                                    <ButtonBar buttons={featurebuttons} onClick={() => this.props.switchEditContext('Edit', layer, value, (v) => updateField(attrname, v), attrname)} />
+                                    <ButtonBar buttons={featurebuttons} onClick={() => this.props.switchEditContext('Edit', layer, value, (f) => updateField(attrname, f.id), attrname)} />
                                     <button className="button" onClick={() => updateField(attrname, null)} type="button"><Icon icon="clear" /></button>
                                 </div>
                             );
@@ -532,7 +537,7 @@ class QtDesignerForm extends React.Component {
                                 {key: 'Pick', icon: 'pick', label: LocaleUtils.tr("common.pick")},
                                 {key: 'Create', icon: 'editdraw', label: LocaleUtils.tr("editing.create")}
                             ];
-                            return (<ButtonBar buttons={featurebuttons} onClick={(action) => this.props.switchEditContext(action, layer, null, (v) => updateField(attrname, v), attrname)} />);
+                            return (<ButtonBar buttons={featurebuttons} onClick={(action) => this.props.switchEditContext(action, layer, null, (f) => updateField(attrname, f.id), attrname)} />);
                         }
                     }
                 }

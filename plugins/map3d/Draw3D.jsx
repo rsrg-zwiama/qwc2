@@ -7,25 +7,30 @@
  */
 
 import React from 'react';
+import {connect} from 'react-redux';
 
 import PropTypes from 'prop-types';
 import {Group} from 'three';
 import {v4 as uuidv4} from 'uuid';
 
+import {LayerRole} from '../../actions/layers';
 import Icon from '../../components/Icon';
 import CreateTool3D from '../../components/map3d/drawtool/CreateTool3D';
 import EditTool3D from '../../components/map3d/drawtool/EditTool3D';
 import TaskBar from '../../components/TaskBar';
 import ButtonBar from '../../components/widgets/ButtonBar';
+import {FeatureSnapIndex} from '../../utils/FeatureSnapIndex';
 import LocaleUtils from '../../utils/LocaleUtils';
 
 
 /**
  * Draw objects in the 3D map.
  */
-export default class Draw3D extends React.Component {
+class Draw3D extends React.Component {
     static propTypes = {
-        sceneContext: PropTypes.object
+        layers: PropTypes.array,
+        sceneContext: PropTypes.object,
+        theme: PropTypes.object
     };
     state = {
         action: null,
@@ -37,30 +42,35 @@ export default class Draw3D extends React.Component {
     };
     onShow = () => {
         this.ensureDrawGroup();
+        const themeLayer = this.props.layers.find(layer => layer.role === LayerRole.THEME);
+        const activeLayers = (this.props.sceneContext.colorLayers[themeLayer.id]?.params?.LAYERS || "").split(",");
+        const snapLayers = this.props.theme.snapping ? this.props.theme.snapping.snaplayers.map(entry => entry.name).filter(layer => activeLayers.includes(layer)) : [];
+        this.snapIndex2d = new FeatureSnapIndex(themeLayer, snapLayers, this.props.sceneContext.mapCrs);
         this.setState({action: 'Pick'});
     };
     onHide = () => {
         // Remove empty draw groups
-        Object.entries(this.props.sceneContext.sceneObjects).filter(([objectId, options]) => {
-            return options.drawGroup === true;
-        }).forEach(([objectId, options]) => {
-            const object = this.props.sceneContext.getSceneObject(objectId);
+        Object.values(this.props.sceneContext.objectTree).filter(entry => {
+            return entry.drawGroup === true;
+        }).forEach(entry => {
+            const object = this.props.sceneContext.getSceneObject(entry.objectId);
             if (object.children.length === 0) {
-                this.props.sceneContext.removeSceneObject(objectId);
+                this.props.sceneContext.removeSceneObject(entry.objectId);
             }
         });
-        this.setState({selectedObject: null});
+        this.snapIndex2d = null;
+        this.setState({selectedObject: null, action: null});
     };
     ensureDrawGroup = () => {
         // Ensure a draw group is present
-        const drawGroup = Object.entries(this.props.sceneContext.sceneObjects).find(([key, options]) => {
-            return options.drawGroup === true;
+        const drawGroupEntry = Object.values(this.props.sceneContext.objectTree).find(entry => {
+            return entry.drawGroup === true;
         });
-        if (drawGroup === undefined) {
+        if (drawGroupEntry === undefined) {
             this.addDrawGroup(LocaleUtils.tr("draw3d.drawings"));
         } else {
-            this.props.sceneContext.updateSceneObject(drawGroup[0], {visibility: true});
-            this.setState({drawGroupId: drawGroup[0]});
+            this.props.sceneContext.updateSceneObject(drawGroupEntry.objectId, {visibility: true});
+            this.setState({drawGroupId: drawGroupEntry.objectId});
         }
     };
     createDrawGroup = () => {
@@ -75,10 +85,9 @@ export default class Draw3D extends React.Component {
         const objectId = uuidv4();
         const options = {
             drawGroup: true,
-            layertree: true,
             title: name
         };
-        this.props.sceneContext.addSceneObject(objectId, new Group(), options);
+        this.props.sceneContext.addSceneObject(objectId, new Group(), true, options);
         this.setState({drawGroupId: objectId});
     };
     renderBody = () => {
@@ -97,7 +106,7 @@ export default class Draw3D extends React.Component {
             {key: "Pick", tooltip: LocaleUtils.tr("common.pick"), icon: "nodetool", data: {action: "Pick", geomType: null}},
             {key: "Delete", tooltip: LocaleUtils.tr("common.delete"), icon: "trash", data: {action: "Delete", geomType: null}, disabled: !this.state.selectedObject}
         ];
-        const drawGroups = Object.entries(this.props.sceneContext.sceneObjects).filter(([key, entry]) => entry.drawGroup === true);
+        const drawGroupEntries = Object.values(this.props.sceneContext.objectTree).filter(entry => entry.drawGroup === true);
         return (
             <div>
                 <div className="redlining-controlsbar">
@@ -105,8 +114,8 @@ export default class Draw3D extends React.Component {
                         <div>{LocaleUtils.tr("redlining.layer")}</div>
                         <div className="controlgroup">
                             <select onChange={ev => this.setActiveDrawGroup(ev.target.value)} value={this.state.drawGroupId}>
-                                {drawGroups.map(([objectId, options]) => (
-                                    <option key={objectId} value={objectId}>{options.title}</option>
+                                {drawGroupEntries.map(entry => (
+                                    <option key={entry.objectId} value={entry.objectId}>{entry.title}</option>
                                 ))}
                             </select>
                             <button className="button" onClick={this.createDrawGroup}><Icon icon="plus" /></button>
@@ -139,8 +148,8 @@ export default class Draw3D extends React.Component {
                 <EditTool3D
                     color={this.state.color} colorChanged={color => this.setState({color})}
                     drawGroupId={this.state.drawGroupId} objectPicked={this.objectPicked}
-                    sceneContext={this.props.sceneContext}
-                    selectedObject={this.state.selectedObject} />
+                    sceneContext={this.props.sceneContext} selectedObject={this.state.selectedObject}
+                    snapIndex2d={this.snapIndex2d} />
             );
         }
         return null;
@@ -175,6 +184,7 @@ export default class Draw3D extends React.Component {
         });
         if (parent) {
             parent.remove(this.state.selectedObject);
+            this.props.sceneContext.eventDispatcher.dispatchEvent({type: 'objectDeleted', objectUuid: this.state.selectedObject.uuid});
             while (parent.parent && !parent.isMesh && parent.children.length === 0 && parent !== group) {
                 const grandparent = parent.parent;
                 grandparent.remove(parent);
@@ -196,3 +206,9 @@ export default class Draw3D extends React.Component {
         this.setState({selectedObject: object});
     };
 }
+
+export default connect((state) => ({
+    theme: state.theme.current,
+    layers: state.layers.flat
+}), {
+})(Draw3D);

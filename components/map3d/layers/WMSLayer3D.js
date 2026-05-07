@@ -10,14 +10,17 @@ import ColorLayer from '@giro3d/giro3d/core/layer/ColorLayer';
 import TiledImageSource from '@giro3d/giro3d/sources/TiledImageSource.js';
 import ol from 'openlayers';
 
-import {wmsImageLoadFunction, wmsToOpenlayersOptions} from '../../map/layers/WMSLayer';
+import {wmsImageLoadFunction, wmsToOpenlayersOptions, getClientSideOpacity} from '../../map/layers/WMSLayer';
+import {Layer3D} from './Layer3D';
 
 
 export default {
     create3d: (options, projection) => {
         const queryParameters = {...wmsToOpenlayersOptions(options), __t: +new Date()};
-        return new ColorLayer({
+        const clientSideOpacity = getClientSideOpacity(options, queryParameters);
+        const layer = new Layer3D(options.id, new ColorLayer({
             name: options.name,
+            opacity: clientSideOpacity ?? 1,
             source: new TiledImageSource({
                 source: new ol.source.TileWMS({
                     url: options.url.split("?")[0],
@@ -27,13 +30,19 @@ export default {
                     tileLoadFunction: (imageTile, src) => wmsImageLoadFunction(imageTile.getImage(), src)
                 })
             })
-        });
+        }));
+        layer.layer().visible = queryParameters.LAYERS !== "" && options.visibility;
+        return layer;
     },
-    update3d: (layer, newOptions, oldOptions, projection) => {
-        if (oldOptions && layer?.source?.updateParams) {
+    update3d: (mapLayer, newOptions, oldOptions, projection) => {
+        const layer = mapLayer.layer();
+        const source = layer.source.source;
+        if (oldOptions && source.updateParams) {
             let changed = (oldOptions.rev || 0) !== (newOptions.rev || 0);
             const oldParams = wmsToOpenlayersOptions(oldOptions);
+            getClientSideOpacity(oldOptions, oldParams); // Make getClientSideOpacity transform oldParams if necessary
             const newParams = wmsToOpenlayersOptions(newOptions);
+            const clientSideOpacity = getClientSideOpacity(newOptions, newParams);
             Object.keys(oldParams).forEach(key => {
                 if (!(key in newParams)) {
                     newParams[key] = undefined;
@@ -50,15 +59,18 @@ export default {
                 if (layer.__updateTimeout) {
                     clearTimeout(layer.__updateTimeout);
                 }
-                if (!newOptions.visibility || !queryParameters.LAYERS) {
+                if (!newOptions.visibility || queryParameters.LAYERS === "") {
                     layer.visible = false;
                 }
+                layer.opacity = clientSideOpacity ?? 1;
                 layer.__updateTimeout = setTimeout(() => {
-                    layer.visible = queryParameters.LAYERS && newOptions.visibility;
-                    layer.source.updateParams(queryParameters);
-                    layer.update();
+                    layer.visible = queryParameters.LAYERS !== "" && newOptions.visibility;
+                    source.updateParams(queryParameters);
+                    layer.source.update();
                     layer.__updateTimeout = null;
                 }, 500);
+            } else {
+                layer.opacity = clientSideOpacity ?? 1;
             }
         }
     }

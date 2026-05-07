@@ -13,7 +13,7 @@ import FileSaver from 'file-saver';
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
 
-import {LayerRole, addLayerFeatures, removeLayer} from '../actions/layers';
+import {LayerRole, addLayerFeatures, removeLayer, refreshLayer} from '../actions/layers';
 import {zoomToExtent, zoomToPoint} from '../actions/map';
 import {setCurrentTask, setCurrentTaskBlocked} from '../actions/task';
 import EditComboField from '../components/EditComboField';
@@ -54,6 +54,7 @@ class AttributeTableWidget extends React.Component {
         mapCrs: PropTypes.string,
         mapScales: PropTypes.array,
         readOnly: PropTypes.bool,
+        refreshLayer: PropTypes.func,
         removeLayer: PropTypes.func,
         setCurrentTask: PropTypes.func,
         setCurrentTaskBlocked: PropTypes.func,
@@ -94,7 +95,7 @@ class AttributeTableWidget extends React.Component {
         originalFeatureProps: null,
         pageSize: 50,
         currentPage: 0,
-        filterField: "id",
+        filterField: "",
         filterOp: "~",
         filterVal: "",
         sortField: null,
@@ -136,6 +137,9 @@ class AttributeTableWidget extends React.Component {
         // Highlight feature
         if (this.state.highlightedFeature !== prevState.highlightedFeature || this.state.features !== prevState.features || this.state.selectedFeatures !== prevState.selectedFeatures) {
             this.highlightFeatures();
+        }
+        if (this.state.loadedLayer !== prevState.loadedLayer && this.props.showDisplayFieldOnly) {
+            this.setState(state => ({filterField: state.curEditConfig.displayField}));
         }
     }
     componentWillUnmount() {
@@ -321,6 +325,7 @@ class AttributeTableWidget extends React.Component {
                     <div className="attribtable-filter controlgroup">
                         <Icon icon="filter" />
                         <select disabled={footbarDisabled} onChange={ev => this.updateFilter("filterField", ev.target.value)} value={this.state.filterField}>
+                            <option disabled value="">{LocaleUtils.tr("common.select")}</option>
                             {showIdColumn ? (
                                 <option value="<id>">{this.translateFieldName(primaryKey)}</option>
                             ) : null}
@@ -367,28 +372,28 @@ class AttributeTableWidget extends React.Component {
             captchaBar = (<div><ReCaptchaWidget onChange={value => this.setState({captchaResponse: value})} sitekey={ConfigUtils.getConfigProp("editServiceCaptchaSiteKey")} /></div>);
         }
 
+        const editLayers = Object.entries(this.props.editConfigs).map(([wmsName, serviceConfigs]) => (
+            Object.entries(serviceConfigs).map(([layerName, editConfig]) => {
+                const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', wmsName, 'name', layerName);
+                let layerTitle = layerName;
+                if (match) {
+                    layerTitle = match.layer.translations?.layertree?.[layerName] ?? editConfig.layerTitle ?? match?.sublayer?.title ?? layerName;
+                } else {
+                    // Note: geometry-less tables are filtered from the theme sublayers
+                    const translations = this.props.layers.find(layer => layer.wms_name === wmsName)?.translations;
+                    layerTitle = translations?.layertree?.[layerName] ?? editConfig.layerTitle ?? layerName;
+                }
+                return {value: wmsName + "#" + layerName, title: layerTitle};
+            })
+        )).flat().filter(Boolean).sort((a, b) => a.title.localeCompare(b.title));
         return (
             <div className="AttributeTable">
                 <div className="attribtable-toolbar">
                     {this.props.showLayerSelection ? (
                         <select disabled={loading || editing} onChange={ev => this.setState({selectedLayer: ev.target.value})} value={this.state.selectedLayer || ""}>
                             <option disabled value="">{LocaleUtils.tr("common.selectlayer")}</option>
-                            {Object.entries(this.props.editConfigs).map(([wmsName, serviceConfigs]) => (
-                                Object.entries(serviceConfigs).map(([layerName, editConfig]) => {
-                                    const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', wmsName, 'name', layerName);
-                                    let layerTitle = layerName;
-                                    if (match) {
-                                        layerTitle = match.layer.translations?.layertree?.[layerName] ?? editConfig.layerTitle ?? match?.sublayer?.title ?? layerName;
-                                    } else {
-                                        // Note: geometry-less tables are filtered from the theme sublayers
-                                        const translations = this.props.layers.find(layer => layer.wms_name === wmsName)?.translations;
-                                        layerTitle = translations?.layertree?.[layerName] ?? editConfig.layerTitle ?? layerName;
-                                    }
-                                    const value = wmsName + "#" + layerName;
-                                    return (
-                                        <option key={value} value={value}>{layerTitle}</option>
-                                    );
-                                })
+                            {editLayers.map(entry => (
+                                <option key={entry.value} value={entry.value}>{entry.title}</option>
                             ))}
                         </select>
                     ) : null}
@@ -655,7 +660,7 @@ class AttributeTableWidget extends React.Component {
         const newState = {filterField: this.state.filterField, filterOp: this.state.filterOp, filterVal: this.state.filterVal};
         newState[stateField] = val;
         // Reset page if a reload is triggered (either filter changed with a set filter value, or filter value cleared)
-        if (newState.filterVal || (this.state.filterVal && !newState.filterVal)) {
+        if (newState.filterField && (newState.filterVal || (this.state.filterVal && !newState.filterVal))) {
             newState.currentPage = 0;
             this.reload(this.state.selectedLayer, false, newState);
         } else {
@@ -737,6 +742,8 @@ class AttributeTableWidget extends React.Component {
             return newState;
         }, () => {
             if (reload) {
+                const mapPrefix = this.state.curEditConfig.editDataset.split(".")[0];
+                this.props.refreshLayer(layer => layer.wms_name === mapPrefix);
                 this.reload(this.state.loadedLayer, true);
             }
         });
@@ -804,6 +811,8 @@ class AttributeTableWidget extends React.Component {
             alert(result);
         } else {
             this.changedFiles = {};
+            const mapPrefix = this.state.curEditConfig.editDataset.split(".")[0];
+            this.props.refreshLayer(layer => layer.wms_name === mapPrefix);
             this.reload(this.state.loadedLayer, true, {changedFeatureIdx: null, originalFeatureProps: null, newFeature: null});
         }
         this.props.setCurrentTaskBlocked(false);
@@ -981,6 +990,7 @@ export default connect((state) => ({
     mapScales: state.map.scales
 }), {
     addLayerFeatures: addLayerFeatures,
+    refreshLayer: refreshLayer,
     removeLayer: removeLayer,
     setCurrentTask: setCurrentTask,
     setCurrentTaskBlocked: setCurrentTaskBlocked,

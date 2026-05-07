@@ -33,8 +33,8 @@ class AppMenu extends React.Component {
         buttonContents: PropTypes.object,
         buttonLabel: PropTypes.string,
         currentTaskBlocked: PropTypes.bool,
-        keepMenuOpen: PropTypes.bool,
-        menuCompact: PropTypes.bool,
+        menuDisplayMode: PropTypes.string,
+        menuIconOnly: PropTypes.bool,
         menuItems: PropTypes.array,
         onMenuToggled: PropTypes.func,
         openExternalUrl: PropTypes.func,
@@ -44,7 +44,8 @@ class AppMenu extends React.Component {
         showOnStartup: PropTypes.bool
     };
     static defaultProps = {
-        onMenuToggled: () => {}
+        onMenuToggled: () => {},
+        menuDisplayMode: "normal"
     };
     state = {
         menuVisible: false,
@@ -59,7 +60,7 @@ class AppMenu extends React.Component {
         this.boundShortcuts = [];
     }
     componentDidMount() {
-        if (this.props.showOnStartup) {
+        if (this.props.showOnStartup || this.props.menuDisplayMode !== "normal") {
             this.toggleMenu();
         }
         this.addKeyBindings(this.props.menuItems);
@@ -68,12 +69,12 @@ class AppMenu extends React.Component {
         }
     }
     componentDidUpdate(prevProps, prevState) {
-        if (this.state.menuVisible && !prevState.menuVisible && !this.props.menuCompact) {
+        if (this.state.menuVisible && !prevState.menuVisible) {
             // Need to wait until slide in transition is over
             setTimeout(() => { this.filterfield?.focus?.(); }, 400);
             // Delay one cycle
             setTimeout(() => document.addEventListener('click', this.checkCloseMenu), 0);
-        } else if (prevState.menuVisible && !this.state.menuVisible && !this.props.menuCompact) {
+        } else if (prevState.menuVisible && !this.state.menuVisible) {
             document.removeEventListener('click', this.checkCloseMenu);
         }
     }
@@ -105,13 +106,13 @@ class AppMenu extends React.Component {
             this.props.setCurrentTask(null);
         }
         this.props.onMenuToggled(!this.state.menuVisible);
-        if (this.props.menuCompact) {
-            this.props.setMenuMargin(!this.state.menuVisible ? MiscUtils.convertEmToPx(3.75) : 0, 0);
+        if (this.props.menuDisplayMode !== "normal") {
+            this.props.setMenuMargin(!this.state.menuVisible ? MiscUtils.convertEmToPx(3.5) : 0, 0);
         }
         this.setState((state) => ({menuVisible: !state.menuVisible, submenusVisible: [], filter: ""}));
     };
     checkCloseMenu = (ev) => {
-        if (this.menuEl && !this.menuEl.contains(ev.target) && !this.props.keepMenuOpen) {
+        if (this.menuEl && !this.menuEl.contains(ev.target) && this.props.menuDisplayMode === "normal") {
             this.toggleMenu();
             MiscUtils.killEvent(ev);
         }
@@ -121,7 +122,7 @@ class AppMenu extends React.Component {
         this.setState((state) => ({submenusVisible: state.submenusVisible.slice(0, level).concat(a)}));
     };
     onMenuitemClicked = (item) => {
-        if (!this.props.keepMenuOpen && this.state.menuVisible) {
+        if (this.props.menuDisplayMode === "normal" && this.state.menuVisible) {
             this.toggleMenu();
         }
         if (item.url) {
@@ -133,6 +134,10 @@ class AppMenu extends React.Component {
     };
     renderMenuItems = (items, level, filter, submenu = false) => {
         return (items || []).map(item => {
+            const trargs = item.trargs || [];
+            const label = item.title ? LocaleUtils.tr(item.title, ...trargs) : LocaleUtils.tr("appmenu.items." + item.key + (item.mode || ""), ...trargs);
+            const comment = item.comment ? LocaleUtils.tr("appmenu.items." + item.key + (item.mode || "") + "_comment", ...trargs) : "";
+            const labelclass = this.props.menuDisplayMode === "icononly" ? "appmenu-menu-item-tooltip" : "appmenu-menu-item-label";
             if (item.subitems) {
                 const expanded = filter || this.state.submenusVisible[level] === item.key;
                 const subitems = expanded ? this.renderMenuItems(item.subitems, level + 1, filter, true) : null;
@@ -152,14 +157,13 @@ class AppMenu extends React.Component {
                         tabIndex={0}
                     >
                         <Icon icon={item.icon} size="xlarge"/>
-                        {item.title ? LocaleUtils.tr(item.title) : LocaleUtils.tr("appmenu.items." + item.key)}
+                        <span className={labelclass}>
+                            {label}
+                        </span>
                     </div>
                 ),
                 subitems];
             } else {
-                const trargs = item.trargs || [];
-                const label = item.title ? LocaleUtils.tr(item.title, ...trargs) : LocaleUtils.tr("appmenu.items." + item.key + (item.mode || ""), ...trargs);
-                const comment = item.comment ? LocaleUtils.tr("appmenu.items." + item.key + (item.mode || "") + "_comment", ...trargs) : "";
                 if (!filter || removeDiacritics(label.toLowerCase()).match(filter) || (comment && removeDiacritics(comment.toLowerCase()).match(filter))) {
                     const className = classnames({
                         "appmenu-menu-item": true,
@@ -173,9 +177,8 @@ class AppMenu extends React.Component {
                             tabIndex={0}
                         >
                             <Icon icon={item.icon} size="xlarge"/>
-                            <span className="appmenu-menu-item-label">
+                            <span className={labelclass}>
                                 {label}
-                                {comment ? (<div className="appmenu-menu-item-comment">{comment}</div>) : null}
                             </span>
                         </div>
                     );
@@ -187,12 +190,13 @@ class AppMenu extends React.Component {
     render() {
         const isMobile = ConfigUtils.isMobile();
         const visible = !this.props.currentTaskBlocked && this.state.menuVisible;
-        const showLabel = !this.props.menuCompact && !isMobile;
+        const showLabel = this.props.menuDisplayMode === "normal" && !isMobile;
         const className = classnames({
             "AppMenu": true,
             "appmenu-blocked": this.props.currentTaskBlocked,
             "appmenu-visible": visible,
-            "appmenu-compact": this.props.menuCompact,
+            "appmenu-compact": this.props.menuDisplayMode === "compact",
+            "appmenu-icononly": this.props.menuDisplayMode === "icononly",
             "appmenu-nolabel": !showLabel
         });
         const filter = this.state.filter ? new RegExp(removeDiacritics(this.state.filter).replace(/[-[\]/{}()*+?.\\^$|]/g, "\\$&"), "i") : null;
@@ -210,27 +214,29 @@ class AppMenu extends React.Component {
                     ]}
                 </div>
                 <div className="appmenu-menu-container" tabIndex={-1}>
-                    <div className="appmenu-menu" inert={!visible} onMouseLeave={this.clearFocus} ref={el => { this.menuEl = el; MiscUtils.setupKillTouchEvents(el); }}>
-                        {this.props.showFilterField ? (
-                            <div
-                                className="appmenu-menu-item appmenu-menu-item-filter"
-                                onFocus={this.focusFilterField}
-                                onKeyDown={this.keyNav}
-                                onMouseOver={ev => ev.target.focus()}
-                                tabIndex={0}
-                            >
-                                <Icon icon={"search"} size="xlarge"/>
-                                <InputContainer>
-                                    <input onChange={ev => this.setState({filter: ev.target.value, curEntry: null})}
-                                        placeholder={LocaleUtils.tr("appmenu.filter")} ref={this.setFilterField}
-                                        role="input"
-                                        type="text"
-                                        value={this.state.filter}/>
-                                    <Icon icon="clear" onClick={() => this.setState({filter: ""})} role="suffix" />
-                                </InputContainer>
-                            </div>
-                        ) : null}
-                        {this.renderMenuItems(this.props.menuItems, 0, filter)}
+                    <div className="appmenu-menu-aligner">
+                        <div className="appmenu-menu" inert={!visible} onMouseLeave={this.clearFocus} ref={el => { this.menuEl = el; MiscUtils.setupKillTouchEvents(el); }}>
+                            {this.props.showFilterField && this.props.menuDisplayMode !== "icononly" ? (
+                                <div
+                                    className="appmenu-menu-item appmenu-menu-item-filter"
+                                    onFocus={this.focusFilterField}
+                                    onKeyDown={this.keyNav}
+                                    onMouseOver={ev => ev.target.focus()}
+                                    tabIndex={0}
+                                >
+                                    <Icon icon={"search"} size="xlarge"/>
+                                    <InputContainer>
+                                        <input onChange={ev => this.setState({filter: ev.target.value, curEntry: null})}
+                                            placeholder={LocaleUtils.tr("appmenu.filter")} ref={this.setFilterField}
+                                            role="input"
+                                            type="text"
+                                            value={this.state.filter}/>
+                                        <Icon icon="clear" onClick={() => this.setState({filter: ""})} role="suffix" />
+                                    </InputContainer>
+                                </div>
+                            ) : null}
+                            {this.renderMenuItems(this.props.menuItems, 0, filter)}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -271,7 +277,7 @@ class AppMenu extends React.Component {
             this.menuEl.children[next].focus();
             MiscUtils.killEvent(ev);
         } else if (ev.key === 'Escape') {
-            if (!this.props.menuCompact) {
+            if (this.props.menuDisplayMode === "normal") {
                 this.toggleMenu();
             }
             this.menuBtn?.focus?.();

@@ -193,6 +193,9 @@ class OlMap extends React.Component {
             if (prevProps.bbox.rotation !== this.props.bbox.rotation) {
                 view.setRotation(this.props.bbox.rotation);
             }
+            if (prevProps.fullExtent !== this.props.fullExtent) {
+                this.setState({rebuildView: true});
+            }
         }
         if (this.state.rebuildView) {
             this.setState({rebuildView: false});
@@ -327,7 +330,8 @@ class OlMap extends React.Component {
             constrainRotation: false,
             enableRotation: enableRotation !== false,
             rotation: MapUtils.degreesToRadians(rotation) || 0,
-            extent: extent
+            extent: extent,
+            constrainOnlyCenter: this.props.mapOptions.constrainOnlyCenter || false
         };
         return new ol.View(viewOptions);
     };

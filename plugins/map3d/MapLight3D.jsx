@@ -24,18 +24,23 @@ import LocaleUtils from '../../utils/LocaleUtils';
 
 import './style/MapLight3D.css';
 
-
+/**
+ * Control the map illumination.
+ */
 export default class MapLight3D extends React.Component {
     static propTypes = {
         /** Default viewer day (1-365) */
         defaultDay: PropTypes.number,
         /** Default viewer time (00:00-23:59) */
         defaultTime: PropTypes.string,
-        sceneContext: PropTypes.object
+        sceneContext: PropTypes.object,
+        /** Show advanced controls */
+        showAdvanced: PropTypes.bool
     };
     static defaultProps = {
         defaultDay: 182,
-        defaultTime: '12:00'
+        defaultTime: '12:00',
+        showAdvanced: true
     };
     state = {
         showAdvanced: false,
@@ -206,6 +211,10 @@ export default class MapLight3D extends React.Component {
                             </tr>
                         ) : null}
                         <tr>
+                            <td />
+                            <td><button className="button" onClick={this.setCurrentDateTime}>{LocaleUtils.tr("maplight3d.currentdatetime")}</button></td>
+                        </tr>
+                        <tr>
                             <td>{LocaleUtils.tr("maplight3d.sunLightIntensity")}</td>
                             <td>{this.renderSlider('sunLightIntensity', 0, 10, 0.1)}</td>
                         </tr>
@@ -221,12 +230,14 @@ export default class MapLight3D extends React.Component {
                             <td>{LocaleUtils.tr("maplight3d.shadowintensity")}</td>
                             <td>{this.renderSlider('shadowIntensity', 0, 2, 0.1)}</td>
                         </tr>
-                        <tr>
-                            <td className="maplight3d-advanced" colSpan="2">
-                                <label>
-                                    <input checked={this.state.showAdvanced} onChange={ev => this.setState(state => ({showAdvanced: !state.showAdvanced}))} type="checkbox" /> {LocaleUtils.tr("maplight3d.showadvanced")}</label>
-                            </td>
-                        </tr>
+                        {this.props.showAdvanced ? (
+                            <tr>
+                                <td className="maplight3d-advanced" colSpan="2">
+                                    <label>
+                                        <input checked={this.state.showAdvanced} onChange={ev => this.setState(state => ({showAdvanced: !state.showAdvanced}))} type="checkbox" /> {LocaleUtils.tr("maplight3d.showadvanced")}</label>
+                                </td>
+                            </tr>
+                        ) : null}
                         {this.state.showAdvanced ? [(
                             <tr key="helpersVisible">
                                 <td>{LocaleUtils.tr("maplight3d.helpersVisible")}</td>
@@ -434,5 +445,13 @@ export default class MapLight3D extends React.Component {
         }
 
         sceneContext.scene.notifyChange();
+    };
+    setCurrentDateTime = () => {
+        const now = new Date();
+        const day = 1 + (now - new Date(Date.UTC(now.getUTCFullYear(), 0, 1))) / (1000 * 60 * 60 * 24);
+        const time = now.getHours() * 60 + now.getMinutes();
+        this.setState(state => ({lightParams: {
+            ...state.lightParams, day, time
+        }}));
     };
 }

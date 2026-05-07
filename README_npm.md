@@ -1,4 +1,4 @@
-![Logo](https://raw.githubusercontent.com/qgis/qwc2/refs/heads/master/static/assets/img/qwc-logo.svg) QGIS Web Client
+![Logo](https://raw.githubusercontent.com/qgis/qwc2/refs/heads/master/static/assets/img/qwc-logo.svg) QGIS Web Client · [qwc.app](https://qwc.app)
 =================
 
 ## Introduction
@@ -8,39 +8,22 @@ The `qwc2` NPM package can be used as a dependency to build a custom QWC applica
 
 ![Screenshot](https://github.com/qgis/qwc2/blob/gh-pages/Screenshot.jpg?raw=true)
 
-### Main Features
+## Homepage
 
-- Modular and easily configurable and extensible
-- Responsive, separately configurable for desktop and mobile devices
-- Theme switcher
-- Search with configurable search providers
-- Layer tree
-  * Toggle layers and groups
-  * Change layer order and opacity
-  * Import external WMS/WFS/WMTS/GeoJSON/KML layers
-  * Compare layers
-- Feature info
-- Printing using QGIS print layouts
-- Share permalinks
-- Bookmarks
-- Measuring tools
-- Height profile
-- Redlining
-- Editing and attribute table
-- Attribute table
-- Export map (raster images, DXF)
-- Time manager for temporal layers
-- Themeable with color schemes
-- [Additional plugins!](https://qwc-services.github.io/master/references/qwc2_plugins/)
+See [qwc.app](https://qwc.app).
+
+## Main Features
+
+See [qwc.app/features](https://qwc.app/features).
 
 ## Quick start
 
-See [qwc-services.github.io/master/QuickStart/](https://qwc-services.github.io/master/QuickStart/)
+See [docs.qwc.app/master/QuickStart/](https://docs.qwc.app/master/QuickStart/).
 
 ## Documentation
 
-* [qwc-services.github.io](https://qwc-services.github.io/)
-* [ChangeLog](https://qwc-services.github.io/master/release_notes/ChangeLog/)
+* [docs.qwc.app](https://docs.qwc.app)
+* [ChangeLog](https://docs.qwc.app/master/release_notes/ChangeLog/)
 
 ## Help
 

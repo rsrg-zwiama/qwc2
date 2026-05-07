@@ -187,19 +187,20 @@ class ExportObjects3D extends React.Component {
             new Vector3(bbox[2], bbox[3], 8000)
         ]);
         const exportGroup = new Group();
-        exportGroup.rotation.set(-Math.PI / 2, 0, 0); // GLTF is Y-UP
 
-        Object.entries(this.props.sceneContext.sceneObjects).forEach(([objectId, options]) => {
-            if (!options.layertree || !options.visibility) {
+        Object.values(this.props.sceneContext.objectTree).forEach(entry => {
+            if (!entry.objectId || !this.props.sceneContext.objectIsVisible(entry.objectId)) {
                 return;
             }
-            const object = this.props.sceneContext.getSceneObject(objectId);
+            const object = this.props.sceneContext.getSceneObject(entry.objectId);
             if (object.tiles) {
                 this.addTileToExportGroup(object.tiles, exportGroup, selectionBox);
             } else {
                 this.addObjectToExportGroup(object, exportGroup, selectionBox);
             }
         });
+        exportGroup.rotation.x -= Math.PI / 2; // GLTF is Y-UP
+        exportGroup.updateMatrixWorld(true);
         const exportScene = new Scene();
         exportScene.add(exportGroup);
         const exporter = new GLTFExporter();
@@ -212,16 +213,14 @@ class ExportObjects3D extends React.Component {
     addTileToExportGroup = (tiles, exportGroup, selectionBox) => {
         tiles.group.traverse( c => {
             if (c.geometry) {
-                const bbox = c.geometry.boundingBox.clone().applyMatrix4(c.matrixWorld);
+                const helper = new TileMeshHelper(c);
+                const bbox = helper.getWorldBBox();
                 if (!selectionBox.intersectsBox(bbox)) {
                     return;
                 }
 
-                const posAttr = c.geometry.getAttribute('position');
-                const norAttr = c.geometry.getAttribute('normal');
                 const colAttr = c.geometry.getAttribute('color');
                 const colStride = c.material.transparent ? 4 : 3;
-                const helper = new TileMeshHelper(c);
                 helper.getFeatureIds().forEach(featureId => {
                     const feature = {
                         position: [],
@@ -230,16 +229,16 @@ class ExportObjects3D extends React.Component {
                         colorStride: colStride,
                         bbox: new Box3()
                     };
-                    helper.forEachFeatureTriangle(featureId, (i0, i1, i2) => {
-                        const pos1 = posAttr.array.slice(3 * i0, 3 * i0 + 3);
-                        const pos2 = posAttr.array.slice(3 * i1, 3 * i1 + 3);
-                        const pos3 = posAttr.array.slice(3 * i2, 3 * i2 + 3);
-                        feature.position.push(...pos1);
-                        feature.position.push(...pos2);
-                        feature.position.push(...pos3);
-                        feature.normal.push(norAttr.getX(i0), norAttr.getY(i0), norAttr.getZ(i0));
-                        feature.normal.push(norAttr.getX(i1), norAttr.getY(i1), norAttr.getZ(i1));
-                        feature.normal.push(norAttr.getX(i2), norAttr.getY(i2), norAttr.getZ(i2));
+                    helper.forEachFeatureTriangle(featureId, (i0, i1, i2, matrix, normalMatrix) => {
+                        const pos1 = helper.getPosition(i0, matrix);
+                        const pos2 = helper.getPosition(i1, matrix);
+                        const pos3 = helper.getPosition(i2, matrix);
+                        feature.position.push(...pos1.toArray());
+                        feature.position.push(...pos2.toArray());
+                        feature.position.push(...pos3.toArray());
+                        feature.normal.push(helper.getNormal(i0, normalMatrix));
+                        feature.normal.push(helper.getNormal(i1, normalMatrix));
+                        feature.normal.push(helper.getNormal(i2, normalMatrix));
                         if (colAttr) {
                             feature.color.push(...colAttr.array.slice(colStride * i0, colStride * i0 + colStride));
                             feature.color.push(...colAttr.array.slice(colStride * i1, colStride * i1 + colStride));
@@ -297,13 +296,22 @@ class ExportObjects3D extends React.Component {
         });
     };
     addObjectToExportGroup = (object, exportGroup, selectionBox) => {
-        object.children.forEach(child => {
-            const objBox = new Box3().setFromObject(child);
-            if (
-                selectionBox.intersectsBox(objBox) &&
-                this.bboxInExportPolygon(objBox)
-            ) {
-                exportGroup.add(child.clone());
+        object.traverse(child => {
+            if (child.isMesh) {
+                const objBox = new Box3().setFromObject(child);
+                if (
+                    selectionBox.intersectsBox(objBox) &&
+                    this.bboxInExportPolygon(objBox)
+                ) {
+                    const clone = child.clone();
+                    clone.matrix.copy(child.matrixWorld);
+                    clone.matrix.decompose(
+                        clone.position,
+                        clone.quaternion,
+                        clone.scale
+                    );
+                    exportGroup.add(clone);
+                }
             }
         });
     };

@@ -51,6 +51,8 @@ class ObliqueView extends React.Component {
         /** The initial map scale. */
         initialScale: PropTypes.number,
         map: PropTypes.object,
+        /** Minimal scale denominator for the overview map. */
+        minOverviewScaleDenom: PropTypes.number,
         projection: PropTypes.string,
         /** A list of allowed map scales, in decreasing order. */
         scales: PropTypes.arrayOf(PropTypes.number),
@@ -72,6 +74,7 @@ class ObliqueView extends React.Component {
             side: 'left'
         },
         initialScale: 1000,
+        minOverviewScaleDenom: 10000,
         scales: [20000, 10000, 5000, 2500, 1000, 500, 250]
     };
     static defaultState = {
@@ -195,13 +198,13 @@ class ObliqueView extends React.Component {
                     )}
                     <div className="obliqueview-nav-rotate" style={{transform: `rotate(${rot}deg)`}}>
                         <span />
-                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "n"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>N</span>
+                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "n"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>{LocaleUtils.tr("obliqueview.directionNorth")}</span>
                         <span />
-                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "w"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>W</span>
+                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "w"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>{LocaleUtils.tr("obliqueview.directionWest")}</span>
                         <span />
-                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "e"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>E</span>
+                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "e"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>{LocaleUtils.tr("obliqueview.directionEast")}</span>
                         <span />
-                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "s"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>S</span>
+                        <span className="obliqueview-nav-dir" onClick={() => this.setState({currentDirection: "s"})} onKeyDown={MiscUtils.checkKeyActivate} style={{transform: `rotate(${-rot}deg)`}} tabIndex={0}>{LocaleUtils.tr("obliqueview.directionSouth")}</span>
                         <span />
                         <div className="obliqueview-nav-circle" />
                     </div>
@@ -223,9 +226,9 @@ class ObliqueView extends React.Component {
                         <span className="obliqueview-bottombar-spacer" />
                         {basemap && this.state.datasetConfig ? (
                             <OverviewMapButton
-                                center={this.state.currentCenter} coneRotation={this.getRotation() / 180 * Math.PI}
+                                center={this.state.currentCenter} coneRotation={-this.getRotation() / 180 * Math.PI}
                                 layer={basemap} projection={this.state.datasetConfig.crs}
-                                resolution={MapUtils.computeForZoom(this.state.datasetConfig.resolutions, this.state.currentZoom) * 0.25}
+                                resolution={this.computeOverviewResolution()}
                             />
                         ) : null}
                     </div>
@@ -247,6 +250,10 @@ class ObliqueView extends React.Component {
                 </InputContainer>
             </div>
         );
+    };
+    computeOverviewResolution = () => {
+        const minResolution = MapUtils.getResolutionsForScales([this.props.minOverviewScaleDenom], this.state.datasetConfig.crs)[0];
+        return Math.max(minResolution, MapUtils.computeForZoom(this.state.datasetConfig.resolutions, this.state.currentZoom) * 0.25);
     };
     changeZoom = (delta) => {
         this.setState(state => ({currentZoom: Math.max(0, Math.min(state.currentZoom + delta, this.props.scales.length - 1))}));

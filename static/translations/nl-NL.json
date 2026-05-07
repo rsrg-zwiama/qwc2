@@ -24,6 +24,7 @@
         "MapExport3D": "",
         "MapFilter": "Kaartfilter",
         "MapLight3D": "",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "Print",
@@ -31,6 +32,7 @@
         "Settings": "Instellingen",
         "Settings3D": "",
         "Share": "Link delen",
+        "SunExposure3D": "",
         "ThemeSwitcher": "Kaartselectie",
         "AttributeTable": "Attributentabel",
         "AuthenticationLogin": "Inloggen",
@@ -41,6 +43,7 @@
         "FeatureSearch": "Zoeken op kenmerken",
         "GeometryDigitizer": "Geometry digitizer",
         "IdentifyPoint": "",
+        "IdentifyRadius": "",
         "IdentifyRegion": "Data opvragen",
         "LayerCatalog": "Lagencatalogus",
         "Login": "Inloggen",
@@ -48,6 +51,7 @@
         "MapLegend": "Legenda",
         "Measure": "Meten",
         "Measure3D": "",
+        "MeasureObject3D": "",
         "MeasureLineString": "lengte meten",
         "MeasurePolygon": "Oppervlakte meten",
         "NewsPopup": "",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "",
         "Redlining": "Redlining",
         "Routing": "Routing",
+        "SensorThingsTool": "",
         "Tools": "Tools",
         "TourGuide": "",
         "TimeManager": "Tijd Manager",
@@ -117,10 +122,13 @@
       "clear": "Wissen",
       "clone": "",
       "close": "Sluiten",
+      "compute": "",
+      "date": "",
       "delete": "",
       "download": "",
       "ellipse": "Ellips",
       "export": "Export",
+      "false": "",
       "format": "Format",
       "line": "Lijn",
       "loading": "Laden...",
@@ -138,6 +146,7 @@
       "square": "",
       "sync2dview": "",
       "text": "Tekst",
+      "true": "",
       "wait": "Even geduld a.u.b....",
       "zoomin": "Inzoomen",
       "zoomout": "Uitzoomen"
@@ -181,6 +190,9 @@
       "rotate": "",
       "rotation": "",
       "scale": "",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "",
       "subtract": "",
       "thescale": "",
@@ -325,6 +337,7 @@
       "radius": "Straal"
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": "Lagencatalogus"
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "Vergelijk bovenste laag",
       "deletealllayers": "Verwijder alle lagen",
-      "hidealllayers": "",
       "importlayer": "Importeer laag",
       "maptip": "Toon kaarttips voor de laag",
       "printlegend": "Print legenda",
       "separator": "Scheider",
       "separatortooltip": "Voeg scheider toe",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "Transparantie",
       "visiblefilter": "Filter onzichtbare lagen",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "",
+      "currentdatetime": "",
       "date": "",
       "dayspersec": "",
       "helpersVisible": "",
@@ -449,6 +463,12 @@
       "pointLabel": "Positie",
       "showmeasurements": "Metingen tonen"
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": "Openen met Ctrl+klik"
     },
@@ -471,6 +491,10 @@
       "windowtitle": "Numerieke invoer"
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "Kaarten",
       "unknownmore": ""
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "Samenvatting",
       "contactEmail": "E-mail",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "Snapping-geometrieën laden...",
       "snappingenabled": "Snapping ingeschakeld",
       "vertex": "Naar hoekpunten snappen"
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "",
+      "default_rounded": "",
       "dark": "",
-      "highcontrast": ""
+      "dark_rounded": "",
+      "highcontrast": "",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",

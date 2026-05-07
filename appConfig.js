@@ -120,6 +120,7 @@ export default {
             RoutingPlugin: RoutingPlugin,
             FeatureSearchPlugin: FeatureSearchPlugin,
             ScratchDrawingPlugin: ScratchDrawingPlugin,
+            SensorThingsToolPlugin: lazy(() => import('./plugins/SensorThingsTool')),
             SettingsPlugin: SettingsPlugin,
             SharePlugin: SharePlugin,
             StartupMarkerPlugin: StartupMarkerPlugin,
@@ -147,8 +148,10 @@ export default {
                 MapExport3D: lazy(() => import('./plugins/map3d/MapExport3D')),
                 MapLight3D: lazy(() => import('./plugins/map3d/MapLight3D')),
                 Measure3D: lazy(() => import('./plugins/map3d/Measure3D')),
+                MeasureObjects3D: lazy(() => import('./plugins/map3d/MeasureObjects3D')),
                 OverviewMap3D: lazy(() => import('./plugins/map3d/OverviewMap3D')),
                 Settings3D: lazy(() => import('./plugins/map3d/Settings3D')),
+                SunExposure3D: lazy(() => import('./plugins/map3d/SunExposure3D')),
                 TopBar3D: lazy(() => import('./plugins/map3d/TopBar3D'))
             }),
             ZoomInPlugin: ZoomInPlugin,

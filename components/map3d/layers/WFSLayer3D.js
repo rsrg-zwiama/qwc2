@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import CoordinateSystem from '@giro3d/giro3d/core/geographic/coordinate-system/CoordinateSystem';
+import CoordinateSystem from '@giro3d/giro3d/core/geographic/CoordinateSystem';
 import Extent from '@giro3d/giro3d/core/geographic/Extent';
 import ColorLayer from '@giro3d/giro3d/core/layer/ColorLayer';
 import StreamableFeatureSource, {wfsBuilder, tiledLoadingStrategy} from '@giro3d/giro3d/sources/StreamableFeatureSource';
@@ -19,6 +19,7 @@ import url from 'url';
 import CoordinatesUtils from '../../../utils/CoordinatesUtils';
 import FeatureStyles from '../../../utils/FeatureStyles';
 import {wfsToOpenlayersOptions} from '../../map/layers/WFSLayer';
+import {Layer3D} from './Layer3D';
 
 
 export default {
@@ -42,10 +43,10 @@ export default {
             srsName: srsName
         };
 
-        return new ColorLayer({
+        return new Layer3D(options.id, new ColorLayer({
             name: options.name,
             source: new VectorSource({
-                dataProjection: CoordinateSystem.fromSrid(projection),
+                dataProjection: CoordinateSystem.get(projection),
                 data: {
                     url: url.format(urlParts),
                     format: olOpts.format
@@ -59,13 +60,17 @@ export default {
                 }),
                 strategy: tile(createXYZ({ tileSize: 512 }))
             })
-        });
+        }));
     },
-    update3d: (layer, newOptions, oldOptions, projection) => {
+    update3d: (mapLayer, newOptions, oldOptions, projection) => {
         // pass
     },
     getFields: (options) => {
         return new Promise((resolve, reject) => {
+            if (options.fields !== undefined) {
+                // Don't requery fields
+                resolve(options.fields);
+            }
 
             const typeName = options.version < "2.0.0" ? "typeName" : "typeNames";
             const urlParts = url.parse(options.url, true);
@@ -98,9 +103,9 @@ export default {
             });
         });
     },
-    createFeatureSource: (layer, options, projection) => {
+    createFeatureSource: (mapLayer, options, projection) => {
         const bounds = CoordinatesUtils.reprojectBbox(options.bbox.bounds, options.bbox.crs, projection);
-        const crs = CoordinateSystem.fromSrid(projection);
+        const crs = CoordinateSystem.get(projection);
         const maxextent = new Extent(crs, bounds[0], bounds[2], bounds[1], bounds[3]);
         return new StreamableFeatureSource({
             queryBuilder: wfsBuilder(

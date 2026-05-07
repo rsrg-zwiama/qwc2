@@ -10,6 +10,7 @@
 import React from 'react';
 import {connect} from 'react-redux';
 
+import Mousetrap from 'mousetrap';
 import ol from 'openlayers';
 import PropTypes from 'prop-types';
 import {v4 as uuidv4} from 'uuid';
@@ -31,7 +32,8 @@ class MeasurementSupport extends React.Component {
         map: PropTypes.object,
         measurement: PropTypes.object,
         projection: PropTypes.string,
-        removeLayer: PropTypes.func
+        removeLayer: PropTypes.func,
+        theme: PropTypes.object
     };
     constructor(props) {
         super(props);
@@ -41,14 +43,22 @@ class MeasurementSupport extends React.Component {
         this.interactions = [];
     }
     componentDidUpdate(prevProps) {
-        if (this.props.measurement.mode === 'Reset') {
+        if (this.props.theme !== prevProps.theme) {
+            this.removeInteractions(true);
+        } else if (this.props.measurement.mode === 'Reset') {
             this.removeInteractions(true);
             const nextmode = this.props.measurement.nextmode !== undefined ? this.props.measurement.nextmode : prevProps.measurement.mode;
             this.props.changeMeasurementState({mode: nextmode});
         } else if (this.props.measurement.mode && this.props.measurement.mode !== prevProps.measurement.mode) {
             this.setupInteractions();
+            if (!prevProps.measurement.mode) {
+                Mousetrap.bind('del', this.triggerDelete);
+                Mousetrap.bind('backspace', this.triggerDelete);
+            }
         } else if (!this.props.measurement.mode && prevProps.measurement.mode) {
             this.removeInteractions();
+            Mousetrap.unbind('del', this.triggerDelete);
+            Mousetrap.unbind('backspace', this.triggerDelete);
         } else if (
             this.measureLayer && (
                 this.props.measurement.lenUnit !== prevProps.measurement.lenUnit ||
@@ -144,7 +154,6 @@ class MeasurementSupport extends React.Component {
     removeInteractions = (clearLayer) => {
         if (this.drawInteraction !== null) {
             this.currentFeature = null;
-            this.measureLayer.getSource().changed();
             this.props.map.un('singleclick', this.handleMapClick);
             this.props.map.un('pointermove', this.clearPickPosition);
             this.props.map.removeInteraction(this.drawInteraction);
@@ -179,6 +188,15 @@ class MeasurementSupport extends React.Component {
             }
         }
     };
+    createPoint = (coord) => {
+        this.currentFeature = new ol.Feature({geometry: new ol.geom.Point(coord)});
+        this.currentFeature.setId(uuidv4());
+        this.currentFeature.set('measureMode', this.props.measurement.mode);
+        this.currentFeature.setStyle(this.featureStyleFunction);
+        this.currentFeature.on('change', evt => this.updateMeasurementResults(evt.target));
+        this.measureLayer.getSource().addFeature(this.currentFeature);
+        this.enterEditMode(this.currentFeature);
+    };
     enterEditMode = (feature) => {
         this.currentFeature = feature;
         this.updateMeasurementResults(this.currentFeature, false);
@@ -197,17 +215,30 @@ class MeasurementSupport extends React.Component {
         this.selectInteraction.setActive(false);
         this.modifyInteraction.setActive(false);
     };
+    triggerDelete = () => {
+        if (this.currentFeature) {
+            this.measureLayer.getSource().removeFeature(this.currentFeature);
+            this.props.changeMeasurementState({
+                mode: this.props.measurement.mode,
+                drawing: false,
+                measureId: null,
+                coordinates: null
+            });
+            this.setupInteractions();
+        }
+    };
     handleMapClick = (evt) => {
         if (!this.drawInteraction.getActive()) {
             const features = this.props.map.getFeaturesAtPixel(evt.pixel, {hitTolerance: 5, layerFilter: layer => layer === this.measureLayer});
             if (features.length === 0) {
-                this.leaveEditMode();
-                // Immediately start new drawing
                 const clickCoord = MapUtils.getHook(MapUtils.GET_SNAPPED_COORDINATES_FROM_PIXEL_HOOK)(evt.pixel);
-                this.drawInteraction.appendCoordinates([clickCoord]);
                 if (this.props.measurement.mode === 'Point') {
-                    // Ughh... Apparently we need to wait 250ms for the 'singleclick' event processing to finish to avoid pick interactions picking up the current event
-                    setTimeout(() => this.drawInteraction.finishDrawing(), 300);
+                    // Special handling for Point: create point feature directly instead of starting a draw interaction
+                    this.createPoint(clickCoord);
+                } else {
+                    this.leaveEditMode();
+                    // Immediately start new drawing
+                    this.drawInteraction.appendCoordinates([clickCoord]);
                 }
             } else {
                 this.enterEditMode(features[0]);
@@ -277,7 +308,8 @@ class MeasurementSupport extends React.Component {
 
 export default connect((state) => ({
     displayCrs: state.map.displayCrs,
-    measurement: state.measurement
+    measurement: state.measurement,
+    theme: state.theme.current
 }), {
     addLayerFeatures,
     changeMeasurementState,

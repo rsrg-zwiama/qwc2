@@ -3,6 +3,7 @@ div.ListInput {
     background-color: var(--list-bg-color);
     padding: 0.25em;
     width: 100%;
+    min-height: 2em;
 }
 
 div.list-input-value {
@@ -14,8 +15,11 @@ div.list-input-value > :first-child {
 }
 
 div.list-input-value > span.icon-trash {
-    color: red;
     padding-left: 0.25em;
+}
+
+div.list-input-value > span.icon-trash:hover {
+    color: red;
 }
 
 div.list-input-add > button {

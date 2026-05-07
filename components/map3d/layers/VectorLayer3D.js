@@ -6,7 +6,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
-import CoordinateSystem from '@giro3d/giro3d/core/geographic/coordinate-system/CoordinateSystem';
+import CoordinateSystem from '@giro3d/giro3d/core/geographic/CoordinateSystem';
 import ColorLayer from '@giro3d/giro3d/core/layer/ColorLayer';
 import StaticFeatureSource from '@giro3d/giro3d/sources/StaticFeatureSource';
 import VectorSource from "@giro3d/giro3d/sources/VectorSource.js";
@@ -14,14 +14,15 @@ import ol from 'openlayers';
 
 import FeatureStyles from '../../../utils/FeatureStyles';
 import {createFeatures, featureStyleFunction, updateFeatures} from '../../map/layers/VectorLayer';
+import {Layer3D} from './Layer3D';
 
 
 export default {
     create3d: (options, projection) => {
-        return new ColorLayer({
+        return new Layer3D(options.id, new ColorLayer({
             name: options.name,
             source: new VectorSource({
-                dataProjection: CoordinateSystem.fromSrid(projection),
+                dataProjection: CoordinateSystem.get(projection),
                 data: createFeatures(options, projection, true),
                 format: new ol.format.GeoJSON(),
                 style: options.styleFunction || (feature => {
@@ -30,18 +31,20 @@ export default {
                     return FeatureStyles[styleName](feature, styleOptions);
                 })
             })
-        });
+        }));
     },
-    update3d: (layer, newOptions, oldOptions, projection) => {
+    update3d: (mapLayer, newOptions, oldOptions, projection) => {
+        const layer = mapLayer.layer();
+        const source = layer.source.source;
         if (newOptions.styleName !== oldOptions.styleName || newOptions.styleOptions !== oldOptions.styleOptions) {
-            layer.source.setStyle(featureStyleFunction(newOptions));
+            source.setStyle(featureStyleFunction(newOptions));
         } else if (newOptions.styleFunction !== oldOptions.styleFunction) {
-            layer.source.setStyle(newOptions.styleFunction);
+            source.setStyle(newOptions.styleFunction);
         }
         if (newOptions.features !== oldOptions.features) {
-            updateFeatures(layer.source, newOptions, oldOptions, projection, true);
+            updateFeatures(source, newOptions, oldOptions, projection, true);
         } else if ((oldOptions.rev || 0) !== (newOptions.rev || 0)) {
-            layer.source.update();
+            source.update();
         }
     },
     getFields: (options) => {
@@ -54,10 +57,11 @@ export default {
         });
     },
     createFeatureSource: (layer, options, projection) => {
-        const crs = CoordinateSystem.fromSrid(projection);
+        const colorlayer = layer.layer();
+        const crs = CoordinateSystem.get(projection);
         return new StaticFeatureSource({
             coordinateSystem: crs,
-            features: layer.source.source.getFeatures()
+            features: colorlayer.source.source.getFeatures()
         });
     }
 };

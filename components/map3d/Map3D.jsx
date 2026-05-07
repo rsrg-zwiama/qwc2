@@ -10,13 +10,12 @@ import React, { Suspense } from 'react';
 import ReactDOM from 'react-dom';
 import {connect} from 'react-redux';
 
-import CoordinateSystem from '@giro3d/giro3d/core/geographic/coordinate-system/CoordinateSystem';
-import Coordinates, {crsIsGeographic} from '@giro3d/giro3d/core/geographic/Coordinates';
+import Coordinates from '@giro3d/giro3d/core/geographic/Coordinates';
+import CoordinateSystem from '@giro3d/giro3d/core/geographic/CoordinateSystem';
 import Ellipsoid from '@giro3d/giro3d/core/geographic/Ellipsoid';
 import Extent from '@giro3d/giro3d/core/geographic/Extent.js';
 import Instance from '@giro3d/giro3d/core/Instance.js';
 import ElevationLayer from '@giro3d/giro3d/core/layer/ElevationLayer.js';
-import DrapedFeatureCollection from '@giro3d/giro3d/entities/DrapedFeatureCollection';
 import Map from '@giro3d/giro3d/entities/Map.js';
 import Tiles3D from "@giro3d/giro3d/entities/Tiles3D.js";
 import Inspector from "@giro3d/giro3d/gui/Inspector.js";
@@ -25,7 +24,12 @@ import axios from 'axios';
 import {fromUrl} from "geotiff";
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
-import {Vector2, CubeTextureLoader, Group, Raycaster, Mesh, Box3, Vector3, Matrix4} from 'three';
+import * as THREE from 'three';
+import {Vector2, CubeTextureLoader, Group, Raycaster, Mesh, Box3, Vector3, Matrix4, EventDispatcher, Points} from 'three';
+import {
+    computeBoundsTree, disposeBoundsTree,
+    computeBatchedBoundsTree, disposeBatchedBoundsTree, acceleratedRaycast
+} from 'three-mesh-bvh';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader';
 import {v4 as uuidv4} from 'uuid';
@@ -42,13 +46,23 @@ import ServiceLayerUtils from '../../utils/ServiceLayerUtils';
 import ThemeUtils from '../../utils/ThemeUtils';
 import {MapContainerPortalContext} from '../PluginsContainer';
 import ViewSwitcher from '../ViewSwitcher';
+import ColorLayer3D from './ColorLayer3D';
 import EditDataset3D from './EditDataset3D';
 import LayerRegistry from './layers/index';
 import MapControls3D from './MapControls3D';
-import {importGltf, updateObjectLabel} from './utils/MiscUtils3D';
+import {updateObjectLabel} from './utils/MiscUtils3D';
 import Tiles3DStyle from './utils/Tiles3DStyle';
 
 import './style/Map3D.css';
+
+
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+THREE.BatchedMesh.prototype.computeBoundsTree = computeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.disposeBoundsTree = disposeBatchedBoundsTree;
+THREE.BatchedMesh.prototype.raycast = acceleratedRaycast;
 
 
 // Ensures onUnload is called *after* all other children have unmounted
@@ -78,7 +92,9 @@ class Map3D extends React.Component {
     static propTypes = {
         controlsPosition: PropTypes.string,
         defaultFov: PropTypes.number,
+        defaultPointSize: PropTypes.number,
         defaultSceneQuality: PropTypes.number,
+        forceAllowInspector: PropTypes.bool,
         innerRef: PropTypes.func,
         layers: PropTypes.array,
         mouseButtons: PropTypes.object,
@@ -107,10 +123,12 @@ class Map3D extends React.Component {
         dtmCrs: null,
         baseLayers: [],
         colorLayers: {},
-        sceneObjects: {},
+        objectTree: {},
         collisionObjects: [],
+        snapObjects: [],
         settings: {
             fov: 30,
+            pointSize: 0,
             sceneQuality: 100
         },
         sceneId: null,
@@ -123,17 +141,22 @@ class Map3D extends React.Component {
             addLayer: (layer) => {},
             getLayer: (layerId) => {},
             removeLayer: (layerId) => {},
-            updateColorLayer: (layerId, options, path) => {},
+            updateColorLayer: (layerId, options, flags) => {},
             setBaseLayer: (layer, visibility) => {},
 
-            add3dTiles: (url, options) => {},
-            addSceneObject: (objectId, object, options = {}, showEditTool = false) => {},
+            importTiles3D: (url, name, addToLayerTree = false, treeOptions = {}, showEditTool = false, matrix = null, label = null) => {},
+            importObject3D: (dataOrUrl, name, addToLayerTree = false, treeOptions = {}, showEditTool = false) => {},
+            addSceneObject: (objectId, object, options = {}, addToLayerTree = false, showEditTool = false) => {},
             getSceneObject: (objectId) => {},
             removeSceneObject: (objectId) => {},
-            updateSceneObject: (objectId, options) => {},
+            updateSceneObject: (objectId, options, flags) => {},
             zoomToObject: (objectId) => {},
+            objectIsVisible: (objectId) => {},
+            objectContainsPoints: (object) => {},
 
             getMap: () => {},
+
+            computeBoundsTree: (object) => {},
 
             setViewToExtent: (bounds, angle) => {},
             getTerrainHeightFromDTM: (scenePos) => {},
@@ -153,18 +176,23 @@ class Map3D extends React.Component {
         this.sceneObjectGroup = null;
         this.objectMap = {};
         this.tilesetStyles = {};
+        this.state.sceneContext.eventDispatcher = new EventDispatcher();
         this.state.sceneContext.addLayer = this.addLayer;
         this.state.sceneContext.getLayer = this.getLayer;
         this.state.sceneContext.removeLayer = this.removeLayer;
         this.state.sceneContext.updateColorLayer = this.updateColorLayer;
         this.state.sceneContext.setBaseLayer = this.setBaseLayer;
-        this.state.sceneContext.add3dTiles = this.add3dTiles;
+        this.state.sceneContext.importTiles3D = this.importTiles3D;
+        this.state.sceneContext.importObject3D = this.importObject3D;
         this.state.sceneContext.addSceneObject = this.addSceneObject;
         this.state.sceneContext.getSceneObject = this.getSceneObject;
         this.state.sceneContext.removeSceneObject = this.removeSceneObject;
         this.state.sceneContext.updateSceneObject = this.updateSceneObject;
         this.state.sceneContext.zoomToObject = this.zoomToObject;
+        this.state.sceneContext.objectIsVisible = this.objectIsVisible;
+        this.state.sceneContext.objectContainsPoints = this.objectContainsPoints;
         this.state.sceneContext.getMap = this.getMap;
+        this.state.computeBoundsTree = this.computeBoundsTree;
         this.state.sceneContext.getTerrainHeightFromDTM = this.getTerrainHeightFromDTM;
         this.state.sceneContext.getTerrainHeightFromMap = this.getTerrainHeightFromMap;
         this.state.sceneContext.getSceneIntersection = this.getSceneIntersection;
@@ -172,6 +200,7 @@ class Map3D extends React.Component {
         this.state.sceneContext.setSetting = this.setSetting;
 
         this.state.sceneContext.settings.fov = props.defaultFov;
+        this.state.sceneContext.settings.pointSize = props.defaultPointSize;
         this.state.sceneContext.settings.sceneQuality = props.defaultSceneQuality;
 
         registerPermalinkDataStoreHook("map3d", this.store3dState);
@@ -192,7 +221,7 @@ class Map3D extends React.Component {
                     }
                 }));
             }
-        } else if (this.props.layers !== prevProps.layers) {
+        } else if (this.props.layers !== prevProps.layers && this.instance) {
             this.setState((state) => ({
                 sceneContext: {
                     ...state.sceneContext,
@@ -201,29 +230,25 @@ class Map3D extends React.Component {
             }));
         }
 
-        // Update map layers
-        if (this.state.sceneContext.baseLayers !== prevState.sceneContext.baseLayers) {
-            this.applyBaseLayer();
-        }
-
-        if (this.state.sceneContext.colorLayers !== prevState.sceneContext.colorLayers) {
-            this.applyColorLayerUpdates(this.state.sceneContext.colorLayers, prevState.sceneContext.colorLayers);
-        }
-        // Update scene objects
-        if (this.state.sceneContext.sceneObjects !== prevState.sceneContext.sceneObjects) {
-            this.applySceneObjectUpdates(this.state.sceneContext.sceneObjects, prevState.sceneContext.sceneObjects);
-
-            // Update collision objects
+        // Update collision objects
+        if (this.state.sceneContext.objectTree !== prevState.sceneContext.objectTree) {
             this.setState(state => ({
                 sceneContext: {
                     ...state.sceneContext,
-                    collisionObjects: Object.entries(state.sceneContext.sceneObjects).map(([objId, options]) => {
-                        if (options.layertree && options.visibility) {
-                            const obj = this.objectMap[objId];
-                            return obj.tiles?.group ?? obj;
+                    collisionObjects: Object.keys(state.sceneContext.objectTree).reduce((res, objectId) => {
+                        const obj = this.objectMap[objectId];
+                        if (obj?.visible) {
+                            res.push(obj.tiles?.group ?? obj);
                         }
-                        return null;
-                    }).filter(Boolean)
+                        return res;
+                    }, []),
+                    snapObjects: Object.entries(state.sceneContext.objectTree).reduce((res, [objectId, entry]) => {
+                        const obj = this.objectMap[objectId];
+                        if (obj?.visible && entry.snap) {
+                            res.push(obj.tiles?.group ?? obj);
+                        }
+                        return res;
+                    }, [])
                 }
             }));
         }
@@ -231,39 +256,37 @@ class Map3D extends React.Component {
             this.instance.view.camera.fov = this.state.sceneContext.settings.fov;
             this.instance.notifyChange(this.instance.view.camera);
         }
+        if (this.state.sceneContext.settings.pointSize !== prevState.sceneContext.settings.pointSize) {
+            Object.values(this.state.sceneContext.objectTree).map((entry) => {
+                const obj = this.state.sceneContext.getSceneObject(entry.objectId);
+                if (this.objectContainsPoints(obj)) {
+                    obj.pointSize = this.state.sceneContext.settings.pointSize;
+                    this.instance.notifyChange(obj);
+                }
+            });
+        }
         if (this.state.sceneContext.settings.sceneQuality !== prevState.sceneContext.settings.sceneQuality) {
             const quality = Math.max(20, this.state.sceneContext.settings.sceneQuality);
             this.map.segments = Math.pow(2, Math.floor(quality / 20));
             this.instance.notifyChange(this.instance.view.camera);
         }
     }
-    applyBaseLayer = () => {
-        const baseLayer = this.state.sceneContext.baseLayers.find(e => e.visibility === true);
-        this.removeLayer("__baselayer");
-        UrlParams.updateParams({bl3d: baseLayer?.name ?? 'null'});
-        if (!baseLayer) {
-            return;
-        }
-        const layerCreator = LayerRegistry[baseLayer.type];
-        if (layerCreator?.create3d) {
-            const layer3d = layerCreator.create3d(baseLayer, this.state.sceneContext.mapCrs);
-            this.addLayer("__baselayer", layer3d);
-            this.map.insertLayerAfter(layer3d, null);
-        }
-    };
     setBaseLayer = (layer, visibility) => {
-        const currentBaseLayer = this.state.sceneContext.baseLayers.find(l => l.visibility === true)?.name || "";
+        const currentBaseLayer = this.state.sceneContext.baseLayers.find(l => l.visibility === true)?.name || null;
         if (visibility && layer.name === currentBaseLayer) {
             // Nothing changed
             return;
         }
-        const dtm = this.getLayer("__dtm");
-        if (visibility !== dtm.visible) {
-            dtm.visible = visibility;
+        if (visibility !== !!(this.map.backgroundOpacity)) {
+            const dtm = this.getLayer("__dtm");
+            if (dtm) {
+                dtm.visible = visibility;
+            }
             this.map.receiveShadow = visibility;
             this.map.backgroundOpacity = visibility ? 1 : 0;
             this.instance.notifyChange(this.map);
         }
+        UrlParams.updateParams({bl3d: !visibility ? 'null' : layer.name});
         this.setState(state => ({
             sceneContext: {
                 ...state.sceneContext,
@@ -305,6 +328,7 @@ class Map3D extends React.Component {
             };
             colorLayers[layer.id] = {
                 ...layer,
+                projection: prevOptions?.projection ?? this.props.theme.mapCrs,
                 visibility: prevOptions?.visibility ?? false,
                 opacity: prevOptions?.opacity ?? 255,
                 extrusionHeight: prevOptions?.extrusionHeight ?? (layerCreator.createFeatureSource ? 0 : undefined),
@@ -312,144 +336,13 @@ class Map3D extends React.Component {
                 sublayers: preserveSublayerOptions(layer, prevOptions)
             };
             Object.assign(colorLayers[layer.id], LayerUtils.buildWMSLayerParams(colorLayers[layer.id]));
-            if (colorLayers[layer.id].fields === undefined && layerCreator.getFields) {
+            if (layerCreator.getFields) {
                 layerCreator.getFields(layer).then(fields => {
                     this.updateColorLayer(layer.id, {fields});
                 });
             }
             return colorLayers;
         }, {});
-    };
-    applyColorLayerUpdates = (colorLayers, prevColorLayers) => {
-        // Add-update new layers
-        let layerBelow = this.getLayer("__baselayer");
-        Object.entries(colorLayers).reverse().forEach(([layerId, options]) => {
-            const prevOptions = prevColorLayers[layerId];
-            if (options === prevOptions) {
-                return;
-            }
-            const layerCreator = LayerRegistry[options.type];
-            let mapLayer = this.getLayer(layerId);
-            if (mapLayer) {
-                layerCreator.update3d(mapLayer.source, options, prevOptions, this.state.sceneContext.mapCrs);
-            } else {
-                mapLayer = layerCreator.create3d(options, this.state.sceneContext.mapCrs);
-                this.addLayer(layerId, mapLayer);
-            }
-            this.map.insertLayerAfter(mapLayer, layerBelow);
-            mapLayer.visible = options.visibility;
-            mapLayer.opacity = options.opacity / 255;
-            layerBelow = mapLayer;
-            if (options.extrusionHeight !== undefined && options.extrusionHeight !== 0) {
-                this.createUpdateExtrudedLayer(layerCreator, mapLayer, options, options.features !== prevOptions?.features);
-            } else if (prevOptions?.extrusionHeight !== undefined && prevOptions?.extrusionHeight !== 0) {
-                this.removeExtrudedLayer(options.id);
-            }
-        });
-        // Remove old layers
-        Object.entries(prevColorLayers).forEach(([layerId, options]) => {
-            if (!(layerId in colorLayers)) {
-                if (options.extrusionHeight !== undefined && options.extrusionHeight !== 0) {
-                    this.removeExtrudedLayer(options.id);
-                }
-                this.removeLayer(layerId);
-            }
-        });
-        this.instance.notifyChange(this.map);
-    };
-    createUpdateExtrudedLayer = (layerCreator, mapLayer, options, forceCreate = false) => {
-        const objId = options.id + ":extruded";
-        const makeColor = (c) => {
-            if (Array.isArray(c)) {
-                return ((c[0] << 16) | (c[1] << 8) | c[2]);
-            } else if (typeof c === "string") {
-                return parseInt(c.replace("#", ""), 16);
-            } else {
-                return c;
-            }
-        };
-        let obj = this.objectMap[objId];
-        if (!obj || forceCreate) {
-            if (obj) {
-                this.instance.remove(obj);
-            }
-            const layercolor = makeColor(options.color ?? "#FF0000");
-            obj = new DrapedFeatureCollection({
-                source: layerCreator.createFeatureSource(mapLayer, options, this.state.sceneContext.mapCrs),
-                drapingMode: 'per-feature',
-                extrusionOffset: (feature) => {
-                    if (typeof obj.userData.extrusionHeight === "string") {
-                        return parseFloat(feature.getProperties()[obj.userData.extrusionHeight]) || 0;
-                    } else {
-                        return obj.userData.extrusionHeight;
-                    }
-                },
-                style: (feature) => {
-                    return obj.userData.featureStyles?.[feature.getId()] ?? {
-                        fill: {color: layercolor, shading: true}
-                    };
-                }
-            });
-            obj.castShadow = true;
-            obj.receiveShadow = true;
-            this.instance.add(obj).then(() => {
-                obj.attach(this.map);
-            });
-            this.objectMap[objId] = obj;
-        }
-        obj.userData.extrusionHeight = options.extrusionHeight;
-        obj.userData.featureStyles = options.features?.reduce?.((res, feature) => ({
-            ...res,
-            [feature.id]: {
-                fill: {
-                    color: makeColor(feature.styleOptions.fillColor),
-                    shading: true
-                }
-            }
-        }), {});
-        obj.opacity = mapLayer.opacity;
-        obj.visible = mapLayer.visible;
-        if (obj.visible) {
-            obj.updateStyles();
-        }
-    };
-    removeExtrudedLayer = (layerId) => {
-        const objId = layerId + ":extruded";
-        if (this.objectMap[objId]) {
-            this.instance.remove(this.objectMap[objId]);
-            delete this.objectMap[objId];
-        }
-        this.instance.notifyChange();
-    };
-    applySceneObjectUpdates = (sceneObjects, prevSceneObjects) => {
-        Object.entries(sceneObjects).forEach(([objectId, options]) => {
-            const prevOptions = prevSceneObjects?.[objectId];
-            const object = this.objectMap[objectId];
-            if (options.opacity !== prevOptions?.opacity || options.visibility !== prevOptions?.visibility) {
-                object.visible = options.visibility && options.opacity > 0;
-                if (object.opacity !== undefined) {
-                    object.opacity = options.opacity / 255;
-                } else {
-                    object.traverse(child => {
-                        if (child instanceof Mesh) {
-                            child.material.transparent = options.opacity < 255;
-                            child.material.opacity = options.opacity / 255;
-                            child.material.needsUpdate = true;
-                        }
-                    });
-                }
-                this.instance.notifyChange(object);
-            }
-            if (options.style !== prevOptions?.style) {
-                this.loadTilesetStyle(objectId, options);
-            }
-            if (options.tilesetStyle !== prevOptions?.tilesetStyle) {
-                object.tiles.group.children.forEach(group => {
-                    Tiles3DStyle.applyTileStyle(group, options, this.state.sceneContext);
-                });
-                this.instance.notifyChange(object);
-            }
-        });
     };
     addLayer = (layerId, layer) => {
         layer.userData.layerId = layerId;
@@ -463,19 +356,55 @@ class Map3D extends React.Component {
             this.map.removeLayer(layer, {dispose: true});
         });
     };
-    updateColorLayer = (layerId, options, path = []) => {
+    updateColorLayer = (layerId, options, flags = {}) => {
         this.setState((state) => {
             const entry = {
                 ...state.sceneContext.colorLayers[layerId]
             };
             let subentry = entry;
-            path.forEach(idx => {
+            let parent = null;
+            (flags.path ?? []).forEach(idx => {
                 subentry.sublayers = [...subentry.sublayers];
                 subentry.sublayers[idx] = {...subentry.sublayers[idx]};
+                parent = subentry;
                 subentry = subentry.sublayers[idx];
             });
+            const prevOptions = {...subentry};
             Object.assign(subentry, options);
-            Object.assign(entry, LayerUtils.buildWMSLayerParams(entry));
+            if (subentry.visibility !== prevOptions.visibility) {
+                if (!isEmpty(subentry.sublayers) && flags.groupTogglesSublayers) {
+                    // Propagate visibility to children
+                    const setChildVisibilities = (child) => {
+                        child.sublayers = child.sublayers.map(gchild => {
+                            const ngchild = {...gchild, visibility: options.visibility};
+                            if (!isEmpty(ngchild.sublayers)) {
+                                setChildVisibilities(ngchild);
+                            }
+                            return ngchild;
+                        });
+                    };
+                    setChildVisibilities(subentry);
+                }
+                if (parent?.mutuallyExclusive) {
+                    parent.sublayers = parent.sublayers.map(sublayer => sublayer === subentry ? subentry : ({...sublayer, visibility: false}));
+                }
+            }
+            if (subentry.opacity !== prevOptions.opacity) {
+                // Propagate opacity to children
+                const setChildOpacities = (child) => {
+                    child.sublayers = child.sublayers.map(gchild => {
+                        const ngchild = {...gchild, opacity: options.opacity};
+                        if (!isEmpty(ngchild.sublayers)) {
+                            setChildOpacities(ngchild);
+                        }
+                        return ngchild;
+                    });
+                };
+                setChildOpacities(subentry);
+            }
+            if (entry.type === "wms") {
+                Object.assign(entry, LayerUtils.buildWMSLayerParams(entry));
+            }
             return {
                 sceneContext: {
                     ...state.sceneContext,
@@ -487,13 +416,13 @@ class Map3D extends React.Component {
             };
         });
     };
-    add3dTiles = (url, name, options = {}, showEditTool = false, matrix = null, label = null) => {
+    importTiles3D = (url, objectId, addToLayerTree = false, treeOptions = {}, showEditTool = false, matrix = null, label = null) => {
         const tiles = new Tiles3D({
             url: MiscUtils.resolveAssetsPath(url)
         });
-        // Recenter tile group
-        tiles.tiles.addEventListener('load-tileset', ({tileSet}) => {
-            if (tileSet.root.parent === null) {
+        // Recenter tile group (so that origin of transform tool is in the center of the tileset)
+        tiles.tiles.addEventListener('load-tileset', ({tileset}) => {
+            if (tileset.root.parent === null) {
                 const bbox = new Box3();
                 tiles.tiles.getBoundingBox(bbox);
                 const center = bbox.getCenter(new Vector3());
@@ -512,7 +441,7 @@ class Map3D extends React.Component {
             }
             this.instance.notifyChange(tiles);
             if (showEditTool) {
-                this.props.setCurrentTask("EditDataset3D", null, null, {objectId: name});
+                this.props.setCurrentTask("EditDataset3D", null, null, {objectId: objectId});
             }
         });
         tiles.tiles.addEventListener('needs-update', () => {
@@ -521,9 +450,13 @@ class Map3D extends React.Component {
 
         // Apply style when loading tile
         tiles.tiles.addEventListener('load-model', ({scene}) => {
-            scene.userData.tilesetName = name;
+            scene.userData.tilesetName = objectId;
             scene.userData.featureIdAttr = "id";
-            Tiles3DStyle.applyTileStyle(scene, this.state.sceneContext.sceneObjects[name], this.state.sceneContext);
+            Tiles3DStyle.applyTileStyle(scene, tiles.userData, this.state.sceneContext);
+            if (this.objectContainsPoints(tiles)) {
+                tiles.pointSize = this.state.sceneContext.settings.pointSize;
+            }
+            this.computeBoundsTree(scene);
             this.instance.notifyChange(tiles);
         });
         // Show/hide labels when tile visibility changes
@@ -535,45 +468,90 @@ class Map3D extends React.Component {
         });
         tiles.castShadow = true;
         tiles.receiveShadow = true;
-        tiles.userData.layertree = true;
-        this.instance.add(tiles);
-        this.objectMap[name] = tiles;
+        this.addSceneObject(objectId, tiles, addToLayerTree, treeOptions);
+    };
+    importObject3D = (dataOrUrl, objectId, addToLayerTree = false, treeOptions = {}, showEditTool = false, callback = null) => {
+        const loader = new GLTFLoader();
+        const processor = (gltf) => {
+            let root = gltf.scene;
+            if (root.children.length === 1 && root.children[0].isGroup) {
+                root = root.children[0];
+            }
+            // GLTF is Y-UP, we need Z-UP
+            root.rotation.x += Math.PI / 2;
+            root.updateMatrixWorld(true);
 
-        this.setState((state) => {
-            const objectState = {
-                imported: true,
-                visibility: true,
-                opacity: 255,
-                layertree: true,
-                title: name,
-                ...options
-            };
-            return {
-                sceneContext: {
-                    ...state.sceneContext,
-                    sceneObjects: {...state.sceneContext.sceneObjects, [name]: objectState}
+            root.castShadow = true;
+            root.receiveShadow = true;
+            root.traverse(c => {
+                if (c.geometry) {
+                    c.castShadow = true;
+                    c.receiveShadow = true;
                 }
-            };
+                updateObjectLabel(c, this.state.sceneContext);
+            });
+
+            // Shift root position to center of object
+            const box = new Box3().setFromObject(root);
+            const centerWorld = box.getCenter(new Vector3());
+            centerWorld.z = box.min.z;
+            const centerLocal = root.worldToLocal(centerWorld.clone());
+            root.position.add(centerWorld);
+
+            // Offset children back so the world positions remain unchanged
+            root.children.forEach(child => {
+                child.position.sub(centerLocal);
+            });
+            root.updateMatrixWorld(true);
+
+            this.addSceneObject(objectId, root, addToLayerTree, treeOptions, showEditTool);
+            callback?.();
+        };
+        if (typeof dataOrUrl === 'string') {
+            loader.load(dataOrUrl, processor, () => {}, (err) => {
+                /* eslint-disable-next-line */
+                console.warn(err);
+            });
+        } else {
+            loader.parse(dataOrUrl, ConfigUtils.getAssetsPath(), processor, (err) => {
+                /* eslint-disable-next-line */
+                console.warn(err);
+            });
+        }
+    };
+    computeBoundsTree = (group) => {
+        group.traverse(c => {
+            c.geometry?.computeBoundsTree?.();
         });
     };
-    addSceneObject = (objectId, object, options = {}, showEditTool = false) => {
-        this.sceneObjectGroup.add(object);
+    addSceneObject = (objectId, object, addToLayerTree = false, treeOptions = {}, showEditTool = false, callback = null) => {
+        if (object.isEntity3D) {
+            this.instance.add(object).then(() => callback?.());
+        } else {
+            this.sceneObjectGroup.add(object);
+            callback?.();
+        }
         this.objectMap[objectId] = object;
         this.instance.notifyChange(object);
-        this.setState((state) => {
-            const objectState = {
-                visibility: true,
-                opacity: 255,
-                layertree: false,
-                ...options
-            };
-            return {
-                sceneContext: {
-                    ...state.sceneContext,
-                    sceneObjects: {...state.sceneContext.sceneObjects, [objectId]: objectState}
-                }
-            };
-        });
+        if (addToLayerTree) {
+            this.computeBoundsTree(object);
+            this.setState((state) => {
+                const newObjectTree = {...state.sceneContext.objectTree};
+                newObjectTree.null = {...newObjectTree.null, children: [...newObjectTree.null.children, objectId]};
+                newObjectTree[objectId] = {
+                    objectId: objectId,
+                    parent: null,
+                    visibility: true,
+                    opacity: 255,
+                    snap: true,
+                    ...treeOptions
+                };
+                return {
+                    sceneContext: {...state.sceneContext, objectTree: newObjectTree}
+                };
+            });
+            object.userData.layertree = addToLayerTree;
+        }
         if (showEditTool) {
             this.props.setCurrentTask("EditDataset3D", null, null, {objectId: objectId});
         }
@@ -586,9 +564,14 @@ class Map3D extends React.Component {
         if (!object) {
             return;
         }
+        if (object.isEntity3D) {
+            this.instance.remove(object);
+        } else {
+            this.sceneObjectGroup.remove(object);
+        }
         // Ensure labels are removed
         object.traverse(c => {
-            if (c.isCSS2DObject) {
+            if (c.isCSS2DObject && c.element.parentNode) {
                 c.element.parentNode.removeChild(c.element);
             }
         });
@@ -599,32 +582,134 @@ class Map3D extends React.Component {
         }
         delete this.objectMap[objectId];
         this.instance.notifyChange();
-        this.setState((state) => {
-            const newSceneObjects = {...state.sceneContext.sceneObjects};
-            delete newSceneObjects[objectId];
-            return {
-                sceneContext: {
-                    ...state.sceneContext,
-                    sceneObjects: newSceneObjects
-                }
-            };
-        }, callback);
-    };
-    updateSceneObject = (objectId, options) => {
-        this.setState((state) => {
-            return {
-                sceneContext: {
-                    ...state.sceneContext,
-                    sceneObjects: {
-                        ...state.sceneContext.sceneObjects,
-                        [objectId]: {
-                            ...state.sceneContext.sceneObjects[objectId],
-                            ...options
-                        }
+        if (objectId in this.state.sceneContext.objectTree) {
+            this.setState((state) => {
+                const newObjectTree = {...state.sceneContext.objectTree};
+                const parentId = newObjectTree[objectId].parent;
+                newObjectTree[parentId] = {
+                    ...newObjectTree[parentId],
+                    children: newObjectTree[parentId].children.filter(x => x !== objectId)
+                };
+                delete newObjectTree[objectId];
+                return {
+                    sceneContext: {
+                        ...state.sceneContext,
+                        objectTree: newObjectTree
                     }
+                };
+            }, callback);
+        } else {
+            callback?.();
+        }
+    };
+    updateSceneObject = (objectId, options, flags = {}) => {
+        this.setState((state) => {
+            const objectTree = {...state.sceneContext.objectTree};
+            const prevOptions = objectTree[objectId] || {};
+            options = {...prevOptions, ...options};
+            // Don't allow hiding the visible child of a mutex group
+            if (objectTree[options.parent]?.mutuallyExclusive && !options.visibility && prevOptions.visibility) {
+                options.visibility = true;
+            }
+            if (options.objectId) {
+                this.applySceneObjectState(objectId, options, prevOptions, objectTree);
+            } else if (options.children && options.visibility !== prevOptions.visibility) {
+                this.setChildObjectVisibility(objectTree, options.children, options.visibility, flags.groupTogglesSublayers);
+            }
+            return {
+                sceneContext: {
+                    ...state.sceneContext,
+                    objectTree: {...objectTree, [objectId]: options}
                 }
             };
         });
+    };
+    applySceneObjectState = (objectId, options, prevOptions, objectTree) => {
+        const object = this.objectMap[objectId];
+        if (!object) {
+            return;
+        }
+        let changed = false;
+        if (options.visibility !== prevOptions.visibility || options.opacity !== prevOptions?.opacity) {
+            // Visibile if object is visibile and parents also
+            let isVisible = options.opacity > 0 && options.visibility;
+            for (let curId = options.parent; isVisible && curId !== undefined; curId = objectTree[curId].parent) {
+                isVisible &&= objectTree[curId].visibility;
+            }
+            changed |= object.visible !== isVisible;
+            object.visible = isVisible;
+            if (objectTree[options.parent]?.mutuallyExclusive && objectTree[options.parent].children) {
+                objectTree[options.parent].children.forEach(child => {
+                    if (child !== objectId) {
+                        objectTree[child] = {...objectTree[child], visibility: false};
+                        this.objectMap[child].visible = false;
+                    }
+                });
+            }
+        }
+        if (options.opacity !== prevOptions?.opacity) {
+            if (object.opacity !== undefined) {
+                object.opacity = options.opacity / 255;
+            } else {
+                object.traverse(child => {
+                    if (child instanceof Mesh) {
+                        child.material.transparent = options.opacity < 255;
+                        child.material.opacity = options.opacity / 255;
+                        child.material.needsUpdate = true;
+                    }
+                });
+            }
+            changed = true;
+        }
+        if (changed) {
+            this.instance.notifyChange(object);
+        }
+        if (options.style !== prevOptions?.style) {
+            this.loadTilesetStyle(objectId, options.styles?.[options.style]);
+        }
+    };
+    setChildObjectVisibility = (objectTree, children, visibility, groupTogglesSublayers) => {
+        children.forEach(nodeId => {
+            if (objectTree[nodeId].children) {
+                this.setChildObjectVisibility(objectTree, objectTree[nodeId].children, visibility && objectTree[nodeId].visibility);
+            } else {
+                if (groupTogglesSublayers) {
+                    objectTree[nodeId] = {...objectTree[nodeId], visibility: visibility};
+                }
+                const child = objectTree[nodeId];
+                const newVisible = visibility && child.visibility && child.opacity > 0;
+                const changed = newVisible !== this.objectMap[child.objectId].visible;
+                this.objectMap[child.objectId].visible = newVisible;
+                if (changed) {
+                    this.instance.notifyChange(this.objectMap[child.objectId]);
+                }
+            }
+        });
+    };
+    loadTilesetStyle = (objectId, url) => {
+        const applyTilesetStyle = (styleurl) => {
+            const tiles3d = this.objectMap[objectId];
+            tiles3d.userData.tilesetStyle = this.tilesetStyles[styleurl];
+            tiles3d.tiles.group.children.forEach(group => {
+                Tiles3DStyle.applyTileStyle(group, tiles3d.userData, this.state.sceneContext);
+            });
+            this.instance.notifyChange(tiles3d);
+        };
+        if (this.tilesetStyles[url]) {
+            applyTilesetStyle(url);
+        } else if (url) {
+            const fullUrl = MiscUtils.resolveAssetsPath(url);
+            axios.get(fullUrl).then(response => {
+                this.tilesetStyles[url] = response.data;
+                applyTilesetStyle(url);
+            }).catch(() => {
+                this.tilesetStyles[url] = null;
+                applyTilesetStyle(url);
+            });
+        } else {
+            this.tilesetStyles[url] = null;
+            applyTilesetStyle(url);
+        }
     };
     zoomToObject = (objectId, margin = 20) => {
         const obj = this.state.sceneContext.getSceneObject(objectId);
@@ -643,6 +728,26 @@ class Map3D extends React.Component {
             ];
             this.state.sceneContext.setViewToExtent(bounds, 0);
         }
+    };
+    objectIsVisible = (objectId) => {
+        const objectTree = this.state.sceneContext.objectTree;
+        const options = objectTree[objectId];
+        let isVisible = options.opacity > 0 && options.visibility;
+        for (let curId = options.parent; isVisible && curId !== undefined; curId = objectTree[curId].parent) {
+            isVisible &&= objectTree[curId].visibility;
+        }
+        return isVisible;
+    };
+    objectContainsPoints = (object) => {
+        let containsPoints = false;
+        if (object?.tiles) {
+            object.traverse((child) => {
+                if (child instanceof Points) {
+                    containsPoints = true;
+                }
+            });
+        }
+        return containsPoints;
     };
     getMap = () => {
         return this.map;
@@ -668,19 +773,39 @@ class Map3D extends React.Component {
                                 <Component sceneContext={this.state.sceneContext} {...this.props.pluginOptions[name]} />
                             </Suspense>
                         ))}
+                        {this.renderBaseLayer()}
+                        {Object.values(this.state.sceneContext.colorLayers).map((options, idx) => (
+                            <ColorLayer3D
+                                key={options.id}
+                                map={this.map} options={options}
+                                prevLayerId={this.state.sceneContext.colorLayers[idx - 1]?.id ?? "__baselayer"}
+                                sceneContext={this.state.sceneContext}
+                            />
+                        ))}
                     </MapControls3D>
                 </UnloadWrapper>
             ) : null
         ];
     }
+    renderBaseLayer = () => {
+        const baseLayer = this.state.sceneContext.baseLayers.find(e => e.visibility === true);
+        return !baseLayer ? null : (
+            <ColorLayer3D key={baseLayer.name} map={this.map} options={{id: "__baselayer", ...baseLayer}} sceneContext={this.state.sceneContext} />
+        );
+    };
     setupContainer = (el) => {
         if (el) {
             this.container = el;
             el.resizeObserver = new ResizeObserver(entries => {
-                const rect = entries[0].contentRect;
-                this.state.sceneContext.scene.view.dispatchEvent({type: 'view-resized', width: rect.width, height: rect.height});
+                if (this.state.sceneContext.scene) {
+                    const rect = entries[0].contentRect;
+                    this.state.sceneContext.scene.view.dispatchEvent({type: 'view-resized', width: rect.width, height: rect.height});
+                }
             });
             el.resizeObserver.observe(el);
+            ConfigUtils.getConfigProp("projections", null, []).forEach(entry => {
+                CoordinateSystem.register(entry.code, entry.proj);
+            });
             this.setupInstance();
         }
     };
@@ -692,7 +817,7 @@ class Map3D extends React.Component {
             return;
         }
         const projection = this.props.theme.mapCrs;
-        const crs = CoordinateSystem.fromSrid(projection);
+        const crs = CoordinateSystem.get(projection);
 
         // Setup instance
         this.instance = new Instance({
@@ -708,7 +833,7 @@ class Map3D extends React.Component {
         this.instance.add(this.sceneObjectGroup);
 
         // Setup map
-        const initialBbox = this.props.theme.map3d?.extent ?? this.props.theme.initialBbox;
+        const initialBbox = this.props.theme.map3d.extent ?? this.props.theme.initialBbox;
         const bounds = CoordinatesUtils.reprojectBbox(initialBbox.bounds, initialBbox.crs, projection);
         const extent = new Extent(crs, bounds[0], bounds[2], bounds[1], bounds[3]);
         this.map = new Map({
@@ -719,7 +844,7 @@ class Map3D extends React.Component {
 
         // Setup camera
         const center = extent.center();
-        if (crsIsGeographic(center.crs)) {
+        if (center.crs.isGeographic()) {
             const position = Ellipsoid.WGS84.toCartesian(
                 center.latitude,
                 center.longitude,
@@ -744,8 +869,8 @@ class Map3D extends React.Component {
         this.instance.scene.background = cubeTexture;
 
         // Setup elevation
-        const demUrl = MiscUtils.resolveAssetsPath(this.props.theme.map3d?.dtm?.url ?? "");
-        const demCrs = CoordinateSystem.fromSrid(this.props.theme.map3d?.dtm?.crs || "EPSG:3857");
+        const demUrl = MiscUtils.resolveAssetsPath(this.props.theme.map3d.dtm?.url ?? "");
+        const demCrs = CoordinateSystem.get(this.props.theme.map3d.dtm?.crs || "EPSG:3857");
         if (demUrl) {
             const demSource = new GeoTIFFSource({
                 url: demUrl,
@@ -764,7 +889,7 @@ class Map3D extends React.Component {
 
         // Collect baselayers
         const externalLayers = {};
-        const baseLayers = ThemeUtils.createThemeBackgroundLayers(this.props.theme.map3d?.basemaps || [], this.props.themes, null, externalLayers);
+        const baseLayers = ThemeUtils.createThemeBackgroundLayers(this.props.theme.map3d.basemaps || [], this.props.themes, null, externalLayers);
         baseLayers.push({
             type: "blank",
             name: "",
@@ -791,62 +916,86 @@ class Map3D extends React.Component {
         // Collect color layers
         const colorLayers = this.collectColorLayers([], []);
 
-        const sceneObjects = {};
         this.objectMap = {};
-        // Add 3d tiles
-        (this.props.theme.map3d?.tiles3d || []).forEach(entry => {
-            const tiles = new Tiles3D({
-                url: MiscUtils.resolveAssetsPath(entry.url),
-                errorTarget: 32
-            });
-            tiles.tiles.addEventListener('load-tileset', () => {
-                this.instance.notifyChange(tiles);
-            });
-            tiles.tiles.addEventListener('needs-update', () => {
-                this.instance.notifyChange(tiles);
-            });
-            // Apply style when loading tile
-            tiles.tiles.addEventListener('load-model', ({scene}) => {
-                scene.userData.tilesetName = entry.name;
-                scene.userData.featureIdAttr = entry.idAttr ?? "id";
-                Tiles3DStyle.applyTileStyle(scene, this.state.sceneContext.sceneObjects[entry.name], this.state.sceneContext);
-                this.instance.notifyChange(tiles);
-            });
-            // Show/hide labels when tile visibility changes
-            tiles.tiles.addEventListener('tile-visibility-change', ({scene, visible}) => {
-                Object.values(scene?.userData?.tileLabels ?? {}).forEach(label => {
-                    label.labelObject.visible = visible;
-                    label.labelObject.element.style.display = visible ? 'initial' : 'none';
-                });
-            });
-            tiles.castShadow = true;
-            tiles.receiveShadow = true;
-            tiles.userData.layertree = true;
-            this.instance.add(tiles);
-            this.objectMap[entry.name] = tiles;
 
-            sceneObjects[entry.name] = {
-                visibility: entry.visibility ?? true,
-                opacity: 255,
-                layertree: true,
-                title: entry.title ?? entry.name,
-                baseColor: entry.baseColor,
-                styles: entry.styles,
-                style: entry.style || Object.keys(entry.styles || {})[0] || null,
-                tilesetStyle: null,
-                idAttr: entry.idAttr,
-                colorAttr: entry.colorAttr,
-                alphaAttr: entry.alphaAttr,
-                labelAttr: entry.labelAttr
-            };
+        const objects = [...this.props.theme.map3d.objects ?? []];
+        // Convert legacy flat lists to tree
+        (this.props.theme.map3d.tiles3d || []).forEach(entry => {
+            objects.push({...entry, type: "tiles3d"});
+        });
+        (this.props.theme.map3d.objects3d || []).forEach(entry => {
+            objects.push({...entry, type: "object3d"});
         });
 
-        // Add other objects
-        (this.props.theme.map3d?.objects3d || []).forEach(entry => {
-            importGltf(MiscUtils.resolveAssetsPath(entry.url), entry.title ?? entry.name, this.state.sceneContext, {
-                visibility: entry.visibility ?? true
+        // Add objects and build tree
+        const objectTree = {
+            [null]: {parent: undefined, children: [], visibility: true}
+        };
+        const buildObjectTree = (entries, parentId) => {
+            const nodeIds = [];
+            entries.forEach(entry => {
+                if (entry.type === "group") {
+                    const groupId = uuidv4();
+                    objectTree[groupId] = {
+                        parent: parentId,
+                        title: entry.title,
+                        visibility: entry.visibility ?? true,
+                        mutuallyExclusive: entry.mutuallyExclusive ?? false,
+                        expanded: entry.expanded ?? true
+                    };
+                    // Need this separately to ensure object[groupId] is already assigned
+                    objectTree[groupId].children = buildObjectTree(entry.items, groupId);
+                    if (entry.mutuallyExclusive) {
+                        // Ensure only one child is visible
+                        let haveVisibleChild = false;
+                        objectTree[groupId].children.forEach(childId => {
+                            objectTree[childId].visibility = objectTree[childId].visibility && !haveVisibleChild;
+                            haveVisibleChild |= objectTree[childId].visibility;
+                        });
+                    }
+                    nodeIds.push(groupId);
+                } else if (entry.type === "tiles3d") {
+                    objectTree[entry.name] = {
+                        objectId: entry.name,
+                        parent: parentId,
+                        title: entry.title ?? entry.name,
+                        visibility: entry.visibility ?? true,
+                        snap: entry.snap ?? true,
+                        opacity: 255,
+                        styles: entry.styles || {},
+                        style: entry.style || Object.keys(entry.styles || {})[0] || null
+                    };
+                    this.importTiles3D(entry.url, entry.name);
+                    this.objectMap[entry.name].userData = {
+                        ...this.objectMap[entry.name].userData,
+                        baseColor: entry.baseColor,
+                        tilesetStyle: null,
+                        idAttr: entry.idAttr,
+                        colorAttr: entry.colorAttr,
+                        alphaAttr: entry.alphaAttr,
+                        labelAttr: entry.labelAttr,
+                        infoAttrBlacklist: entry.infoAttrBlacklist
+                    };
+                    this.applySceneObjectState(entry.name, objectTree[entry.name], {}, objectTree);
+                    nodeIds.push(entry.name);
+                } else if (entry.type === "object3d") {
+                    objectTree[entry.name] = {
+                        objectId: entry.name,
+                        parent: parentId,
+                        title: entry.title ?? entry.name,
+                        visibility: entry.visibility ?? true,
+                        snap: entry.snap ?? true,
+                        opacity: 255
+                    };
+                    this.importObject3D(MiscUtils.resolveAssetsPath(entry.url), entry.name, false, {}, false, () => {
+                        this.applySceneObjectState(entry.name, objectTree[entry.name], {}, objectTree);
+                    });
+                    nodeIds.push(entry.name);
+                }
             });
-        });
+            return nodeIds;
+        };
+        objectTree.null.children = buildObjectTree(objects, null);
 
         this.setState(state => ({
             sceneContext: {
@@ -858,13 +1007,13 @@ class Map3D extends React.Component {
                 dtmCrs: demCrs,
                 baseLayers: baseLayers,
                 colorLayers: colorLayers,
-                sceneObjects: sceneObjects
+                objectTree: objectTree
             },
             sceneId: uuidv4()
         }));
 
         // Inspector
-        if (["1", "true"].includes((UrlParams.getParam("inspector") || "").toLowerCase())) {
+        if ((process.env.NODE_ENV !== "production" || this.props.forceAllowInspector) && ["1", "true"].includes((UrlParams.getParam("inspector") || "").toLowerCase())) {
             const inspectorContainer = document.createElement("div");
             inspectorContainer.className = 'map3d-inspector';
             this.container.appendChild(inspectorContainer);
@@ -885,9 +1034,8 @@ class Map3D extends React.Component {
         const isFirstPerson = this.state.sceneContext.scene.view.controls.isFirstPerson;
         const maxDistance = isFirstPerson ? 200 + 20 * quality : 500 + quality * quality;
         // Hide scene objects according to scene quality
-        Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
-            const object = this.objectMap[objId];
-            if (options.layertree && object.isObject3D && object.visible) {
+        Object.values(this.objectMap).forEach(object => {
+            if (object.userData.layertree && object.isObject3D && object.visible) {
                 object.children.forEach(child => {
                     if (child.geometry) {
                         if (!child.geometry.boundingBox) {
@@ -909,9 +1057,8 @@ class Map3D extends React.Component {
         if (!this.state.sceneContext.scene?.view?.controls) {
             return;
         }
-        Object.entries(this.state.sceneContext.sceneObjects).forEach(([objId, options]) => {
-            const object = this.objectMap[objId];
-            if (options.layertree && object.isObject3D) {
+        Object.values(this.objectMap).forEach(object => {
+            if (object.userData.layertree && object.isObject3D) {
                 object.children.forEach(child => {
                     child.visible = child.userData.__wasVisible;
                     delete child.userData.__wasVisible;
@@ -939,24 +1086,6 @@ class Map3D extends React.Component {
             this.instance.view.camera.far = this.instance.view.camera.userData.__previousFar;
             delete this.instance.view.camera.userData.__previousFar;
             this.instance.view.camera.updateProjectionMatrix();
-        }
-    };
-    loadTilesetStyle = (objectId, options) => {
-        const url = options.styles?.[options.style];
-        if (this.tilesetStyles[url]) {
-            this.updateSceneObject(objectId, {tilesetStyle: this.tilesetStyles[url]});
-        } else if (url) {
-            const fullUrl = MiscUtils.resolveAssetsPath(url);
-            axios.get(fullUrl).then(response => {
-                this.tilesetStyles[url] = response.data;
-                this.updateSceneObject(objectId, {tilesetStyle: this.tilesetStyles[url]});
-            }).catch(() => {
-                this.tilesetStyles[url] = {};
-                this.updateSceneObject(objectId, {tilesetStyle: this.tilesetStyles[url]});
-            });
-        } else {
-            this.tilesetStyles[url] = null;
-            this.updateSceneObject(objectId, {tilesetStyle: this.tilesetStyles[url]});
         }
     };
     disposeInstance = () => {
@@ -1007,7 +1136,7 @@ class Map3D extends React.Component {
             scenePos = [scenePos];
         }
         const dtmPos = scenePos.map(p => {
-            return CoordinatesUtils.reproject(p, this.state.sceneContext.mapCrs, this.state.sceneContext.dtmCrs.name);
+            return CoordinatesUtils.reproject(p, this.state.sceneContext.mapCrs, this.state.sceneContext.dtmCrs.id);
         });
         const dtmExt = [Infinity, Infinity, -Infinity, -Infinity];
         dtmPos.forEach(p => {
@@ -1024,7 +1153,8 @@ class Map3D extends React.Component {
             fromUrl(this.state.sceneContext.dtmUrl).then(tiff => {
 
                 tiff.getImage().then(image => {
-                    const {ModelTiepoint, ModelPixelScale} = image.fileDirectory;
+                    const ModelPixelScale = image.fileDirectory.getValue('ModelPixelScale');
+                    const ModelTiepoint = image.fileDirectory.getValue('ModelTiepoint');
 
                     // Extract scale and tiepoint values
                     const [scaleX, scaleY] = [ModelPixelScale[0], ModelPixelScale[1]];
@@ -1055,7 +1185,7 @@ class Map3D extends React.Component {
         });
     };
     getTerrainHeightFromMap = (scenePos) => {
-        const crs = CoordinateSystem.fromSrid(this.state.sceneContext.mapCrs);
+        const crs = CoordinateSystem.get(this.state.sceneContext.mapCrs);
         const coordinates = new Coordinates(crs, scenePos[0], scenePos[1], 0);
         const elevationResult = this.state.sceneContext.map.getElevation({coordinates});
         // const raycaster = new Raycaster(new Vector3(scenePos[0], scenePos[1], 10000));
@@ -1102,23 +1232,20 @@ class Map3D extends React.Component {
         this.state.sceneContext.setViewToExtent(bounds, rotation);
     };
     store3dState = () => {
-        const promises = Object.entries(this.state.sceneContext.sceneObjects).map(([objectId, entry]) => {
-            if (!entry.layertree) {
-                return null;
-            }
+        const promises = Object.values(this.state.sceneContext.objectTree).map(entry => {
             return new Promise(resolve => {
-                const object = this.state.sceneContext.getSceneObject(objectId);
+                const object = this.state.sceneContext.getSceneObject(entry.objectId);
                 if (entry.drawGroup) {
                     const exporter = new GLTFExporter();
                     exporter.parse(object, (result) => {
-                        resolve({id: objectId, options: entry, data: result});
+                        resolve({id: entry.objectId, options: entry, data: result});
                     });
                 } else if (entry.imported && object.tiles) {
                     const container = object.tiles.group.parent;
                     const tileset = {matrix: container.matrix.elements, label: container.userData.label, url: object.tiles.rootURL};
-                    resolve({id: objectId, options: entry, tileset: tileset});
+                    resolve({id: entry.objectId, options: entry, tileset: tileset});
                 } else {
-                    resolve({id: objectId, options: entry});
+                    resolve({id: entry.objectId, options: entry});
                 }
             });
         }).filter(Boolean);
@@ -1130,7 +1257,8 @@ class Map3D extends React.Component {
                     id: layerId, options: {
                         visibility: options.visibility,
                         opacity: options.opacity,
-                        extrusionHeight: options.extrusionHeight
+                        extrusionHeight: options.extrusionHeight,
+                        expanded: options.expanded
                     }
                 }));
                 resolve({
@@ -1150,6 +1278,7 @@ class Map3D extends React.Component {
         }
         (data.objects || []).forEach(item => {
             if (item.data) {
+                // Don't use importObject3D as we don't need to transform from Y-up to Z-up
                 const loader = new GLTFLoader();
                 loader.parse(item.data, ConfigUtils.getAssetsPath(), (gltf) => {
                     gltf.scene.traverse(c => {
@@ -1159,11 +1288,11 @@ class Map3D extends React.Component {
                         }
                         updateObjectLabel(c, this.state.sceneContext);
                     });
-                    this.state.sceneContext.addSceneObject(item.id, gltf.scene, item.options);
+                    this.addSceneObject(item.id, gltf.scene, true, item.options);
                 });
             } else if (item.tileset) {
-                this.add3dTiles(item.tileset.url, item.id, item.options, false, new Matrix4().fromArray(item.tileset.matrix), item.tileset.label);
-            } else if (item.id in this.state.sceneContext.sceneObjects) {
+                this.importTiles3D(item.tileset.url, item.id, true, item.options, false, new Matrix4().fromArray(item.tileset.matrix), item.tileset.label);
+            } else if (item.id in this.state.sceneContext.objectTree) {
                 this.state.sceneContext.updateSceneObject(item.id, item.options);
             }
         });
@@ -1173,9 +1302,11 @@ class Map3D extends React.Component {
             }
         });
         this.state.sceneContext.restoreView(data);
-        const bl3d = data.baseLayer ?? "";
+        if ((data.baseLayer ?? null) !== null) {
+            const bl3d = data.baseLayer ?? "";
 
-        this.setBaseLayer({name: bl3d}, bl3d !== "null");
+            this.setBaseLayer({name: bl3d}, bl3d !== "null");
+        }
         this.state.sceneContext.scene.notifyChange();
     };
 }

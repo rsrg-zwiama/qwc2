@@ -47,13 +47,12 @@ import './style/LayerTree.css';
  */
 class LayerTree extends React.Component {
     static propTypes = {
-        /** Whether to allow adding separator entries in the layer tree, useful for organizing the tree. */
         addLayerSeparator: PropTypes.func,
         /** Whether to enable the compare function. Requires the `MapCompare` plugin. */
         allowCompare: PropTypes.bool,
         /** Whether to allow importing external layers. */
         allowImport: PropTypes.bool,
-        /** Whether to allow adding layer tree separators. */
+        /** Whether to allow adding separator entries in the layer tree, useful for organizing the tree. */
         allowLayerTreeSeparators: PropTypes.bool,
         /** Whether to allow enabling map tips. */
         allowMapTips: PropTypes.bool,
@@ -111,6 +110,8 @@ class LayerTree extends React.Component {
         setThemeLayersVisibilityPreset: PropTypes.func,
         /** Whether to display an icon linking to the layer attribute table in the layer options menu.  */
         showAttributeTableLink: PropTypes.bool,
+        /** Whether to show style selection menu for groups (if `showStyleSelector` is `true`). */
+        showGroupStyleSelector: PropTypes.bool,
         /** Whether to display legend icons. */
         showLegendIcons: PropTypes.bool,
         /** Whether to display the queryable icon to indicate that a layer is identifyable. */
@@ -119,6 +120,8 @@ class LayerTree extends React.Component {
         showRootEntry: PropTypes.bool,
         /** Whether to show the style selection menu for layers with multiple styles. */
         showStyleSelector: PropTypes.bool,
+        /** Whether to show a settings menu in the titlebar which groups all titlebar buttons. */
+        showTitlebarSettingsMenu: PropTypes.bool,
         /** Whether to display a checkbox to toggle all layers. */
         showToggleAllLayersCheckbox: PropTypes.bool,
         /** The side of the application on which to display the sidebar. */
@@ -159,6 +162,7 @@ class LayerTree extends React.Component {
         enableVisibleFilter: true,
         enableServiceInfo: true,
         infoInSettings: true,
+        showGroupStyleSelector: true,
         showStyleSelector: true,
         showToggleAllLayersCheckbox: true,
         transparencyIcon: true,
@@ -277,7 +281,7 @@ class LayerTree extends React.Component {
         const allowRemove = this.props.allowRemovingThemeLayers || ConfigUtils.getConfigProp("allowRemovingThemeLayers", this.props.theme) === true || layer.role !== LayerRole.THEME;
         const allowReordering = ConfigUtils.getConfigProp("allowReorderingLayers", this.props.theme) === true && !this.state.filterinvisiblelayers;
         const sortable = allowReordering && ConfigUtils.getConfigProp("preventSplittingGroupsWhenReordering", this.props.theme) === true;
-        const styles = this.props.showStyleSelector && layer.type === "wms" && path.length === 0 ? this.getLayerStyles(layer) : null;
+        const styles = this.props.showStyleSelector && this.props.showGroupStyleSelector && layer.type === "wms" && path.length === 0 ? this.getLayerStyles(layer) : null;
         return (
             <div className="layertree-item-container" data-id={JSON.stringify({layer: layer.id, path: path})} key={groupId}>
                 <div className={classnames(itemclasses)}>
@@ -403,8 +407,8 @@ class LayerTree extends React.Component {
         let reorderButtons = null;
         if (allowReordering && !this.state.filterinvisiblelayers) {
             reorderButtons = [
-                (<Icon className="layertree-item-move" icon="arrow-down" key="layertree-item-move-down" onClick={() => this.props.reorderLayer(layer, path, +1)} />),
-                (<Icon className="layertree-item-move" icon="arrow-up" key="layertree-item-move-up" onClick={() => this.props.reorderLayer(layer, path, -1)} />)
+                (<Icon className="layertree-item-move" icon="arrow-down" key="layertree-item-move-down" onClick={() => this.props.reorderLayer(layer.id, path, +1)} />),
+                (<Icon className="layertree-item-move" icon="arrow-up" key="layertree-item-move-up" onClick={() => this.props.reorderLayer(layer.id, path, -1)} />)
             ];
         }
         let toggleGroupButton = null;
@@ -429,6 +433,9 @@ class LayerTree extends React.Component {
                 {this.props.transparencyIcon ? (<Icon icon="transparency" />) : LocaleUtils.tr("layertree.transparency")}
                 <input className="layertree-item-transparency-slider" max="255" min="0"
                     onChange={(ev) => this.layerTransparencyChanged(layer, path, ev.target.value, !isEmpty(sublayer.sublayers) ? 'children' : null)}
+                    onMouseDown={ev => ev.stopPropagation()} onMouseMove={ev => ev.stopPropagation()}
+                    onPointerDown={ev => ev.stopPropagation()} onPointerMove={ev => ev.stopPropagation()}
+                    onTouchMove={ev => ev.stopPropagation()} onTouchStart={ev => ev.stopPropagation()}
                     step="1" type="range" value={255 - LayerUtils.computeLayerOpacity(sublayer)} />
                 {reorderButtons}
                 {toggleGroupButton}
@@ -473,12 +480,14 @@ class LayerTree extends React.Component {
             const usedGroupIds = new Set();
             if (isEmpty(layer.sublayers) && layer.role !== LayerRole.THEME) {
                 return this.renderLayer(layer, layer, [], layer.visibility, false, !haveGroups);
+            } else if (this.props.showRootEntry && layer.role === LayerRole.THEME && isEmpty(layer.sublayers)) {
+                return null;
             } else if (this.props.showRootEntry || layer.role !== LayerRole.THEME) {
                 return this.renderLayerGroup(layer, layer, [], layer.visibility, false, usedGroupIds);
             } else {
                 return layer.sublayers.map((sublayer, idx) => {
                     const subpath = [idx];
-                    if (sublayer.sublayers) {
+                    if (!isEmpty(sublayer.sublayers)) {
                         return this.renderLayerGroup(layer, sublayer, subpath, layer.visibility, false, usedGroupIds);
                     } else {
                         return this.renderLayer(layer, sublayer, subpath, layer.visibility, false, !haveGroups);
@@ -587,16 +596,15 @@ class LayerTree extends React.Component {
         }
         let deleteAllLayersIcon = null;
         if (this.props.allowRemovingThemeLayers || ConfigUtils.getConfigProp("allowRemovingThemeLayers") === true) {
-            const deleteAllLayersTooltip = LocaleUtils.tr("layertree.deletealllayers");
-            deleteAllLayersIcon = (<Icon className="layertree-delete-legend" icon="trash" onClick={this.deleteAllLayers} title={deleteAllLayersTooltip}/>);
+            deleteAllLayersIcon = (<Icon className="layertree-delete-legend" icon="trash" onClick={this.deleteAllLayers} title={LocaleUtils.tr("layertree.deletealllayers")}/>);
         }
         let serviceInfoIcon = null;
         if (this.props.enableServiceInfo) {
-            const serviceInfoTooltip = LocaleUtils.tr("serviceinfo.title");
-            serviceInfoIcon = (<Icon className="layertree-theme-metadata" icon="info-sign" onClick={() => this.props.setActiveServiceInfo(this.props.theme)} title={serviceInfoTooltip} />);
+            serviceInfoIcon = (<Icon className="layertree-theme-metadata" icon="info-sign" onClick={() => this.props.setActiveServiceInfo(this.props.theme)} title={LocaleUtils.tr("serviceinfo.title")} />);
         }
 
-        const extraTitlebarContent = (
+        const extraBeforeContent = this.props.showTitlebarSettingsMenu ? this.renderVisibilityButton() : null;
+        const extraTitlebarContent = this.props.showTitlebarSettingsMenu ? null : (
             <span>
                 {this.renderVisibilityButton()}
                 {legendPrintIcon}
@@ -607,8 +615,9 @@ class LayerTree extends React.Component {
 
         return (
             <div>
-                <SideBar extraTitlebarContent={extraTitlebarContent}
-                    icon="layers"
+                <SideBar extraBeforeContent={extraBeforeContent}
+                    extraTitlebarContent={extraTitlebarContent}
+                    icon={this.props.showTitlebarSettingsMenu ? null : "layers"}
                     id="LayerTree" onHide={this.onHide}
                     side={this.props.side}
                     title={LocaleUtils.tr("appmenu.items.LayerTree")}
@@ -625,43 +634,82 @@ class LayerTree extends React.Component {
         );
     }
     renderVisibilityButton = () => {
-        if (!this.props.showToggleAllLayersCheckbox && !this.props.enableVisibleFilter && isEmpty(this.props.theme.visibilityPresets)) {
-            return null;
-        }
+        const menuEntries = [];
         let vis = 0;
-        let count = 0;
-        for (const layer of this.props.layers) {
-            if (layer.role === LayerRole.THEME || layer.role === LayerRole.USERLAYER) {
-                count += 1;
-                vis += layer.visibility;
+        if (this.state.visibilityMenu) {
+            let count = 0;
+            for (const layer of this.props.layers) {
+                if (layer.role === LayerRole.THEME || layer.role === LayerRole.USERLAYER) {
+                    count += 1;
+                    vis += layer.visibility;
+                }
+            }
+            vis /= Math.min(1, count);
+        }
+        let needsep = false;
+        if (this.props.showToggleAllLayersCheckbox) {
+            menuEntries.push(
+                <div key="showallayers" onClick={() => this.toggleLayerTreeVisibility(vis === 0)}>
+                    <Icon icon={vis === 0 ? "unchecked" : "checked"} /> {LocaleUtils.tr("layertree.showallayers")}
+                </div>
+            );
+        }
+        if (this.props.enableVisibleFilter) {
+            menuEntries.push(
+                <div key="filtervisible" onClick={() => this.setState((state) => ({filterinvisiblelayers: !state.filterinvisiblelayers}))}>
+                    <Icon icon={this.state.filterinvisiblelayers ? "checked" : "unchecked"} /> {LocaleUtils.tr("layertree.visiblefilter")}
+                </div>
+            );
+        }
+        Object.entries(this.props.theme.visibilityPresets || {}).forEach(([name, preset], idx) => {
+            menuEntries.push(
+                <div className={idx === 0 && menuEntries.length > 0 ? "layertree-visibility-menu-sep" : ""} key={name} onClick={() => this.props.setThemeLayersVisibilityPreset(preset)}>
+                    <Icon icon={this.state.activePreset === name ? "radio_checked" : "radio_unchecked"} /> {name}
+                </div>
+            );
+            needsep = true;
+        });
+        if (this.props.showTitlebarSettingsMenu) {
+            if (this.props.enableLegendPrint) {
+                menuEntries.push(
+                    <div className={needsep ? "layertree-visibility-menu-sep" : ""} key="printlegend" onClick={() => this.setState({legendPrintVisible: true})}>
+                        <Icon icon="print" /> {LocaleUtils.tr("layertree.printlegend")}
+                    </div>
+                );
+                needsep = false;
+            }
+            if (this.props.allowRemovingThemeLayers || ConfigUtils.getConfigProp("allowRemovingThemeLayers") === true) {
+                menuEntries.push(
+                    <div className={needsep ? "layertree-visibility-menu-sep" : ""} key="removeall" onClick={this.deleteAllLayers}>
+                        <Icon icon="trash" /> {LocaleUtils.tr("layertree.deletealllayers")}
+                    </div>
+                );
+                needsep = false;
+            }
+            if (this.props.enableServiceInfo) {
+                menuEntries.push(
+                    <div className={needsep ? "layertree-visibility-menu-sep" : ""} key="removeall" onClick={() => this.props.setActiveServiceInfo(this.props.theme)}>
+                        <Icon icon="info-sign" /> {LocaleUtils.tr("serviceinfo.title")}
+                    </div>
+                );
+                needsep = false;
             }
         }
-        vis /= Math.min(1, count);
+        if (menuEntries.length === 0) {
+            return null;
+        }
+
         const buttonClasses = classnames({
             "layertree-visibility-button": true,
             "layertree-visibility-button-active": this.state.visibilityMenu
         });
         return (
             <span className={buttonClasses} onClick={() => this.setState(state => ({visibilityMenu: !state.visibilityMenu}))} onKeyDown={MiscUtils.checkKeyActivate} ref={el => {this.visibilityButton = el;}} tabIndex={0}>
-                <Icon icon="eye"/>
+                <Icon icon={this.props.showTitlebarSettingsMenu ? "cog" : "eye"}/>
                 <Icon icon="chevron-down" />
                 {this.state.visibilityMenu ? (
                     <PopupMenu anchor={this.visibilityButton} className="layertree-visibility-menu" keepMenuOpen onClose={() => this.setState({visibilityMenu: false})}>
-                        {this.props.showToggleAllLayersCheckbox ? (
-                            <div key="hidealllayers" onClick={() => this.toggleLayerTreeVisibility(vis === 0)}>
-                                <Icon icon={vis === 0 ? "checked" : "unchecked"} /> {LocaleUtils.tr("layertree.hidealllayers")}
-                            </div>
-                        ) : null}
-                        {this.props.enableVisibleFilter ? (
-                            <div key="filtervisible" onClick={() => this.setState((state) => ({filterinvisiblelayers: !state.filterinvisiblelayers}))}>
-                                <Icon icon={this.state.filterinvisiblelayers ? "checked" : "unchecked"} /> {LocaleUtils.tr("layertree.visiblefilter")}
-                            </div>
-                        ) : null}
-                        {Object.entries(this.props.theme.visibilityPresets || {}).map(([name, preset], idx) => (
-                            <div className={idx === 0 ? "layertree-visibility-menu-sep" : ""} key={name} onClick={() => this.props.setThemeLayersVisibilityPreset(preset)}>
-                                <Icon icon={this.state.activePreset === name ? "radio_checked" : "radio_unchecked"} /> {name}
-                            </div>
-                        ))}
+                        {menuEntries}
                     </PopupMenu>
                 ) : null}
             </span>
@@ -723,10 +771,7 @@ class LayerTree extends React.Component {
     };
     onSortChange = (order, sortable, ev) => {
         const moved = JSON.parse(order[ev.newIndex]);
-        const layer = this.props.layers.find(l => l.id === moved.layer);
-        if (layer) {
-            this.props.reorderLayer(layer, moved.path, ev.newIndex - ev.oldIndex);
-        }
+        this.props.reorderLayer(moved.layer, moved.path, ev.newIndex - ev.oldIndex);
     };
     toggleImportLayers = () => {
         this.setState((state) => {

@@ -536,9 +536,11 @@ class IdentifyViewer extends React.Component {
         let inlineExtaAttribs = false;
         const featureReports = this.state.reports[layerid] || [];
         if (feature.featurereport) {
+            const parts = feature.featurereport.split(".");
             featureReports.push({
                 title: null,
-                template: feature.featurereport
+                template: parts.shift(),
+                format: parts.join(".")
             });
         }
         if (feature.type === "text") {
@@ -652,7 +654,7 @@ class IdentifyViewer extends React.Component {
                     ) : null}
                     <span>{[this.props.showLayerTitles ? feature.layertitle : "", feature.displayname].filter(Boolean).join(": ")}</span>
                     {zoomToFeatureButton}
-                    <Icon icon="info-sign" onClick={() => this.showLayerInfo(layerid)} />
+                    <Icon icon="info-sign" onClick={() => this.showLayerInfo(layerid, feature.layerinfo)} />
                     <Icon icon="trash" onClick={() => this.removeResult(layerid, feature)} />
                 </div>
                 {this.props.collapsible && !expanded ? null : (
@@ -1001,9 +1003,12 @@ class IdentifyViewer extends React.Component {
             this.setState({generatingReport: false});
         });
     };
-    showLayerInfo = (layer) => {
+    showLayerInfo = (layer, infolayer) => {
         const [layerUrl, layerName] = layer.split('#');
-        const match = LayerUtils.searchLayer(this.props.layers, 'url', layerUrl, 'name', layerName);
+        if (!infolayer) {
+            infolayer = layerName;
+        }
+        const match = LayerUtils.searchLayer(this.props.layers, 'url', layerUrl, 'name', infolayer);
         if (match) {
             this.props.setActiveLayerInfo(match.layer, match.sublayer);
         }
@@ -1016,12 +1021,21 @@ class IdentifyViewer extends React.Component {
             return (<a href={text} rel="noreferrer" target="_blank"><img src={text} /></a>);
         }
         text = "" + text; // Ensure text is a string
+        for (const formatter of Object.values(window.qwc2?.__attributeFormatters || {})) {
+            text = formatter(attrName, text, layer, result);
+            if (React.isValidElement(text)) {
+                return text;
+            }
+        }
         text = this.props.attributeTransform(attrName, text, layer, result);
         text = MiscUtils.addLinkAnchors(text);
         return this.parsedContent(text);
     };
     parsedContent = (text) => {
-        text = DOMPurify.sanitize(text, {ADD_ATTR: ['target'], ADD_TAGS: ["iframe"], FORCE_BODY: true}).replace('&#10;', '<br />');
+        text = DOMPurify.sanitize(text, {
+            ADD_ATTR: ['target'], ADD_TAGS: ["iframe"], FORCE_BODY: true,
+            ALLOW_UNKNOWN_PROTOCOLS: true
+        }).replace('&#10;', '<br />');
         const options = {replace: (node) => {
             if (node.name === "a") {
                 return (

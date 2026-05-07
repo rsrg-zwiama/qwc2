@@ -69,8 +69,21 @@ function parsePropType(type) {
         return '[' + parsePropType(type.value) + "]";
     } else if (type.name === 'union') {
         return '{' + type.value.map(entry => parsePropType(entry)).join(", ") + '}';
+    } else if (type.name === 'enum') {
+        return `{${type.value.map(x => x.value).join(", ")}}`;
+    } else if (type.name === 'objectOf') {
+        return '<key>: ' + parsePropType(type.value);
     } else {
         return type.name;
+    }
+}
+function parsePropDesc(prop) {
+    if (prop.type.name === 'shape') {
+        return prop.description.replaceAll("\n", "<br />") + "<br />" + Object.entries(prop.type.value).map(([name, subprop]) => {
+            return "- `" + name + "`: " + subprop.description;
+        }).join("<br />");
+    } else {
+        return prop.description.replaceAll("\n", "<br />");
     }
 }
 function genPluginDoc(plugin) {
@@ -91,7 +104,7 @@ function genPluginDoc(plugin) {
             }
             const defaultValue = prop.defaultValue ? prop.defaultValue.value.split("\n").map(x => '`' + x.replace(' ', ' ') + '`').join("<br />") : "`undefined`";
             const type = "`" + parsePropType(prop.type).replaceAll(' ', ' ').replaceAll("\n", "`<br />`") + "`";
-            output += `| ${name} | ${type} | ${prop.description.replaceAll("\n", "<br />")} | ${defaultValue} |\n`;
+            output += `| ${name} | ${type} | ${parsePropDesc(prop)} | ${defaultValue} |\n`;
         });
         output += "\n";
     }

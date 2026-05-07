@@ -11,7 +11,7 @@ import {connect} from 'react-redux';
 
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
-import {BufferAttribute, BufferGeometry, Float32BufferAttribute, Mesh, MeshStandardMaterial, Raycaster, Vector2} from 'three';
+import {BufferAttribute, BufferGeometry, Float32BufferAttribute, Matrix4, Mesh, MeshStandardMaterial, Raycaster, Vector2, Vector3} from 'three';
 
 import Icon from '../../components/Icon';
 import {TileMeshHelper} from '../../components/map3d/utils/MiscUtils3D';
@@ -79,10 +79,6 @@ class HideObjects3D extends React.Component {
             </SideBar>
         );
     }
-    clear = () => {
-        this.setState({pickAttrs: null});
-        this.props.sceneContext.removeSceneObject("__identify3d_highlight");
-    };
     pickOnRelease = (ev) => {
         if (ev.button !== 0) {
             return;
@@ -96,7 +92,6 @@ class HideObjects3D extends React.Component {
         if (this.props.enabled !== true) {
             return;
         }
-        this.clear();
 
         // Setup raycaster
         const raycaster = new Raycaster();
@@ -108,15 +103,15 @@ class HideObjects3D extends React.Component {
         raycaster.setFromCamera(new Vector2(x, y), camera);
 
         const picks = [];
-        Object.entries(this.props.sceneContext.sceneObjects).forEach(([objId, options]) => {
-            if (!options.layertree || !options.visibility) {
+        Object.values(this.props.sceneContext.objectTree).forEach(entry => {
+            if (!entry.objectId || !this.props.sceneContext.objectIsVisible(entry.objectId)) {
                 return;
             }
-            const object = this.props.sceneContext.getSceneObject(objId);
+            const object = this.props.sceneContext.getSceneObject(entry.objectId);
             if (object.tiles?.raycast) {
                 const intersections = [];
                 object.tiles.raycast(raycaster, intersections);
-                intersections.forEach(entry => { entry.isTilePick = true; });
+                intersections.forEach(inter => { inter.isTilePick = true; });
                 picks.push(...intersections);
             } else {
                 picks.push(...raycaster.intersectObjects([object], true));
@@ -134,7 +129,6 @@ class HideObjects3D extends React.Component {
     };
     hideTilePick = (pick) => {
         const posAttr = pick.object.geometry.getAttribute('position');
-        const norAttr = pick.object.geometry.getAttribute('normal');
 
         // Ensure geometry is indexed
         if (!pick.object.geometry.index) {
@@ -144,31 +138,43 @@ class HideObjects3D extends React.Component {
             }
             pick.object.geometry.setIndex(new BufferAttribute(indices, 1));
         }
-        if (!pick.object.userData.originalIndex) {
-            pick.object.userData.originalIndex = pick.object.geometry.index.array.slice();
-            pick.object.userData.hiddenIds = [];
-        }
 
         const helper = new TileMeshHelper(pick.object);
-        const pickFeatureId = helper.getFeatureId(pick.face);
+        const pickFeatureId = helper.getPickFeatureId(pick);
 
         // Extract feature geometry
         const pickPosition = [];
         const pickNormal = [];
-        helper.forEachFeatureTriangle(pickFeatureId, (i0, i1, i2) => {
-            pickPosition.push(posAttr.getX(i0), posAttr.getY(i0), posAttr.getZ(i0));
-            pickPosition.push(posAttr.getX(i1), posAttr.getY(i1), posAttr.getZ(i1));
-            pickPosition.push(posAttr.getX(i2), posAttr.getY(i2), posAttr.getZ(i2));
-            pickNormal.push(norAttr.getX(i0), norAttr.getY(i0), norAttr.getZ(i0));
-            pickNormal.push(norAttr.getX(i1), norAttr.getY(i1), norAttr.getZ(i1));
-            pickNormal.push(norAttr.getX(i2), norAttr.getY(i2), norAttr.getZ(i2));
+        helper.forEachFeatureTriangle(pickFeatureId, (i0, i1, i2, matrix, normalMatrix) => {
+            pickPosition.push(...helper.getPosition(i0, matrix).toArray());
+            pickPosition.push(...helper.getPosition(i1, matrix).toArray());
+            pickPosition.push(...helper.getPosition(i2, matrix).toArray());
+            pickNormal.push(...helper.getNormal(i0, normalMatrix).toArray());
+            pickNormal.push(...helper.getNormal(i1, normalMatrix).toArray());
+            pickNormal.push(...helper.getNormal(i2, normalMatrix).toArray());
         });
 
         // Filter indices
-        const filteredIndices = pick.object.geometry.index.array.filter(idx => {
-            return helper.featureIdAttr.getX(idx) !== pickFeatureId;
-        });
-        pick.object.geometry.setIndex(new BufferAttribute(new Uint32Array(filteredIndices), 1));
+        if (pick.object.isInstancedMesh) {
+            if (!pick.object.userData.originalMatrix) {
+                pick.object.userData.originalMatrix = {};
+            }
+            const matrix = new Matrix4();
+            pick.object.getMatrixAt(pickFeatureId, matrix);
+            pick.object.userData.originalMatrix[pickFeatureId] = matrix.clone();
+            matrix.setPosition(new Vector3(1e9, 1e9, 1e9));
+            pick.object.setMatrixAt(pickFeatureId, matrix);
+            pick.object.instanceMatrix.needsUpdate = true;
+        } else {
+            if (!pick.object.userData.originalIndex) {
+                pick.object.userData.originalIndex = pick.object.geometry.index.array.slice();
+            }
+            const filteredIndices = pick.object.geometry.index.array.filter(idx => {
+                return helper.featureIdAttr.getX(idx) !== pickFeatureId;
+            });
+            pick.object.geometry.setIndex(new BufferAttribute(new Uint32Array(filteredIndices), 1));
+        }
+        pick.object.geometry?.computeBoundsTree?.();
 
         // Hide label
         const pickLabel = helper.getTileUserData().tileLabels?.[pickFeatureId];
@@ -189,13 +195,15 @@ class HideObjects3D extends React.Component {
         const index = pick.object.geometry.getIndex();
 
         // Create highlight geometry
-        this.storeHiddenObject(pick, posAttr.array, norAttr.array, index);
+        this.storeHiddenObject(pick, posAttr.array, norAttr?.array, index);
     };
     storeHiddenObject = (pick, position, normal, index = null, featureId = null) => {
         const material = new MeshStandardMaterial({color: 0xff0000});
         const geometry = new BufferGeometry();
         geometry.setAttribute('position', new Float32BufferAttribute(position, 3));
-        geometry.setAttribute('normal', new Float32BufferAttribute(normal, 3));
+        if (normal) {
+            geometry.setAttribute('normal', new Float32BufferAttribute(normal, 3));
+        }
         geometry.setIndex(index);
         const mesh = new Mesh(geometry, material);
         mesh.receiveShadow = true;
@@ -226,11 +234,17 @@ class HideObjects3D extends React.Component {
             const helper = new TileMeshHelper(entry.object);
 
             // Re-add filtered indices
-            const filteredIndices = entry.object.userData.originalIndex.filter(i => helper.featureIdAttr.getX(i) === entry.featureId);
-            const combined = new Uint32Array(entry.object.geometry.index.array.length + filteredIndices.length);
-            combined.set(entry.object.geometry.index.array, 0);
-            combined.set(new Uint32Array(filteredIndices), entry.object.geometry.index.array.length);
-            entry.object.geometry.setIndex(new BufferAttribute(combined, 1));
+            if (entry.object.isInstancedMesh) {
+                entry.object.setMatrixAt(entry.featureId, entry.object.userData.originalMatrix[entry.featureId]);
+                entry.object.instanceMatrix.needsUpdate = true;
+            } else {
+                const filteredIndices = entry.object.userData.originalIndex.filter(i => helper.featureIdAttr.getX(i) === entry.featureId);
+                const combined = new Uint32Array(entry.object.geometry.index.array.length + filteredIndices.length);
+                combined.set(entry.object.geometry.index.array, 0);
+                combined.set(new Uint32Array(filteredIndices), entry.object.geometry.index.array.length);
+                entry.object.geometry.setIndex(new BufferAttribute(combined, 1));
+            }
+            entry.object.geometry?.computeBoundsTree?.();
 
             // Restore label
             const pickLabel = helper.getTileUserData().tileLabels?.[entry.featureId];

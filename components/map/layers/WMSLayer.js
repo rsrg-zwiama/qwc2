@@ -122,15 +122,15 @@ export default {
                 ...(options.layerConfig || {})
             });
         }
-        layer.setVisible(queryParameters.LAYERS && options.visibility);
-        layer.setOpacity(clientSideOpacity ?? 100);
+        layer.setVisible(queryParameters.LAYERS !== "" && options.visibility);
+        layer.setOpacity(clientSideOpacity ?? 1);
         return layer;
     },
     update: (layer, newOptions, oldOptions) => {
         if (oldOptions && layer?.getSource()?.updateParams) {
             let changed = (oldOptions.rev || 0) !== (newOptions.rev || 0);
             const oldParams = wmsToOpenlayersOptions(oldOptions);
-            getClientSideOpacity(oldOptions, oldParams);
+            getClientSideOpacity(oldOptions, oldParams); // Make getClientSideOpacity transform oldParams if necessary
             const newParams = wmsToOpenlayersOptions(newOptions);
             const clientSideOpacity = getClientSideOpacity(newOptions, newParams);
             Object.keys(oldParams).forEach(key => {
@@ -149,18 +149,18 @@ export default {
                 if (layer.get("updateTimeout")) {
                     clearTimeout(layer.get("updateTimeout"));
                 }
-                if (!newOptions.visibility || !queryParameters.LAYERS) {
+                if (!newOptions.visibility || queryParameters.LAYERS === "") {
                     layer.setVisible(false);
                 }
-                layer.setOpacity(clientSideOpacity ?? 100);
+                layer.setOpacity(clientSideOpacity ?? 1);
                 layer.set("updateTimeout", setTimeout(() => {
-                    layer.setVisible(queryParameters.LAYERS && newOptions.visibility);
+                    layer.setVisible(queryParameters.LAYERS !== "" && newOptions.visibility);
                     layer.getSource().updateParams(queryParameters);
                     layer.getSource().changed();
                     layer.set("updateTimeout", null);
                 }, 500));
             } else {
-                layer.setOpacity(clientSideOpacity ?? 100);
+                layer.setOpacity(clientSideOpacity ?? 1);
             }
         }
     }

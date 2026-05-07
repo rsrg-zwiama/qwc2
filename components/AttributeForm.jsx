@@ -19,7 +19,7 @@ import {refreshLayer} from '../actions/layers';
 import {setCurrentTaskBlocked} from '../actions/task';
 import ConfigUtils from '../utils/ConfigUtils';
 import CoordinatesUtils from '../utils/CoordinatesUtils';
-import {getFeatureTemplate, parseExpressionsAsync} from '../utils/EditingUtils';
+import {FeatureCache, getFeatureTemplate, KeyValCache, parseExpressionsAsync} from '../utils/EditingUtils';
 import LocaleUtils from '../utils/LocaleUtils';
 import AutoEditForm from './AutoEditForm';
 import LinkFeatureForm from './LinkFeatureForm';
@@ -39,6 +39,7 @@ class AttributeForm extends React.Component {
         hideDelete: PropTypes.bool,
         iface: PropTypes.object,
         map: PropTypes.object,
+        nested: PropTypes.bool,
         onCommit: PropTypes.func,
         onDelete: PropTypes.func,
         onDiscard: PropTypes.func,
@@ -85,6 +86,12 @@ class AttributeForm extends React.Component {
             });
             // Re-validate feature field constraints
             this.validateFieldConstraints(this.props.editContext.feature);
+        }
+    }
+    componentWillUnmount() {
+        if (!this.props.nested) {
+            KeyValCache.clear();
+            FeatureCache.clear();
         }
     }
     render = () => {
@@ -147,11 +154,11 @@ class AttributeForm extends React.Component {
             readOnlyMsg = LocaleUtils.tr("editing.geomnonzeroz");
         }
         return (
-            <div className="AttributeForm">
+            <div className={`AttributeForm ${this.state.childEdit ? "attrib-form-has-child" : ""}`}>
                 {readOnlyMsg ? (
                     <div className="attrib-form-geom-readonly">{readOnlyMsg}</div>
                 ) : null}
-                <form action="" onChange={ev => this.formChanged(ev)} onSubmit={this.onSubmit} ref={this.setupChangedObserver}>
+                <form action="" className="attrib-form-parent-form" onChange={ev => this.formChanged(ev)} onSubmit={this.onSubmit} ref={this.setupChangedObserver}>
                     {editConfig.form ? (
                         <QtDesignerForm addRelationRecord={this.addRelationRecord} editConfig={editConfig}
                             editRelationRecord={this.editRelationRecord}
@@ -182,6 +189,9 @@ class AttributeForm extends React.Component {
         this.setState({busy: busy});
     };
     updateField = (key, value) => {
+        if (value === this.props.editContext.feature?.properties?.[key]) {
+            return;
+        }
         const newProperties = {...this.props.editContext.feature.properties, [key]: value};
         const newFeature = {...this.props.editContext.feature, properties: newProperties};
         this.props.setEditContext(this.props.editContext.id, {feature: newFeature, changed: true});
@@ -294,14 +304,15 @@ class AttributeForm extends React.Component {
         const newFeature = {...this.props.editContext.feature, relationValues: newRelationValues};
         this.props.setEditContext(this.props.editContext.id, {feature: newFeature, changed: true});
     };
-    editRelationRecord = (action, layer, table, idx, displayField) => {
-        const editConfig = this.props.editConfigs[this.props.editContext.mapPrefix][table.split('.').slice(-1)];
-        const feature = this.props.editContext.feature.relationValues[table].features[idx];
+    editRelationRecord = (action, layer, idx, displayField) => {
+        const dataset = this.props.editContext.mapPrefix + "." + layer;
+        const editConfig = this.props.editConfigs[this.props.editContext.mapPrefix][layer];
+        const feature = this.props.editContext.feature.relationValues[dataset].features[idx];
         const childEdit = {
             action: action,
             editConfig: editConfig,
             editContextId: ':' + layer,
-            dataset: table,
+            dataset: dataset,
             idx: idx,
             feature: feature,
             finishCallback: this.finishEditRelationRecord,
@@ -721,15 +732,16 @@ class AttributeForm extends React.Component {
                 displayField: displayField,
                 featureId: featureId,
                 updateField: updateField,
-                finishCallback: this.finishChildEdit
+                finishCallback: this.finishChildEdit,
+                hideDelete: true
             };
             this.setState({childEdit: childEdit});
         }
     };
     finishChildEdit = (feature) => {
         this.props.clearEditContext(this.state.childEdit.editContextId, this.props.editContext.id);
-        if (feature && feature.id !== this.state.childEdit.featureId) {
-            this.state.childEdit.updateField(feature.id);
+        if (feature) {
+            this.state.childEdit.updateField(feature);
         }
         this.setState({childEdit: null});
     };

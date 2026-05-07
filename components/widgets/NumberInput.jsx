@@ -11,6 +11,7 @@ import React from 'react';
 import classNames from 'classnames';
 import PropTypes from 'prop-types';
 
+import MiscUtils from '../../utils/MiscUtils';
 import Icon from '../Icon';
 
 import './style/NumberInput.css';
@@ -102,6 +103,9 @@ export default class NumberInput extends React.Component {
         this.setState({value: value, changed: true});
     };
     currentFloatValue = () => {
+        if (this.state.value === "") {
+            return 0;
+        }
         const floatValue = parseFloat(this.state.value);
         return isNaN(floatValue) ? null : floatValue;
     };
@@ -123,6 +127,9 @@ export default class NumberInput extends React.Component {
     };
     onKeyDown = (ev) => {
         if (ev.key === 'Enter') {
+            if (this.state.changed) {
+                MiscUtils.killEvent(ev);
+            }
             this.commit();
         }
         // Ensure prefix/suffix isn't changed

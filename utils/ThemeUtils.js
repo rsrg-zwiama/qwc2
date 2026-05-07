@@ -64,7 +64,7 @@ const ThemeUtils = {
                     (externalLayers[key] = externalLayers[key] || []).push(params);
                     delete bgLayer.resource;
                 } else if (bgLayer.type === "wms") {
-                    bgLayer.version = bgLayer.params.VERSION || bgLayer.version || themes.defaultWMSVersion || "1.3.0";
+                    bgLayer.version = bgLayer.params?.VERSION || bgLayer.version || themes.defaultWMSVersion || "1.3.0";
                 } else if (bgLayer.type === "group") {
                     bgLayer.items = bgLayer.items.map(item => {
                         if (item.ref) {
@@ -141,10 +141,12 @@ const ThemeUtils = {
                     return res;
                 }, {})
             },
+            srcid: uuidv4(),
             translations: theme.translations,
             translationsUrl: theme.translationsUrl,
             editConfig: theme.editConfig,
             editConfigUrl: theme.editConfigUrl,
+            filter: theme.filter,
             wms_name: theme.wms_name
         };
         if (layer.editConfigUrl) {

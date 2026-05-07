@@ -9,6 +9,8 @@
 import React from 'react';
 import {connect} from 'react-redux';
 
+import {featureCollection} from '@turf/helpers';
+import intersect from '@turf/intersect';
 import isEmpty from 'lodash.isempty';
 import PropTypes from 'prop-types';
 
@@ -79,8 +81,10 @@ class Identify extends React.Component {
         iframeDialogsInitiallyDocked: PropTypes.bool,
         /** The initial radius units of the identify dialog in radius mode. One of 'm', 'ft', 'km', 'mi'. */
         initialRadiusUnits: PropTypes.string,
+        layerFilterGeom: PropTypes.object,
         layers: PropTypes.array,
-        longAttributesDisplay: PropTypes.string,
+        /** How to handle long attribute names / values. */
+        longAttributesDisplay: PropTypes.oneOf(["wrap", "ellipsis"]),
         map: PropTypes.object,
         /** Extra params to append to the GetFeatureInfo request (i.e. `FI_POINT_TOLERANCE`, `FI_LINE_TOLERANCE`, `feature_count`, ...). Additionally, `region_feature_count` and `radius_feature_count` are supported. */
         params: PropTypes.object,
@@ -88,8 +92,8 @@ class Identify extends React.Component {
         removeMarker: PropTypes.func,
         /** Whether to replace an attribute value containing an URL to an image with an inline image. */
         replaceImageUrls: PropTypes.bool,
-        /** Result display mode, one of `tree`, `flat`, `paginated`. */
-        resultDisplayMode: PropTypes.string,
+        /** Result display mode. */
+        resultDisplayMode: PropTypes.oneOf(["tree", "flat", "paginated"]),
         /** Target cell size of the result grid in comparison mode. */
         resultGridSize: PropTypes.number,
         /** Whether multi-display mode should be enabled by default, only relevant if `resultDisplayMode` is `paginated`. */
@@ -110,7 +114,7 @@ class Identify extends React.Component {
         exportGeometry: true,
         clearResultsOnClose: true,
         customExporters: [],
-        longAttributesDisplay: 'ellipsis',
+        longAttributesDisplay: 'wrap',
         resultDisplayMode: 'flat',
         resultGridSize: 200,
         resultMultiDisplay: false,
@@ -244,7 +248,6 @@ class Identify extends React.Component {
         center[0] /= poly.length;
         center[1] /= poly.length;
 
-        const filter = VectorLayerUtils.geoJSONGeomToWkt(this.state.filterGeom);
         let pendingRequests = 0;
         const params = {...this.props.params};
         if (this.props.params.region_feature_count) {
@@ -252,7 +255,8 @@ class Identify extends React.Component {
             delete params.region_feature_count;
         }
         queryableLayers.forEach(layer => {
-            const request = IdentifyUtils.buildFilterRequest(layer, layer.queryLayers.join(","), filter, this.props.map, params);
+            const requestFilterGeom = this.getRequestFilterGeomWkt(this.state.filterGeom);
+            const request = IdentifyUtils.buildFilterRequest(layer, layer.queryLayers.join(","), requestFilterGeom, this.props.map, params);
             ++pendingRequests;
             IdentifyUtils.sendRequest(request, (response) => {
                 this.setState((state) => ({pendingRequests: state.pendingRequests - 1}));
@@ -289,6 +293,19 @@ class Identify extends React.Component {
             this.setState({identifyResults: identifyResults, pendingRequests: pendingRequests});
         });
         this.props.addMarker("identify", clickPoint, "", this.props.map.projection);
+    };
+    getRequestFilterGeomWkt = (identifyGeom) => {
+        const sourceFilterGeom = this.props.layerFilterGeom;
+        if (!sourceFilterGeom) return VectorLayerUtils.geoJSONGeomToWkt(identifyGeom);
+        try {
+            const intersection = intersect(featureCollection([
+                {type: "Feature", properties: {}, geometry: identifyGeom},
+                {type: "Feature", properties: {}, geometry: sourceFilterGeom}
+            ]));
+            return intersection?.geometry ? VectorLayerUtils.geoJSONGeomToWkt(intersection.geometry) : null;
+        } catch {
+            return VectorLayerUtils.geoJSONGeomToWkt(identifyGeom);
+        }
     };
     changeBufferUnit = (ev) => {
         this.setState({ radiusUnits: ev.target.value });
@@ -447,6 +464,7 @@ export default connect((state) => {
     return {
         click: state.map.click || {modifiers: {}},
         enabled: enabled,
+        layerFilterGeom: state.layers.filter?.filterGeom,
         layers: state.layers.flat,
         map: state.map,
         selection: state.selection,

@@ -14,10 +14,10 @@ import polygonIntersectTest from 'polygon-intersect-test';
 import {LayerRole} from '../actions/layers';
 import ConfigUtils from './ConfigUtils';
 import CoordinatesUtils from './CoordinatesUtils';
+import DataServiceExprUtils from './DataServiceExprUtils';
 import IdentifyUtils from './IdentifyUtils';
 import LayerUtils from './LayerUtils';
 import LocaleUtils from './LocaleUtils';
-import VectorLayerUtils from './VectorLayerUtils';
 
 
 export const SearchResultType = {
@@ -35,16 +35,17 @@ function coordinatesSearch(text, searchParams, callback) {
     if (matches && matches.length >= 3) {
         const x = parseFloat(matches[1]);
         const y = parseFloat(matches[2]);
-        if (displaycrs !== "EPSG:4326") {
+        const searchCrs = [displaycrs, ...searchParams.extracrs.filter(crs => !['EPSG:4326', displaycrs].includes(crs))];
+        searchCrs.forEach(crs => {
             items.push({
-                id: "coord0",
-                text: x + ", " + y + " (" + displaycrs + ")",
+                id: "coord" + items.length,
+                text: x + ", " + y + " (" + crs + ")",
                 x: x,
                 y: y,
-                crs: displaycrs,
+                crs: crs,
                 bbox: [x, y, x, y]
             });
-        }
+        });
         if (x >= -180 && x <= 180 && y >= -90 && y <= 90) {
             const title = Math.abs(x) + (x >= 0 ? "°E" : "°W") + ", "
                       + Math.abs(y) + (y >= 0 ? "°N" : "°S");
@@ -217,12 +218,32 @@ class NominatimSearch {
 
 /** ************************************************************************ **/
 
-class QgisSearch {
+export class QgisSearch {
 
-    static search(text, searchParams, callback) {
+    static buildFilter(filter, values, removeEmptySubexpr = true) {
+        if (typeof filter === "string") {
+            let replacedFilter = filter;
+            // Uses legacy expression format
+            Object.entries(values).forEach(([key, value]) => {
+                replacedFilter = replacedFilter.replaceAll(`$${key}$`, value.replace("'", "\\'"));
+            });
+            return replacedFilter;
+        } else {
+            // Data service filter expression
+            let replacedExpr = DataServiceExprUtils.replaceExpressionVariables(filter, values, {});
+            if (replacedExpr === null) {
+                /* eslint-disable-next-line */
+                console.warn("Invalid filter expression: " + JSON.stringify(filter));
+                return null;
+            }
+            if (removeEmptySubexpr && DataServiceExprUtils.isSimpleExpr(replacedExpr)) {
+                replacedExpr = DataServiceExprUtils.removeEmptySubexpressions(replacedExpr);
+            }
+            return DataServiceExprUtils.buildFilter(replacedExpr);
+        }
+    }
 
-        const filter = {...searchParams.cfgParams.expression};
-        const values = {TEXT: text};
+    static buildFeatureInfoUrlParams(searchParams, filter, values, removeEmptySubexpr = true) {
         const params = {
             SERVICE: 'WMS',
             VERSION: searchParams.theme.version,
@@ -230,22 +251,31 @@ class QgisSearch {
             CRS: searchParams.theme.mapCrs,
             WIDTH: 100,
             HEIGHT: 100,
-            LAYERS: [],
-            FILTER: [],
-            WITH_MAPTIP: false,
             WITH_GEOMETRY: true,
+            WITH_MAPTIP: false,
             feature_count: searchParams.cfgParams.featureCount || 100,
             info_format: 'text/xml'
         };
-        Object.keys(filter).forEach(layer => {
-            Object.entries(values).forEach(([key, value]) => {
-                filter[layer] = filter[layer].replaceAll(`$${key}$`, value.replace("'", "\\'"));
-            });
-            params.LAYERS.push(layer);
-            params.FILTER.push(layer + ":" + filter[layer]);
+
+        const newParams = {
+            LAYERS: Array.from(Object.keys(filter)),
+            FILTER: []
+        };
+
+        newParams.LAYERS.forEach(layer => {
+            const replacedFilter = QgisSearch.buildFilter(filter[layer], values, removeEmptySubexpr);
+            if (replacedFilter !== null) {
+                newParams.FILTER.push(layer + ":" + replacedFilter);
+            }
         });
-        params.QUERY_LAYERS = params.LAYERS = params.LAYERS.join(",");
-        params.FILTER = params.FILTER.join(";");
+        params.QUERY_LAYERS = params.LAYERS = newParams.LAYERS.join(",");
+        params.FILTER = newParams.FILTER.join(";");
+
+        return params;
+    }
+
+    static search(text, searchParams, callback) {
+        const params = QgisSearch.buildFeatureInfoUrlParams(searchParams, {...searchParams.cfgParams.expression}, {TEXT: text}, false);
         axios.get(searchParams.theme.featureInfoUrl, {params}).then(response => {
             callback(QgisSearch.searchResults(
                 IdentifyUtils.parseResponse(response.data, searchParams.theme, 'text/xml', null, searchParams.mapcrs),
@@ -399,9 +429,9 @@ export class FulltextSearch {
         const quot = typeof(resultItem.id) === 'string' ? '"' : '';
         const filter = `[["${resultItem.id_field_name}","=", ${quot}${resultItem.id}${quot}]]`;
         axios.get(dataServiceUrl.replace(/\/?$/, "/") + resultItem.dataproduct_id + "/?filter=" + filter).then(response => {
+            const feature = response.data;
             const bbox = response.data.bbox;
-            const center = bbox ? [0.5 * (bbox[0] + bbox[2]), 0.5 * (bbox[1] + bbox[3])] : null;
-            callback({bbox, center, feature: response.data, crs: response.data.crs.properties.name});
+            callback({bbox, center: null, feature: feature, crs: feature.crs.properties.name});
         }).catch(() => {
             callback(null);
         });
@@ -503,41 +533,6 @@ export function unregisterSearchProvider(key) {
     addedSearchProviders.delete(key);
 }
 
-// Uniformize the response of getResultGeometry
-function getResultGeometry(provider, item, callback) {
-    provider.getResultGeometry(item, (response) => {
-        const features = [];
-        if (response?.geometry) {
-            const highlightFeature = response.geometry.coordinates ? {
-                type: "Feature", geometry: response.geometry
-            } : VectorLayerUtils.wktToGeoJSON(response.geometry, response.crs, response.crs);
-            if (highlightFeature) {
-                features.push(highlightFeature);
-            }
-        } else if (response?.feature) {
-            if (response.feature.features) {
-                features.push(...response.feature.features);
-            } else {
-                features.push(response.feature);
-            }
-        }
-        if (features.length === 0) {
-            callback(null);
-        } else {
-            callback({
-                feature: {
-                    type: "FeatureCollection",
-                    features: features
-                },
-                crs: response.crs,
-                hidemarker: response.hidemarker,
-                ...(response.bbox && { bbox: response.bbox }),
-                ...(response.center && { center: response.center })
-            });
-        }
-    });
-}
-
 export function collectSearchProviders(theme, layers, mapScale = null) {
     // Collect active layers/search terms
     let searchTerms = [];
@@ -581,7 +576,7 @@ export function collectSearchProviders(theme, layers, mapScale = null) {
                 ...provider,
                 label: entry.label ?? provider.label,
                 labelmsgid: entry.labelmsgid ?? provider.labelmsgid,
-                getResultGeometry: provider.getResultGeometry ? (item, callback) => getResultGeometry(provider, item, callback) : null,
+                getResultGeometry: provider.getResultGeometry,
                 cfgParams: entry.params || {},
                 params: {
                     searchTerms: searchTerms,

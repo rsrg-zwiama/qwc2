@@ -123,6 +123,8 @@ const actionFunctions = {
  * Exposes an API for interacting with QWC.
  *
  * You can interact with the API as soon as the `QWC2ApiReady` event is dispatched.
+ * If you are using the `postMessage` interface, a `QWC2ApiReady` message will be sent to
+ * all origins listed in `allowedMessageOrigins`.
  *
  * ### `postMessage` interface
  *
@@ -139,6 +141,16 @@ const actionFunctions = {
  *   "method": "zoomToPoint",
  *   "params": [[2684764, 1247841], 18, "EPSG:2056"]
  * }, "http://<qwc_hostname>:<port>")
+ * ```
+ * You can also post multiple calls at once as follows:
+ * ```
+ * qwcframe.contentWindow.postMessage([{
+ *   "method": "zoomToPoint",
+ *   "params": [[2684764, 1247841], 18, "EPSG:2056"]
+ * }, {
+ *   "method": "addMarker",
+ *   "params": ["mymarker", [2684764, 1247841], "Hello world", "EPSG:2056"]
+ * }], "http://<qwc_hostname>:<port>")
  * ```
  * If you call a method which returns a value, pass a `requestId` and listen to response messages:
  *
@@ -249,6 +261,7 @@ class API extends React.Component {
         window.qwc2 = {
             __customPlugins: {},
             __attributeCalculators: {},
+            __attributeFormatters: {},
             __identifyExportes: {}
         };
         // Auto-binded functions
@@ -265,6 +278,8 @@ class API extends React.Component {
         window.qwc2.removeIdentifyAttributeCalculator = this.removeIdentifyAttributeCalculator;
         window.qwc2.addIdentifyExporter = this.addIdentifyExporter;
         window.qwc2.removeIdentifyExporter = this.removeIdentifyExporter;
+        window.qwc2.addIdentifyAttributeFormatter = this.addIdentifyAttributeFormatter;
+        window.qwc2.removeIdentifyAttributeFormatter = this.removeIdentifyAttributeFormatter;
         window.qwc2.addExternalLayer = this.addExternalLayer;
         window.qwc2.drawScratch = this.drawScratch;
         window.qwc2.drawGeometry = this.drawGeometry;
@@ -353,11 +368,15 @@ class API extends React.Component {
         window.addEventListener("message", this.handleMessage);
 
         window.dispatchEvent(new Event("QWC2ApiReady"));
+        if (window.parent && window.parent !== window) {
+            window.parent.postMessage("QWC2ApiReady", "*");
+        }
     }
     static propTypes = {
         addLayer: PropTypes.func,
         /* List of origins which are allowed to post messages via `qwcIframe.postMessage`. */
         allowedMessageOrigins: PropTypes.arrayOf(PropTypes.string),
+        click: PropTypes.object,
         mapCrs: PropTypes.string,
         registerCustomPlugin: PropTypes.func,
         setCurrentTask: PropTypes.func,
@@ -367,6 +386,16 @@ class API extends React.Component {
     static defaultProps = {
         allowedMessageOrigins: []
     };
+    constructor(props) {
+        super(props);
+        this.onclickCallbacks = [];
+    }
+    componentDidUpdate(prevProps) {
+        if (this.props.click !== prevProps.click && this.onclickCallbacks.length > 0) {
+            this.onclickCallbacks.forEach(cb => cb({...this.props.click}));
+            this.onclickCallbacks = [];
+        }
+    }
     handleMessage = (ev) => {
         if (!this.props.allowedMessageOrigins.includes(ev.origin)) {
             /* eslint-disable-next-line */
@@ -375,7 +404,9 @@ class API extends React.Component {
         }
         const allowedMemberFunctions = [
             "addExternalLayer",
-            "getState"
+            "getState",
+            "drawGeometry",
+            "onMapClick"
         ];
         if (ev.data === "help") {
             const signatures = Object.fromEntries(Object.entries(actionFunctions).map(([key, val]) => {
@@ -387,27 +418,53 @@ class API extends React.Component {
             /* eslint-disable-next-line */
             console.log(signatures);
         }
-        if (ev.data?.method) {
-            const func = ev.data.method;
-            const args = ev.data.params ?? [];
-            let result = null;
-            if (func in actionFunctions) {
-                result = this.props[func](...args);
-            } else if (
-                allowedMemberFunctions.includes(func)
-            ) {
-                result = this[func](...args);
-            } else {
-                /* eslint-disable-next-line */
-                console.warn("Unhandeled message: " + JSON.stringify(ev.data));
+        const messages = Array.isArray(ev.data) ? ev.data : [ev.data];
+        messages.forEach(message => {
+            if (message?.method) {
+                const func = message.method;
+                let args = message.params ?? [];
+                let result = null;
+                let postResult = true;
+                if (func in actionFunctions) {
+                    result = this.props[func](...args);
+                } else if (
+                    allowedMemberFunctions.includes(func)
+                ) {
+                    // Inject proper callback function
+                    if (func === "drawGeometry") {
+                        args.splice(2, 0, (features, crs) => {
+                            if (message.requestId) {
+                                ev.source.postMessage({
+                                    requestId: message.requestId,
+                                    result: {features, crs}
+                                }, ev.origin);
+                            }
+                        });
+                        postResult = false;
+                    } else if (func === "onMapClick") {
+                        args = [(click) => {
+                            if (message.requestId) {
+                                ev.source.postMessage({
+                                    requestId: message.requestId,
+                                    result: click
+                                }, ev.origin);
+                            }
+                        }];
+                        postResult = false;
+                    }
+                    result = this[func](...args);
+                } else {
+                    /* eslint-disable-next-line */
+                    console.warn("Unhandeled message: " + JSON.stringify(message));
+                }
+                if (postResult && message.requestId) {
+                    ev.source.postMessage({
+                        requestId: message.requestId,
+                        result: result
+                    }, ev.origin);
+                }
             }
-            if (ev.data.requestId) {
-                ev.source.postMessage({
-                    requestId: ev.data.requestId,
-                    result: result
-                }, ev.origin);
-            }
-        }
+        });
     };
     render() {
         return null;
@@ -454,6 +511,26 @@ class API extends React.Component {
      */
     removeIdentifyAttributeCalculator = (name) => {
         delete window.qwc2.__attributeCalculators[name];
+    };
+    /**
+     * Add custom attribute formatter
+     * (i.e. computed attributes which are added to GetFeatureInfo responses).
+     *
+     * * `name`: An identifier
+     * * `fmtFunc`: The formatter function with signature `function(name, value, layer, feature)`
+     *
+     * The `fmtFunc` should return a string (which may also be a HTML fragment) or a React element.
+     */
+    addIdentifyAttributeFormatter = (name, fmtFunc) => {
+        window.qwc2.__attributeFormatters[name] = fmtFunc;
+    };
+    /**
+     * Remove custom identify attribute formatter
+     *
+     * * `name`: The identifier
+     */
+    removeIdentifyAttributeFormatter = (name) => {
+        delete window.qwc2.__attributeFormatters[name];
     };
     /**
      * Add custom identify exporter
@@ -523,7 +600,9 @@ class API extends React.Component {
         this.props.setCurrentTask("ScratchDrawing", null, null, {geomType, message, drawMultiple, callback, style});
     };
     /**
-     *  Draw geometries, and return these as GeoJSON to the calling application.
+     * Draw geometries, and return these as GeoJSON to the calling application.
+     *
+     * *NOTE*: when calling `drawGeometry` through the `postMessage` interface, omit the `callback` parameter. The response will be sent via the response message.
      *
      * * `geomType`: `Point`, `LineString`, `Polygon`, `Circle` or `Box`.
      * * `message`: A descriptive string to display in the tool taskbar.
@@ -553,9 +632,17 @@ class API extends React.Component {
     getState = () => {
         return this.props.state;
     };
+    /** Fires the callback on the next click on the map.
+     *
+     * *NOTE*: when calling `onMapClick` through the `postMessage` interface, omit the `callback` parameter. The response will be sent via the response message.
+     */
+    onMapClick = (callback) => {
+        this.onclickCallbacks.push(callback);
+    };
 }
 
 export default connect(state => ({
+    click: state.map.click || {modifiers: {}},
     mapCrs: state.map.projection,
     state: state
 }), {

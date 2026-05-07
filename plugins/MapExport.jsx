@@ -21,6 +21,7 @@ import {setSnappingConfig} from '../actions/map';
 import Icon from '../components/Icon';
 import PrintSelection from '../components/PrintSelection';
 import SideBar from '../components/SideBar';
+import ComboBox from '../components/widgets/ComboBox';
 import NumberInput from '../components/widgets/NumberInput';
 import Spinner from '../components/widgets/Spinner';
 import ConfigUtils from '../utils/ConfigUtils';
@@ -54,9 +55,10 @@ class MapExport extends React.Component {
         exportExternalLayers: PropTypes.bool,
         /** Template for the name of the generated files when downloading. Can contain the placeholders `{username}`, `{tenant}`, `{theme}`, `{themeTitle}`, `{timestamp}`. */
         fileNameTemplate: PropTypes.string,
+        filter: PropTypes.object,
         /** Formats to force as available even if the map capabilities report otherwise. Useful if a serviceUrl is defined in a format configuration. */
         forceAvailableFormats: PropTypes.array,
-        /** Custom export configuration per format.
+        /** Custom format export configuration. Specify a format mime-type (i.e. `application/dxf`) as key, and an array of one or more configurations as value.
          *  If more than one configuration per format is provided, a selection combo will be displayed.
          *  `labelMsgId` is a translation string message id for the combo label. If not defined, `name` will be displayed.
          *  `extraQuery` will be appended to the query string (replacing any existing parameters).
@@ -64,8 +66,8 @@ class MapExport extends React.Component {
          *  `baseLayer` will be appended to the LAYERS instead of the background layer.
          *  `projections` is a list of export projections. If empty, the map projection is automatically used.
          *  `serviceUrl` is the address of a custom service to use instead of the layer OWS service url. */
-        formatConfiguration: PropTypes.shape({
-            format: PropTypes.arrayOf(PropTypes.shape({
+        formatConfiguration: PropTypes.objectOf(
+            PropTypes.arrayOf(PropTypes.shape({
                 name: PropTypes.string,
                 labelMsgId: PropTypes.string,
                 extraQuery: PropTypes.string,
@@ -74,7 +76,7 @@ class MapExport extends React.Component {
                 projections: PropTypes.array,
                 serviceUrl: PropTypes.string
             }))
-        }),
+        ),
         layers: PropTypes.array,
         map: PropTypes.object,
         /** List of image sizes to offer, in addition to the free-hand selection. The width and height are in millimeters. */
@@ -169,10 +171,10 @@ class MapExport extends React.Component {
         let scaleChooser = null;
         if (!isEmpty(this.props.allowedScales)) {
             scaleChooser = (
-                <select onChange={this.changeScale} value={this.state.scale || ""}>
-                    <option hidden value={this.state.scale || ""}>{this.state.scale || ""}</option>
-                    {this.props.allowedScales.map(scale => (<option key={scale} value={scale}>1 : {scale}</option>))}
-                </select>);
+                <ComboBox onChange={this.changeScale} value={this.state.scale || ""}>
+                    {this.props.allowedScales.map(scale => (<div key={scale} value={scale}>1 : {scale}</div>))}
+                </ComboBox>
+            );
         } else if (this.props.allowedScales !== false) {
             scaleChooser = (
                 <NumberInput min={1} mobile onChange={this.changeScale} prefix="1 : " value={this.state.scale || null} />
@@ -333,7 +335,8 @@ class MapExport extends React.Component {
             width: 0,
             height: 0,
             scale: null,
-            pageSize: null
+            pageSize: null,
+            exporting: false
         });
     };
     geometryChanged = (center, extents, rotation, scale) => {
@@ -395,6 +398,7 @@ class MapExport extends React.Component {
         params.WIDTH = width;
         params.HEIGHT = height;
         params.filename = fileName;
+        params.FILTER_GEOM = VectorLayerUtils.geoJSONGeomToWkt(VectorLayerUtils.reprojectGeometry(this.props.filter.filterGeom, this.props.map.projection, crs));
 
         // Dimension values
         this.props.layers.forEach(layer => {
@@ -476,17 +480,32 @@ class MapExport extends React.Component {
         });
     };
     dxfExport = (baseParams, fileName, formatConfiguration) => {
-        const promises = this.props.layers.filter(
-            layer => layer.type === 'wms' && layer.role > LayerRole.BACKGROUND && layer.mapFormats?.includes("application/dxf")
-        ).reverse().map(layer => {
-            const params = {
-                ...baseParams,
-                LAYERS: layer.params.LAYERS,
-                OPACITIES: layer.params.OPACITIES,
-                STYLES: layer.params.STYLES,
-                FILTER: layer.params.FILTER ?? '',
-                FILTER_GEOM: layer.params.FILTER_GEOM ?? ''
-            };
+        // If formatConfiguration overrides LAYERS, only export theme layer with those layers
+        const layersOverridden = (formatConfiguration.extraQuery || "").split(/[?&]/).find(
+            entry => entry.split("=")[0].toLowerCase() === "layers"
+        ) !== undefined;
+        let jobs = [];
+        if (layersOverridden) {
+            jobs.push({
+                layer: this.props.theme,
+                params: baseParams
+            });
+        } else {
+            jobs = this.props.layers.filter(
+                layer => layer.type === 'wms' && layer.role > LayerRole.BACKGROUND && layer.mapFormats?.includes("application/dxf")
+            ).reverse().map(layer => ({
+                layer: layer,
+                params: {
+                    ...baseParams,
+                    LAYERS: layer.params.LAYERS,
+                    OPACITIES: layer.params.OPACITIES,
+                    STYLES: layer.params.STYLES,
+                    FILTER: layer.params.FILTER ?? ''
+                }
+            }));
+        }
+
+        const promises = jobs.map(({layer, params}) => {
             const data = Object.entries(params).map((pair) =>
                 pair.map(entry => encodeURIComponent(entry).replace(/%20/g, '+')).join("=")
             ).join("&");
@@ -507,17 +526,22 @@ class MapExport extends React.Component {
         Promise.all(promises).then((responses) => {
             const decoder = new TextDecoder("iso-8859-1");
             const dxfDocuments = responses.filter(
-                response => response.headers['content-type'] === "application/dxf"
+                response => response && response.headers['content-type'] === "application/dxf"
             ).map(response => explodeDxf(decoder.decode(response.data)));
-            const dxfDocument = mergeDxf(dxfDocuments);
-            const result = implodeDxf(dxfDocument);
-            const encoder = new TextEncoder("iso-8859-1");
-            FileSaver.saveAs(new Blob([encoder.encode(result)], {type: "application/dxf"}), fileName);
-            /*
-            responses.forEach((response, idx) => {
-                FileSaver.saveAs(new Blob([response.data], {type: "application/dxf"}), "orig_" + idx + "_" + fileName);
-            });
-            */
+            if (dxfDocuments.length !== 0) {
+                const dxfDocument = mergeDxf(dxfDocuments);
+                const result = implodeDxf(dxfDocument);
+                const encoder = new TextEncoder("iso-8859-1");
+                FileSaver.saveAs(new Blob([encoder.encode(result)], {type: "application/dxf"}), fileName);
+                /*
+                responses.forEach((response, idx) => {
+                    FileSaver.saveAs(new Blob([response.data], {type: "application/dxf"}), "orig_" + idx + "_" + fileName);
+                });
+                */
+            } else {
+                /* eslint-disable-next-line */
+                alert('Export failed');
+            }
             this.setState({exporting: false});
         });
     };
@@ -526,7 +550,8 @@ class MapExport extends React.Component {
 const selector = (state) => ({
     theme: state.theme.current,
     map: state.map,
-    layers: state.layers.flat
+    layers: state.layers.flat,
+    filter: state.layers.filter
 });
 
 export default connect(selector, {

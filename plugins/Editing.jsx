@@ -112,12 +112,37 @@ class Editing extends React.Component {
         this.setState({minimized: false, drawPick: false});
     };
     componentDidUpdate(prevProps, prevState) {
-        // Clear selected layer on layers change
-        if (this.props.layers !== prevProps.layers && this.state.selectedLayer) {
+        if (!this.state.selectedLayer && this.props.editConfigs !== prevProps.editConfigs) {
+            // Automatically select layer if only one edit layer exists
+            const editLayers = Object.entries(this.props.editConfigs).map(([mapName, serviceConfigs]) => (
+                Object.entries(serviceConfigs).map(([layerName, edConfig]) => {
+                    if (this.props.omitReadOnlyDatasets && Object.values(edConfig.permissions).every(permission => permission === false)) {
+                        return null;
+                    }
+                    const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', mapName, 'name', layerName);
+                    if (!match) {
+                        return null;
+                    }
+                    return mapName + "#" + layerName;
+                })
+            )).flat().filter(Boolean);
+            if (editLayers.length === 1) {
+                this.setState({selectedLayer: editLayers[0]});
+            }
+        } else if (this.props.layers !== prevProps.layers && this.state.selectedLayer) {
+            // Clear selected layer on layers change
             const [wmsName, layerName] = this.state.selectedLayer.split("#");
             if (!LayerUtils.searchLayer(this.props.layers, 'wms_name', wmsName, 'name', layerName)) {
                 this.setState({selectedLayer: null});
             }
+        } else if (this.props.taskData && this.props.taskData !== prevProps.taskData) {
+            if (this.props.taskData.feature) {
+                const [wmsName, layerName] = this.props.taskData.layer.split("#");
+                const editConfig = this.props.editConfigs[wmsName][layerName];
+                this.props.iface.getFeatureById(editConfig, this.props.taskData.feature, this.props.map.projection, (feature) => {
+                    this.changeSelectedLayer(this.props.taskData.layer, feature || this.props.taskData.feature);
+                });
+            } else this.changeSelectedLayer(this.props.taskData.layer);
         }
         // If click point changed and in pick mode with a selected layer, trigger a pick
         const isCurrentContext = this.props.editContext.id === this.props.currentEditContext;
@@ -242,26 +267,26 @@ class Editing extends React.Component {
                     onCommit={this.updatePickedFeatures} translations={translations} />
             );
         }
+        const editLayers = Object.entries(this.props.editConfigs).map(([mapName, serviceConfigs]) => (
+            Object.entries(serviceConfigs).map(([layerName, edConfig]) => {
+                if (this.props.omitReadOnlyDatasets && Object.values(edConfig.permissions).every(permission => permission === false)) {
+                    return null;
+                }
+                const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', mapName, 'name', layerName);
+                if (!match) {
+                    return null;
+                }
+                const layerTitle = match.layer.translations?.layertree?.[layerName] ?? edConfig.layerTitle ?? match?.sublayer?.title ?? layerName;
+                return {value: mapName + "#" + layerName, title: layerTitle};
+            })
+        )).flat().filter(Boolean).sort((a, b) => a.title.localeCompare(b.title));
         return (
             <div className="editing-body">
                 <div className="editing-layer-selection">
                     <select className="combo editing-layer-select" disabled={this.props.editContext.changed === true || this.props.editContext.id !== this.props.currentEditContext} onChange={ev => this.changeSelectedLayer(ev.target.value)} value={this.state.selectedLayer || ""}>
                         <option disabled value="">{LocaleUtils.tr("common.selectlayer")}</option>
-                        {Object.entries(this.props.editConfigs).map(([mapName, serviceConfigs]) => (
-                            Object.entries(serviceConfigs).map(([layerName, edConfig]) => {
-                                if (this.props.omitReadOnlyDatasets && Object.values(edConfig.permissions).every(permission => permission === false)) {
-                                    return null;
-                                }
-                                const match = LayerUtils.searchLayer(this.props.layers, 'wms_name', mapName, 'name', layerName);
-                                if (!match) {
-                                    return null;
-                                }
-                                const layerTitle = match.layer.translations?.layertree?.[layerName] ?? edConfig.layerTitle ?? match?.sublayer?.title ?? layerName;
-                                const value = mapName + "#" + layerName;
-                                return (
-                                    <option key={value} value={value}>{layerTitle}</option>
-                                );
-                            })
+                        {editLayers.map(entry => (
+                            <option key={entry.value} value={entry.value}>{entry.title}</option>
                         ))}
                     </select>
                 </div>
@@ -270,7 +295,6 @@ class Editing extends React.Component {
                 {pickBar}
                 {attributeForm}
             </div>
-
         );
     };
     render() {
@@ -478,7 +502,7 @@ class Editing extends React.Component {
             if (match) {
                 const oldvisibility = match.sublayer.visibility;
                 if (oldvisibility !== visibility && visibility !== null) {
-                    const recurseDirection = !oldvisibility ? "both" : "children";
+                    const recurseDirection = !oldvisibility ? "parents" : null;
                     this.props.changeLayerProperty(match.layer.id, "visibility", visibility, match.path, recurseDirection);
                 }
                 return oldvisibility;

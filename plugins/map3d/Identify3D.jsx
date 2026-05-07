@@ -126,15 +126,15 @@ class Identify3D extends React.Component {
         raycaster.setFromCamera(new Vector2(x, y), camera);
 
         const picks = [];
-        Object.entries(this.props.sceneContext.sceneObjects).forEach(([objId, options]) => {
-            if (!options.layertree || !options.visibility) {
+        Object.values(this.props.sceneContext.objectTree).forEach(entry => {
+            if (!entry.objectId || !this.props.sceneContext.objectIsVisible(entry.objectId)) {
                 return;
             }
-            const object = this.props.sceneContext.getSceneObject(objId);
+            const object = this.props.sceneContext.getSceneObject(entry.objectId);
             if (object.tiles?.raycast) {
                 const intersections = [];
                 object.tiles.raycast(raycaster, intersections);
-                intersections.forEach(entry => { entry.isTilePick = true; });
+                intersections.forEach(inter => { inter.isTilePick = true; });
                 picks.push(...intersections);
             } else {
                 picks.push(...raycaster.intersectObjects([object], true));
@@ -151,25 +151,24 @@ class Identify3D extends React.Component {
         }
     };
     identifyTilePick = (pick) => {
-        const posAttr = pick.object.geometry.getAttribute('position');
-        const norAttr = pick.object.geometry.getAttribute('normal');
         const helper = new TileMeshHelper(pick.object);
-        if (!helper.isValid()) {
-            return;
-        }
-        const pickFeatureId = helper.getFeatureId(pick.face);
+        const pickFeatureId = helper.getPickFeatureId(pick);
         const featureAttrs = helper.getFeatureProperties(pickFeatureId);
+        const infoAttrBlacklist = pick.object.userData?.parentEntity?.userData?.infoAttrBlacklist ?? [];
+        const infoAttrs = Object.fromEntries(Object.entries(featureAttrs).filter(([key, value]) => {
+            return !infoAttrBlacklist.includes(key);
+        }));
 
         // Extract feature geometry
         const pickPosition = [];
         const pickNormal = [];
-        helper.forEachFeatureTriangle(pickFeatureId, (i0, i1, i2) => {
-            pickPosition.push(posAttr.getX(i0), posAttr.getY(i0), posAttr.getZ(i0));
-            pickPosition.push(posAttr.getX(i1), posAttr.getY(i1), posAttr.getZ(i1));
-            pickPosition.push(posAttr.getX(i2), posAttr.getY(i2), posAttr.getZ(i2));
-            pickNormal.push(norAttr.getX(i0), norAttr.getY(i0), norAttr.getZ(i0));
-            pickNormal.push(norAttr.getX(i1), norAttr.getY(i1), norAttr.getZ(i1));
-            pickNormal.push(norAttr.getX(i2), norAttr.getY(i2), norAttr.getZ(i2));
+        helper.forEachFeatureTriangle(pickFeatureId, (i0, i1, i2, matrix, normalMatrix) => {
+            pickPosition.push(...helper.getPosition(i0, matrix).toArray());
+            pickPosition.push(...helper.getPosition(i1, matrix).toArray());
+            pickPosition.push(...helper.getPosition(i2, matrix).toArray());
+            pickNormal.push(...helper.getNormal(i0, normalMatrix).toArray());
+            pickNormal.push(...helper.getNormal(i1, normalMatrix).toArray());
+            pickNormal.push(...helper.getNormal(i2, normalMatrix).toArray());
         });
 
         // Add selection object
@@ -185,18 +184,18 @@ class Identify3D extends React.Component {
             );
             axios.get(url).then(response => {
                 response.data.forEach(attr => {
-                    if (attr.name in featureAttrs && featureAttrs[attr.name] === attr.value) {
+                    if (attr.name in infoAttrs && infoAttrs[attr.name] === attr.value) {
                         // Use attribute alias
-                        delete featureAttrs[attr.name];
+                        delete infoAttrs[attr.name];
                     }
-                    featureAttrs[attr.alias] = attr.value;
+                    infoAttrs[attr.alias] = attr.value;
                 });
-                this.setState({pickAttrs: featureAttrs});
+                this.setState({pickAttrs: infoAttrs});
             }).catch(() => {
-                this.setState({pickAttrs: featureAttrs});
+                this.setState({pickAttrs: infoAttrs});
             });
         } else {
-            this.setState({pickAttrs: featureAttrs});
+            this.setState({pickAttrs: infoAttrs});
         }
     };
     identifyObjectPick = (pick) => {

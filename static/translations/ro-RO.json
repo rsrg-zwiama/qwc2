@@ -24,6 +24,7 @@
         "MapExport3D": "",
         "MapFilter": "",
         "MapLight3D": "",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "Tipărire",
@@ -31,6 +32,7 @@
         "Settings": "Setări",
         "Settings3D": "",
         "Share": "Trimite Link",
+        "SunExposure3D": "",
         "ThemeSwitcher": "Hărți tematice",
         "AttributeTable": "Tabela de atribute",
         "AuthenticationLogin": "Conectează-te",
@@ -41,6 +43,7 @@
         "FeatureSearch": "",
         "GeometryDigitizer": "",
         "IdentifyPoint": "Interogare punct",
+        "IdentifyRadius": "",
         "IdentifyRegion": "Interogare regiune",
         "LayerCatalog": "Catalog  de straturi",
         "Login": "Conectează-te",
@@ -48,6 +51,7 @@
         "MapLegend": "Legenda",
         "Measure": "Măsoară",
         "Measure3D": "",
+        "MeasureObject3D": "",
         "MeasureLineString": "Măsoară o linie",
         "MeasurePolygon": "Măsoară un poligon",
         "NewsPopup": "",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "",
         "Redlining": "Evidențiere",
         "Routing": "Traseu",
+        "SensorThingsTool": "",
         "Tools": "Unelte hartă",
         "TourGuide": "",
         "TimeManager": "Informații temporale",
@@ -117,10 +122,13 @@
       "clear": "Curățare",
       "clone": "",
       "close": "Închideți",
+      "compute": "",
+      "date": "",
       "delete": "",
       "download": "",
       "ellipse": "Elipsă",
       "export": "",
+      "false": "",
       "format": "",
       "line": "Linie",
       "loading": "Se încarcă",
@@ -138,6 +146,7 @@
       "square": "Pătrat",
       "sync2dview": "",
       "text": "Text",
+      "true": "",
       "wait": "",
       "zoomin": "Mărire",
       "zoomout": "Micșorare"
@@ -181,6 +190,9 @@
       "rotate": "",
       "rotation": "",
       "scale": "",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "",
       "subtract": "",
       "thescale": "",
@@ -325,6 +337,7 @@
       "radius": "Raza"
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": "Catalog straturi"
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "Compară stratul de sus",
       "deletealllayers": "Elimină toate straturile",
-      "hidealllayers": "",
       "importlayer": "Import strat",
       "maptip": "Arată indicii hartă",
       "printlegend": "Tipărește legenda",
       "separator": "separator",
       "separatortooltip": "Adaugă separator",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "Transparență",
       "visiblefilter": "Filtrează straturile invizibile",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "",
+      "currentdatetime": "",
       "date": "",
       "dayspersec": "",
       "helpersVisible": "",
@@ -449,6 +463,12 @@
       "pointLabel": "Poziție",
       "showmeasurements": "Afișare dimensiuni"
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": ""
     },
@@ -471,6 +491,10 @@
       "windowtitle": "Valori numerice"
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "Hărți tematice",
       "unknownmore": ""
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "Abstract",
       "contactEmail": "Email",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "Geometriile se încarcă...",
       "snappingenabled": "Sari la punct",
       "vertex": ""
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "",
+      "default_rounded": "",
       "dark": "",
-      "highcontrast": ""
+      "dark_rounded": "",
+      "highcontrast": "",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",

@@ -16,6 +16,7 @@ import {v4 as uuidv4} from 'uuid';
 import {LayerRole} from '../actions/layers';
 import ConfigUtils from './ConfigUtils';
 import CoordinatesUtils from './CoordinatesUtils';
+import DataServiceExprUtils from './DataServiceExprUtils';
 import LocaleUtils from './LocaleUtils';
 import MapUtils from './MapUtils';
 import VectorLayerUtils from './VectorLayerUtils';
@@ -53,9 +54,11 @@ const LayerUtils = {
     restoreOrderedLayerParams(themeLayer, layerConfigs, permalinkLayers, externalLayers) {
         const exploded = LayerUtils.explodeLayers([themeLayer]);
         let reordered = [];
+        let haveThemeLayer = false;
         // Iterate over layer configs and reorder items accordingly, create external layer placeholders as neccessary
         for (const layerConfig of layerConfigs) {
             if (layerConfig.type === 'theme') {
+                haveThemeLayer = true;
                 const entry = exploded.find(e => e.sublayer.name === layerConfig.name);
                 if (entry) {
                     entry.sublayer.opacity = layerConfig.opacity;
@@ -72,6 +75,10 @@ const LayerUtils = {
         }
         LayerUtils.insertPermalinkLayers(reordered, permalinkLayers);
         const layers = LayerUtils.implodeLayers(reordered);
+        if (!haveThemeLayer) {
+            // Ensure empty theme layer container is present
+            layers.unshift({...themeLayer, sublayers: []});
+        }
         LayerUtils.setGroupVisiblities(layers);
         return layers;
     },
@@ -108,6 +115,7 @@ const LayerUtils = {
         });
         return LayerUtils.explodeLayers([{
             id: id,
+            srcid: uuidv4(),
             type: "placeholder",
             name: layerConfig.name,
             opacity: layerConfig.opacity,
@@ -196,15 +204,27 @@ const LayerUtils = {
                 ...layer.dimensionValues
             };
         }
+        const LAYERS = newParams.LAYERS.split(",");
+        const FILTER = {};
         if (filter.filterParams) {
-            newParams.FILTER = Object.entries(filter.filterParams).reduce((res, [layerid, filters]) => {
+            Object.entries(filter.filterParams).forEach(([layerid, expression]) => {
                 const [wmsName, layername] = layerid.split("#");
-                if (wmsName !== layer.wms_name || !newParams.LAYERS.split(",").includes(layername)) {
-                    return res;
+                if (wmsName === layer.wms_name && LAYERS.includes(layername)) {
+                    FILTER[layername] = expression;
                 }
-                return [...res, layername + ":" + filters.map(expr => Array.isArray(expr) ? LayerUtils.formatFilterExpr(expr) : "AND").join(" ")];
-            }, []).join(";");
+            });
         }
+        if (layer.filter?.layerfilter) {
+            Object.entries(layer.filter.layerfilter).forEach(([layername, expression]) => {
+                if (LAYERS.includes(layername)) {
+                    FILTER[layername] = FILTER[layername] ? [FILTER[layername], 'AND', expression] : expression;
+                }
+            });
+        }
+        newParams.FILTER = Object.entries(FILTER).reduce((res, [layername, expression]) => {
+            return [...res, layername + ":" + DataServiceExprUtils.buildFilter(expression)];
+        }, []).join(";");
+
         if (filter.filterGeom) {
             newParams.FILTER_GEOM = VectorLayerUtils.geoJSONGeomToWkt(filter.filterGeom);
         }
@@ -214,22 +234,6 @@ const LayerUtils = {
             queryLayers: queryLayers,
             initialOpacities: initialOpacities
         };
-    },
-    formatFilterExpr(expr) {
-        if (expr.length === 3 && typeof expr[0] === "string") {
-            const op = expr[1].toUpperCase();
-            if (typeof expr[2] === "number") {
-                return `"${expr[0]}" ${op} ${expr[2]}`;
-            } else if (expr[2] === null) {
-                return `"${expr[0]}" ${op} NULL`;
-            } else if (Array.isArray(expr[2])) {
-                return `"${expr[0]}" ${op} ( ${expr[2].join(' , ')} )`;
-            } else {
-                return `"${expr[0]}" ${op} '${expr[2]}'`;
-            }
-        } else {
-            return "( " + expr.map(entry => Array.isArray(entry) ? this.formatFilterExpr(entry) : entry.toUpperCase()).join(" ") + " )";
-        }
     },
     buildWMSLayerUrlParam(layers) {
         const layernames = [];
@@ -362,15 +366,38 @@ const LayerUtils = {
             ...layers.filter(layer => layer.role === LayerRole.BACKGROUND)
         ];
     },
-    reorderLayer(layers, movelayer, sublayerpath, delta, preventSplittingGroups) {
+    reorderLayer(layers, layerId, sublayerpath, delta, preventSplittingGroups) {
         // Extract foreground layers
-        const fglayers = layers.filter(layer => layer.role !== LayerRole.BACKGROUND);
-        // Explode layers (one entry for every single sublayer)
-        const exploded = LayerUtils.explodeLayers(fglayers);
-        // Find entry to move
-        if (movelayer) {
+        let newlayers = layers.filter(layer => layer.role !== LayerRole.BACKGROUND);
+        if (preventSplittingGroups) {
+            const moveLayerIdx = newlayers.findIndex(l => l.id === layerId);
+            let oldIndex = moveLayerIdx;
+            let group = newlayers;
+            if (!isEmpty(sublayerpath)) {
+                newlayers[moveLayerIdx] = {...newlayers[moveLayerIdx], sublayers: [...newlayers[moveLayerIdx].sublayers]};
+                group = newlayers[moveLayerIdx].sublayers;
+                sublayerpath.slice(0, -1).forEach(idx => {
+                    group[idx] = {...group[idx], sublayers: [...group[idx].sublayers]};
+                    group = group[idx].sublayers;
+                });
+                oldIndex = sublayerpath[sublayerpath.length - 1];
+            }
+            let newIndex = oldIndex + delta;
+            // Clamp to array bounds
+            if (newIndex < 0) {
+                newIndex = 0;
+            }
+            if (newIndex >= group.length) {
+                newIndex = group.length - 1;
+            }
+            const [item] = group.splice(oldIndex, 1);
+            group.splice(newIndex, 0, item);
+        } else {
+            // Explode layers (one entry for every single sublayer)
+            const exploded = LayerUtils.explodeLayers(newlayers);
+            // Find entry to move
             const indices = exploded.reduce((result, entry, index) => {
-                if (entry.layer.id === movelayer.id && LayerUtils.pathEqualOrBelow(sublayerpath, entry.path)) {
+                if (entry.layer.id === layerId && LayerUtils.pathEqualOrBelow(sublayerpath, entry.path)) {
                     return [...result, index];
                 }
                 return result;
@@ -382,25 +409,6 @@ const LayerUtils = {
             if ((delta < 0 && indices[0] <= 0) || (delta > 0 && indices[indices.length - 1] >= exploded.length - 1)) {
                 return layers;
             }
-            if (preventSplittingGroups) {
-                // Prevent moving an entry out of a containing group
-                const idx = delta < 0 ? indices[0] : indices[indices.length - 1];
-                const level = sublayerpath.length;
-                if (level > exploded[idx + delta].path.length || (level > 0 && !isEqual(exploded[idx + delta].path.slice(0, level - 1), sublayerpath.slice(0, -1)))) {
-                    return layers;
-                }
-                // Avoid splitting sibling groups when reordering
-                const group = sublayerpath.slice(0, -1).reduce((sublayer, i) => sublayer.sublayers[i], movelayer);
-                // Compute move offset
-                const dir = delta > 0 ? 1 : -1;
-                const oldIndex = sublayerpath[sublayerpath.length - 1];
-                const newIndex = oldIndex + delta;
-                let offset = 0;
-                for (let i = oldIndex + dir; dir * i <= dir * newIndex; i += dir) {
-                    offset += LayerUtils.layerTreeCount(group.sublayers[i]) * dir;
-                }
-                delta = offset;
-            }
             // Reorder layer
             if (delta < 0) {
                 for (const idx of indices) {
@@ -411,9 +419,9 @@ const LayerUtils = {
                     exploded.splice(idx + delta, 0, exploded.splice(idx, 1)[0]);
                 }
             }
+            // Re-assemble layers
+            newlayers = LayerUtils.implodeLayers(exploded);
         }
-        // Re-assemble layers
-        const newlayers = LayerUtils.implodeLayers(exploded);
         // Re-add background layers
         return [
             ...newlayers,
@@ -488,30 +496,36 @@ const LayerUtils = {
     implodeLayers(exploded) {
         const newlayers = [];
         const usedIds = new Set();
+        let prevlayer = null;
 
         // Merge all possible items of an exploded layer array
         for (const entry of exploded) {
             const layer = entry.layer;
 
             // Attempt to merge with previous if possible
-            let target = newlayers.length > 0 ? newlayers[newlayers.length - 1] : null;
-            let source = layer;
-            if (target && target.sublayers && target.url === layer.url) {
-                let innertarget = target.sublayers[target.sublayers.length - 1];
-                let innersource = source.sublayers[0]; // Exploded entries have only one entry per sublayer level
-                while (innertarget && innertarget.sublayers && innertarget.name === innersource.name) {
-                    target = innertarget;
-                    source = innersource;
-                    innertarget = target.sublayers[target.sublayers.length - 1];
-                    innersource = source.sublayers[0]; // Exploded entries have only one entry per sublayer level
+            if (prevlayer?.srcid === layer.srcid) {
+                if (isEmpty(prevlayer.sublayers)) {
+                    prevlayer.sublayers = layer.sublayers;
+                } else if (!isEmpty(layer.sublayers)) {
+                    // Find deepest nested matching group
+                    let group = layer;
+                    let prevgroup = prevlayer;
+                    while (
+                        !isEmpty(group.sublayers) && !isEmpty(prevgroup.sublayers) &&
+                        group.sublayers[0]?.name === prevgroup.sublayers[prevgroup.sublayers.length - 1]?.name
+                    ) {
+                        group = group.sublayers[0]; // Exploded layers have one layer per sublayer level
+                        prevgroup = prevgroup.sublayers[prevgroup.sublayers.length - 1];
+                    }
+                    prevgroup.sublayers.push(group.sublayers[0]);
                 }
-                target.sublayers.push(source.sublayers[0]);
             } else {
                 if (usedIds.has(layer.id)) {
                     newlayers.push({...layer, id: uuidv4()});
                 } else {
                     newlayers.push(layer);
                 }
+                prevlayer = newlayers[newlayers.length - 1];
                 usedIds.add(layer.id);
             }
         }
@@ -1191,16 +1205,18 @@ const LayerUtils = {
         return newLayer;
     },
     queryLayerMetadata(layer, callback) {
+        if (!layer) {
+            callback({});
+        }
+        const metadata = {};
         const metadataRequests = [];
         if (layer.editConfigUrl) {
             metadataRequests.push(new Promise((resolve) => {
                 axios.get(layer.editConfigUrl).then(response => {
-                    layer.editConfig = response.data;
-                    delete layer.editConfigUrl;
+                    metadata.editConfig = response.data;
                     resolve();
                 }).catch(() => {
-                    layer.editConfig = {};
-                    delete layer.editConfigUrl;
+                    metadata.editConfig = {};
                     resolve();
                 });
             }));
@@ -1208,23 +1224,24 @@ const LayerUtils = {
         if (layer.translationsUrl) {
             metadataRequests.push(new Promise((resolve) => {
                 axios.get(layer.translationsUrl.replace('{lang}', LocaleUtils.lang())).then(response => {
-                    layer.translations = deepmerge(LocaleUtils.commonTranslations(), response.data);
-                    delete layer.translationsUrl;
+                    metadata.translations = deepmerge(LocaleUtils.commonTranslations(), response.data);
                     resolve();
                 }).catch(() => {
-                    layer.translations = LocaleUtils.commonTranslations();
                     delete layer.translationsUrl;
                     resolve();
                 });
             }));
         } else {
-            layer.translations = deepmerge(LocaleUtils.commonTranslations(), layer.translations || {});
+            metadataRequests.push(new Promise((resolve) => {
+                metadata.translations = deepmerge(LocaleUtils.commonTranslations(), layer.translations || {});
+                resolve();
+            }));
         }
         Promise.all(metadataRequests).then(() => {
             if (layer.translations) {
                 layer = LayerUtils.applyTranslations(layer, layer.translations);
             }
-            callback(layer);
+            callback(metadata);
         });
     },
     applyTranslations(layer, translations) {

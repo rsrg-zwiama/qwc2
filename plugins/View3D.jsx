@@ -46,9 +46,13 @@ class View3D extends React.Component {
         controlsPosition: PropTypes.string,
         /** The default field of view (`20`: min, `100`: max). */
         defaultFov: PropTypes.number,
+        /** The default point size for point cloud tiles (`0`: min, `20`: max). Automatic size computation when the value is `0`. */
+        defaultPointSize: PropTypes.number,
         /** The default scene quality factor (`20`: min, `100`: max). */
         defaultSceneQuality: PropTypes.number,
         display: PropTypes.object,
+        /** Whether to allow opening the inspector in production environment. */
+        forceAllowInspector: PropTypes.bool,
         /** Default window geometry. */
         geometry: PropTypes.shape({
             initialWidth: PropTypes.number,
@@ -83,7 +87,9 @@ class View3D extends React.Component {
     static defaultProps = {
         controlsPosition: 'top',
         defaultFov: 30,
+        defaultPointSize: 0,
         defaultSceneQuality: 100,
+        forceAllowInspector: false,
         geometry: {
             initialWidth: 600,
             initialHeight: 800,
@@ -314,7 +320,9 @@ class View3D extends React.Component {
                                 <Map3D
                                     controlsPosition={this.props.controlsPosition}
                                     defaultFov={this.props.defaultFov}
+                                    defaultPointSize={this.props.defaultPointSize}
                                     defaultSceneQuality={this.props.defaultSceneQuality}
+                                    forceAllowInspector={this.props.forceAllowInspector}
                                     innerRef={this.setRef}
                                     mouseButtons={this.props.mouseButtons}
                                     onCameraChanged={this.onCameraChanged}

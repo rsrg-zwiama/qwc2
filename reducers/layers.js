@@ -7,6 +7,7 @@
  * LICENSE file in the root directory of this source tree.
  */
 
+import deepmerge from 'deepmerge';
 import isEmpty from 'lodash.isempty';
 import {v4 as uuidv4} from 'uuid';
 
@@ -15,6 +16,7 @@ import {
     SET_LAYER_LOADING,
     ADD_LAYER,
     ADD_LAYER_SEPARATOR,
+    SET_LAYER_METADATA,
     REMOVE_LAYER,
     REORDER_LAYER,
     CHANGE_LAYER_PROPERTY,
@@ -132,12 +134,13 @@ export default function layers(state = defaultState, action) {
         const newLayer = {
             ...action.layer,
             id: layerId,
+            srcid: action.layer.srcid ?? uuidv4(),
             name: action.layer.name || layerId,
             role: action.layer.role || LayerRole.USERLAYER,
             queryable: action.layer.queryable || false,
             visibility: action.layer.visibility ?? true,
             opacity: action.layer.opacity ?? 255,
-            layertreehidden: action.layer.layertreehidden || action.layer.role > LayerRole.USERLAYER
+            layertreehidden: action.options?.layertreehidden ?? action.layer.layertreehidden ?? action.layer.role > LayerRole.USERLAYER
         };
         if (action.options?.beforeLayerName || action.options?.afterLayerName) {
             newLayers = LayerUtils.insertLayer(
@@ -177,6 +180,31 @@ export default function layers(state = defaultState, action) {
             };
         }
         return {...state, flat: newLayers, editConfigs: newEditConfigs};
+    }
+    case SET_LAYER_METADATA: {
+        let newEditConfigs = state.editConfigs;
+        const layerIdx = state.flat.findIndex(l => l.id === action.id);
+        if (layerIdx >= 0) {
+            let newLayer = {...state.flat[layerIdx]};
+            if (action.metadata.editConfig) {
+                newEditConfigs = {
+                    ...newEditConfigs,
+                    [newLayer.wms_name]: {
+                        ...newEditConfigs[newLayer.wms_name],
+                        ...action.metadata.editConfig
+                    }
+                };
+            }
+            if (action.metadata.translations) {
+                newLayer.translations = deepmerge(newLayer.translations || {}, action.metadata.translations);
+                newLayer = LayerUtils.applyTranslations(newLayer, newLayer.translations);
+            }
+            const newLayers = [...state.flat];
+            newLayers[layerIdx] = newLayer;
+            return {...state, flat: newLayers, editConfigs: newEditConfigs};
+        } else {
+            return state;
+        }
     }
     case ADD_LAYER_SEPARATOR: {
         const newLayers = LayerUtils.insertSeparator(state.flat, action.title, action.afterLayerId, action.afterSublayerPath).map(layer => {
@@ -228,6 +256,15 @@ export default function layers(state = defaultState, action) {
                 }
             });
         }
+        // Ensure (empty) theme layer is present
+        if (!newLayers.find(l => l.role === LayerRole.THEME)) {
+            const prevThemeLayer = state.flat.find(l => l.role === LayerRole.THEME);
+            if (prevThemeLayer) {
+                const themeLayer = {...prevThemeLayer, sublayers: []};
+                const pos = newLayers.findIndex(l => l.role === LayerRole.BACKGROUND);
+                newLayers.splice(pos === -1 ? newLayers.length : pos, 0, {...themeLayer, ...LayerUtils.buildWMSLayerParams(themeLayer, state.filter)});
+            }
+        }
         UrlParams.updateParams({l: LayerUtils.buildWMSLayerUrlParam(newLayers)});
         return {...state, flat: newLayers, editConfigs: newEditConfigs};
     }
@@ -250,7 +287,8 @@ export default function layers(state = defaultState, action) {
                 visibility: action.layer.visibility || true,
                 opacity: action.layer.opacity || 255,
                 layertreehidden: action.layer.layertreehidden || action.layer.role > LayerRole.USERLAYER,
-                bbox: VectorLayerUtils.computeFeaturesBBox(action.features)
+                bbox: VectorLayerUtils.computeFeaturesBBox(action.features),
+                srcid: action.layer.srcid ?? uuidv4()
             };
             let inspos = 0;
             for (; inspos < newLayers.length && newLayer.role < newLayers[inspos].role; ++inspos);
@@ -333,7 +371,7 @@ export default function layers(state = defaultState, action) {
     }
     case REORDER_LAYER: {
         const newLayers = LayerUtils.reorderLayer(
-            state.flat, action.layer, action.sublayerpath, action.direction, action.preventSplittingGroups
+            state.flat, action.layerId, action.sublayerpath, action.direction, action.preventSplittingGroups
         ).map(layer => {
             if (layer.type === "wms") {
                 return {...layer, ...LayerUtils.buildWMSLayerParams(layer, state.filter)};

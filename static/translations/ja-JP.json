@@ -24,6 +24,7 @@
         "MapExport3D": "地図をエクスポート",
         "MapFilter": "マップ・フィルタ",
         "MapLight3D": "光と影",
+        "MeasureObjects3D": "",
         "ObjectList": "",
         "PlotInfoTool": "",
         "Print": "印刷",
@@ -31,6 +32,7 @@
         "Settings": "設定",
         "Settings3D": "",
         "Share": "リンクを共有",
+        "SunExposure3D": "",
         "ThemeSwitcher": "テーマ",
         "AttributeTable": "属性テーブル",
         "AuthenticationLogin": "ログイン",
@@ -41,6 +43,7 @@
         "FeatureSearch": "地物検索",
         "GeometryDigitizer": "ジオメトリ・デジタイザ",
         "IdentifyPoint": "点で地物を確認",
+        "IdentifyRadius": "",
         "IdentifyRegion": "領域内の地物を確認",
         "LayerCatalog": "レイヤ・カタログ",
         "Login": "ログイン",
@@ -48,6 +51,7 @@
         "MapLegend": "凡例",
         "Measure": "計測",
         "Measure3D": "計測",
+        "MeasureObject3D": "",
         "MeasureLineString": "ラインを測る",
         "MeasurePolygon": "ポリゴンを測る",
         "NewsPopup": "ニュース",
@@ -57,6 +61,7 @@
         "PrintScreen3D": "ラスタ・エクスポート",
         "Redlining": "スケッチ",
         "Routing": "ルート探索",
+        "SensorThingsTool": "",
         "Tools": "地図ツール",
         "TourGuide": "ツアー・ガイド",
         "TimeManager": "タイム・マネージャ",
@@ -117,10 +122,13 @@
       "clear": "クリア",
       "clone": "クローン",
       "close": "閉じる",
+      "compute": "",
+      "date": "",
       "delete": "削除",
       "download": "ダウンロード",
       "ellipse": "楕円",
       "export": "エクスポート",
+      "false": "",
       "format": "形式",
       "line": "線",
       "loading": "ロード中...",
@@ -138,6 +146,7 @@
       "square": "四角形",
       "sync2dview": "2D ビューと同期",
       "text": "テキスト",
+      "true": "",
       "wait": "しばらくお待ちください...",
       "zoomin": "ズーム・イン",
       "zoomout": "ズーム・アウト"
@@ -181,6 +190,9 @@
       "rotate": "回転",
       "rotation": "回転角",
       "scale": "スケール",
+      "snap_2dedge": "",
+      "snap_2dvertex": "",
+      "snap_3dbody": "",
       "sphere": "球体",
       "subtract": "差分",
       "thescale": "スケール",
@@ -325,6 +337,7 @@
       "radius": "半径"
     },
     "layercatalog": {
+      "openlink": "",
       "windowtitle": "レイヤ・カタログ"
     },
     "layerinfo": {
@@ -341,12 +354,12 @@
     "layertree": {
       "compare": "トップ・レイヤを比較",
       "deletealllayers": "全てのレイヤを削除",
-      "hidealllayers": "全てのレイヤを非表示",
       "importlayer": "レイヤをインポート",
       "maptip": "レイヤのマップ・チップを表示",
       "printlegend": "凡例を印刷",
       "separator": "区切り",
       "separatortooltip": "区切りを追加",
+      "showallayers": "",
       "togglegroup": "",
       "transparency": "透明度",
       "visiblefilter": "不可視のレイヤをフィルタ",
@@ -419,6 +432,7 @@
     },
     "maplight3d": {
       "animationstep": "アニメーション・ステップ",
+      "currentdatetime": "",
       "date": "日付",
       "dayspersec": "日数 / 秒",
       "helpersVisible": "補助オブジェクト表示",
@@ -449,6 +463,12 @@
       "pointLabel": "位置",
       "showmeasurements": "計測結果を表示"
     },
+    "measureobjects3d": {
+      "clickonmap": "",
+      "object": "",
+      "remove": "",
+      "removeall": ""
+    },
     "misc": {
       "ctrlclickhint": "Ctrl+クリックで開く"
     },
@@ -471,6 +491,10 @@
       "windowtitle": "数値入力"
     },
     "obliqueview": {
+      "directionEast": "",
+      "directionNorth": "",
+      "directionSouth": "",
+      "directionWest": "",
       "nodataset": "",
       "title": ""
     },
@@ -618,6 +642,99 @@
       "themes": "テーマ",
       "unknownmore": "更なる結果"
     },
+    "sensorthingstool": {
+      "addDatastream": "",
+      "datastreamInfo": {
+        "calibration": "",
+        "description": "",
+        "location": "",
+        "name": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": "",
+        "unit": ""
+      },
+      "datastreamLabel": "",
+      "datastreamNone": "",
+      "datastreamOptions": {
+        "arithmeticMean": "",
+        "percentiles": "",
+        "percentilesDesc": "",
+        "showOnSecondYAxis": "",
+        "showPercentiles": "",
+        "title": ""
+      },
+      "datastreamTable": {
+        "fullPeriod": "",
+        "selectedPeriod": "",
+        "timestamp": "",
+        "title": "",
+        "unit": "",
+        "value": ""
+      },
+      "datastreamsFilter": {
+        "datastream": "",
+        "location": "",
+        "observedProperty": "",
+        "sensor": "",
+        "thing": "",
+        "title": ""
+      },
+      "exportCSV": "",
+      "exportImage": "",
+      "graphOptions": {
+        "reverseAxis": "",
+        "threshold": "",
+        "thresholdLabel": "",
+        "thresholdValue": "",
+        "title": "",
+        "toggleGridLines": "",
+        "toggleSecondYAxis": "",
+        "xAxis": "",
+        "xAxisAtTop": "",
+        "yAuto": "",
+        "yAxis": "",
+        "yMax": "",
+        "yMin": ""
+      },
+      "intervalOptions": {
+        "custom": "",
+        "day": "",
+        "hour": "",
+        "month": "",
+        "week": "",
+        "year": ""
+      },
+      "locationInfo": {
+        "description": "",
+        "inactive": "",
+        "name": "",
+        "platform": "",
+        "qompSensorId": "",
+        "serialNumber": "",
+        "title": ""
+      },
+      "locationLabel": "",
+      "pickLocation": "",
+      "pickLocationDesc": "",
+      "removeDatastream": "",
+      "removeLocation": "",
+      "selectInterval": "",
+      "selectLocation": "",
+      "setEndToNow": "",
+      "setPeriodAfterBegin": "",
+      "setPeriodBeforeEnd": "",
+      "showDefaultPeriod": "",
+      "showFullPeriod": "",
+      "showNextPeriod": "",
+      "showPrevPeriod": "",
+      "statistics": {
+        "arithmeticMean": "",
+        "nthPercentile": ""
+      },
+      "title": ""
+    },
     "serviceinfo": {
       "abstract": "概要",
       "contactEmail": "メール",
@@ -642,6 +759,8 @@
     },
     "settings3d": {
       "fov": "",
+      "pointSize": "",
+      "pointSizeAuto": "",
       "quality": ""
     },
     "share": {
@@ -660,6 +779,16 @@
       "loading": "スナップしたジオメトリをロード中...",
       "snappingenabled": "スナップ有効",
       "vertex": "頂点にスナップ"
+    },
+    "sunexposure3d": {
+      "end": "",
+      "hoursOfSunlight": "",
+      "includeterrain": "",
+      "irradiation": "",
+      "meanIrradiance": "",
+      "spatialres": "",
+      "start": "",
+      "tempres": ""
     },
     "themelayerslist": {
       "addanyway": "",
@@ -777,8 +906,11 @@
     },
     "colorschemes": {
       "default": "デフォルト",
+      "default_rounded": "",
       "dark": "ダーク",
-      "highcontrast": "ハイ・コントラスト"
+      "dark_rounded": "",
+      "highcontrast": "ハイ・コントラスト",
+      "highcontrast_rounded": ""
     },
     "plotdescr": {
       "title": "",
